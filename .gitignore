@@ -1,3 +1,6 @@
+# ignore node_modules symlink
+node_modules.nosync
+
 # Logs
 logs
 *.log
@@ -59,3 +62,9 @@ typings/
 
 # next.js build output
 .next
+
+# localstorage
+scratch
+
+# mac
+.DS_Store
