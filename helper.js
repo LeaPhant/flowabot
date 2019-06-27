@@ -178,8 +178,7 @@ module.exports = {
     getUsername: (args, message, user_ign) => {
         let return_username;
 
-        if(args[0].startsWith('!'))
-            args = args.slice(1);
+        args = args.slice(1);
 
         args.forEach(function(arg){
             if(module.exports.validUsername(arg))

@@ -1037,7 +1037,7 @@ module.exports = {
             response = response.data;
 
             if(response.length < 1){
-                cb(`no recent plays found for \`${options.user}\``);
+                cb(`no recent plays found for ${options.user}`);
                 return;
             }
 
@@ -1060,7 +1060,7 @@ module.exports = {
                 }
 
                 if(!recent_raw){
-                    cb(`no recent passes found for \`${options.user}\``);
+                    cb(`no recent passes found for ${options.user}`);
                     return;
                 }
             }else{
@@ -1172,7 +1172,7 @@ module.exports = {
             response = response.data;
 
             if(response.length < 1){
-                cb(`no top plays found for \`${options.user}\``);
+                cb(`no top plays found for ${options.user}`);
                 return;
             }
 
