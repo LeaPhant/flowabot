@@ -1,0 +1,40 @@
+{
+  "name": "flowabot",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "LeaPhant",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^0.18.0",
+    "canvas": "^2.5.0",
+    "cheerio": "^1.0.0-rc.2",
+    "discord.js": "git://github.com/discordjs/discord.js.git#11.5-dev",
+    "erlpack": "github:hammerandchisel/erlpack",
+    "gif-encoder": "^0.7.2",
+    "highcharts-export-server": "^2.0.16",
+    "jimp": "^0.6.0",
+    "lzma": "^2.3.2",
+    "mathjs": "^6.0.2",
+    "moment": "^2.24.0",
+    "moment-duration-format": "^2.2.2",
+    "moment-timezone": "^0.5.23",
+    "node-emoji": "^1.8.1",
+    "node-localstorage": "^1.3.0",
+    "node-persist": "^2.1.0",
+    "object-path": "^0.11.4",
+    "ojsama": "^1.2.1",
+    "osu-parser": "^0.3.3",
+    "osureplayparser": "^1.0.1",
+    "oxford-dictionary": "^1.4.1",
+    "pty.js": "^0.3.1",
+    "randomcolor": "^0.5.4",
+    "twitch-helix": "^1.0.7",
+    "url": "^0.11.0",
+    "vm2": "^3.6.10",
+    "ws": "^6.2.1"
+  }
+}
