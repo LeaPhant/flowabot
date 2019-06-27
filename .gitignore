@@ -68,3 +68,6 @@ scratch
 
 # mac
 .DS_Store
+
+# config and credentials
+config.json
