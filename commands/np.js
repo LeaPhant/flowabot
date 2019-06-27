@@ -25,7 +25,8 @@ module.exports = {
 
             let embed;
 
-            if(typeof presence.game === 'object'
+            if(presence.game !== null
+            && typeof presence.game === 'object'
             && 'name' in presence.game
             && ['Spotify', 'osu!'].includes(presence.game.name)){
                 if(presence.game.name == 'osu!'
