@@ -66,7 +66,7 @@ module.exports = {
                     let track_url = `https://open.spotify.com/track/${presence.game.syncID}`;
                     let username = msg.author.username;
 
-                    if('member' in msg && msg.member.nickname)
+                    if(msg.member !== null && msg.member.nickname !== null)
                       username = msg.member.nickname;
 
                     if(album_cover.length > 1){
@@ -75,7 +75,7 @@ module.exports = {
                         embed = {
                             color: 1947988,
                             author: {
-                                name: msg.member.nickname || msg.member.username,
+                                name: username,
                                 icon_url: msg.author.avatarURL
                             },
                             footer: {
