@@ -64,6 +64,10 @@ module.exports = {
                     let album_name = album.largeText;
                     let album_cover = album.largeImage.split(':');
                     let track_url = `https://open.spotify.com/track/${presence.game.syncID}`;
+                    let username = msg.author.username;
+
+                    if('member' in msg && msg.member.nickname)
+                      username = msg.member.nickname;
 
                     if(album_cover.length > 1){
                         album_cover = `https://i.scdn.co/image/${album_cover[1]}`;
