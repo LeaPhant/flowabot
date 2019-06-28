@@ -101,10 +101,10 @@ module.exports = {
                             examples_value += "\n\n";
 
                         if(typeof example === 'object'){
-                            examples_value += "```" + example.run + "```";
+                            examples_value += `${cmd_escape}${config.prefix}${example.run}${cmd_escape}`;
                             examples_value += example.result;
                         }else{
-                            examples_value += "```" + example + "```";
+                            examples_value += `${cmd_escape}${config.prefix}${example}${cmd_escape}`;
                         }
                     });
 
