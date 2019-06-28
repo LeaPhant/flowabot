@@ -27,7 +27,7 @@ module.exports = {
 
             osu.get_user(osu_user, (err, embed) => {
                 if(err){
-                    reject('Something went wrong');
+                    reject(err);
                     helper.error(err);
                     return false;
                 }

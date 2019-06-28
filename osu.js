@@ -582,7 +582,7 @@ function getScore(recent_raw, cb){
                 cb(null, recent);
             }
         }).catch(err => {
-            cb('Map not in the database, maps that are too new don\'t work yet!');
+            cb('Map not in the database, maps that are too new don\'t work yet');
             console.log(err);
             return;
         });
@@ -1037,7 +1037,7 @@ module.exports = {
             response = response.data;
 
             if(response.length < 1){
-                cb(`no recent plays found for ${options.user}`);
+                cb(`No recent plays found for ${options.user}`);
                 return;
             }
 
@@ -1060,7 +1060,7 @@ module.exports = {
                 }
 
                 if(!recent_raw){
-                    cb(`no recent passes found for ${options.user}`);
+                    cb(`No recent passes found for ${options.user}`);
                     return;
                 }
             }else{
@@ -1120,7 +1120,7 @@ module.exports = {
             }
 
             if(!score){
-                cb(`no scores matching criteria found`);
+                cb(`No scores matching criteria found`);
                 return;
             }
 
@@ -1146,7 +1146,7 @@ module.exports = {
             response = response.data;
 
             if(response.length < 1){
-                cb(`no scores matching criteria found`);
+                cb(`No scores matching criteria found`);
                 return;
             }
 
@@ -1172,7 +1172,7 @@ module.exports = {
             response = response.data;
 
             if(response.length < 1){
-                cb(`no top plays found for ${options.user}`);
+                cb(`No top plays found for ${options.user}`);
                 return;
             }
 
@@ -1325,7 +1325,7 @@ module.exports = {
 
             cb(null, embed);
         }).catch(e => {
-            cb('Map not in the database, maps that are too new don\'t work yet!');
+            cb('Map not in the database, maps that are too new don\'t work yet');
             console.error(e);
             return false;
         });
@@ -1399,7 +1399,7 @@ module.exports = {
             }
 
             if(bpms.length == 0){
-                cb('an error occured');
+                cb('An error occured getting the Beatmap BPM values');
                 return false;
             }
 
@@ -1442,11 +1442,11 @@ module.exports = {
             };
 
             highcharts.export(highcharts_settings, (err, res) => {
-                if(err) cb('an error occured!')
+                if(err) cb('An error occured creating the graph')
                 else cb(null, res.data);
             });
         }catch(e){
-            cb('an error occured');
+            cb('An error occured creating the graph');
             console.error(e);
             return;
         }
@@ -1455,6 +1455,14 @@ module.exports = {
     get_user: function(user, cb){
         api.get('/get_user', {params: {u: user}}).then(response => {
             response = response.data;
+
+			console.log(response);
+
+			if(response.length == 0){
+				cb("Couldn't find user");
+				return false;
+			}
+
             let data = response[0];
 
             let grades = "";
@@ -1522,9 +1530,13 @@ module.exports = {
             console.log(embed);
 
             cb(null, embed);
-        }).catch(e => {
-            cb('an error occured');
-            console.error(e);
+        }).catch(err => {
+			if(err.status == 404)
+				cb("Couldn't find user");
+			else
+	            cb("Couldn't reach osu!api");
+
+            console.error(err);
             return;
         });
     },
@@ -1614,7 +1626,7 @@ module.exports = {
                 let user = response[0];
                 if(user.user_id in tracked_users){
                     if(tracked_users[user.user_id].channels.includes(channel_id)){
-                        cb(`${user.username} is already being tracked in this channel.`);
+                        cb(`${user.username} is already being tracked in this channel`);
                     }else{
                         tracked_users[user.user_id].channels.push(channel_id);
                         tracked_users[user.user_id].top = top;
@@ -1637,9 +1649,14 @@ module.exports = {
             }else{
                 cb(`Couldn't find user \`${user}\``);
             }
-        }).catch(err => {
-            cb('Something went wrong :(');
-            console.error(err);
+		}).catch(err => {
+			if(err.status == 404)
+				cb("Couldn't find user");
+			else
+				cb("Couldn't reach osu!api");
+
+			console.error(err);
+			return false;
         });
     },
 
@@ -1655,9 +1672,9 @@ module.exports = {
                         = tracked_users[user.user_id].channels.filter(a => a != channel_id);
 
                         if(tracked_users[user.user_id].channels.length > 0){
-                            cb(null, `Stopped tracking ${user.username} in this channel`);
+                            cb(null, `Stopped tracking ${user.username} in this channel.`);
                         }else{
-                            cb(null, `Stopped tracking ${user.username}`);
+                            cb(null, `Stopped tracking ${user.username}.`);
 
                             delete tracked_users[user.user_id];
                             delete top_plays[user.user_id];
@@ -1666,17 +1683,22 @@ module.exports = {
                         helper.setItem('tracked_users', JSON.stringify(tracked_users));
                         helper.setItem('top_plays', JSON.stringify(top_plays));
                     }else{
-                        cb(`${user.username} is not being tracked in this channel.`);
+                        cb(`${user.username} is not being tracked in this channel`);
                     }
                 }else{
-                    cb(`${user.username} is not being tracked.`);
+                    cb(`${user.username} is not being tracked`);
                 }
             }else{
                 cb(`Couldn't find \`${user}\``);
             }
         }).catch(err => {
-            cb('Something went wrong :(');
-            console.error(err);
+			if(err.status == 404)
+				cb("Couldn't find user");
+			else
+				cb("Couldn't reach osu!api");
+
+			console.error(err);
+			return false;
         });
     },
 
@@ -1753,9 +1775,8 @@ module.exports = {
             };
 
             highcharts.export(highcharts_settings, (err, res) => {
-                if(err) cb('an error occured!')
+                if(err) cb('An error occured creating the graph')
                 else{
-                    console.log('start time first obj',  map.objects[0].time);
                     frame.get_frame(osu_file_path, max_strain_time_real - map.objects[0].time % 400, mods_array, [468, 351], {ar: ar, cs: cs}, output_frame => {
                         Jimp.read(new Buffer(res.data, 'base64')).then(_graph => {
                             Jimp.read(output_frame).then(_frame => {
@@ -1770,7 +1791,7 @@ module.exports = {
                 }
             });
         }catch(e){
-            cb('an error occured');
+            cb('An error occured creating the graph');
             console.error(e);
             return;
         }
