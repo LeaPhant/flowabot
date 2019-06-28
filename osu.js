@@ -627,9 +627,6 @@ function updateTrackedUsers(){
     for(user_id in tracked_users){
         let user = user_id;
 
-		if(tracked_users[user_id].channels.filter(a => a == discord_client.channels.keyArray()).length == 0)
-			continue;
-
         api.get('/get_user_best', {params: { u: user, limit: tracked_users[user].top, mode: 0 }}).then(response => {
             response = response.data;
 
