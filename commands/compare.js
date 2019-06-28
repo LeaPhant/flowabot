@@ -2,7 +2,7 @@ const osu = require('../osu.js');
 const helper = require('../helper.js');
 
 module.exports = {
-    command: 'compare',
+    command: ['compare', 'c'],
     description: "Search for best score on the last beatmap.",
     usage: '[username or * for all users] [+mods]',
     example: [

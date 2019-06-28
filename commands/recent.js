@@ -27,7 +27,7 @@ module.exports = {
 
             let recent_user = helper.getUsername(argv, msg, user_ign);
 
-            let pass = ['recentpass', 'rp'].includes(argv[0].toLowerCase());
+            let pass = argv[0].toLowerCase().startsWith('rp') || argv[0].toLowerCase().startsWith('recentpass');
 
             let index = 1;
             let match = argv[0].match(/\d+/);

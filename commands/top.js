@@ -32,8 +32,8 @@ module.exports = {
 
             let top_user = helper.getUsername(argv, msg, user_ign);
 
-            let rb = ['rb', 'recentbest'].includes(argv[0].toLowerCase());
-            let ob = ['ob', 'oldestbest'].includes(argv[0].toLowerCase());
+            let rb = argv[0].toLowerCase().startsWith('rb') || argv[0].toLowerCase().startsWith('recentbest');
+            let ob = argv[0].toLowerCase().startsWith('ob') || argv[0].toLowerCase().startsWith('oldestbest');
 
             let index = 1;
             let match = argv[0].match(/\d+/);
