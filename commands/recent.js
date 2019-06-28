@@ -9,15 +9,15 @@ module.exports = {
     example: [
         {
             run: "recent nathan_on_osu",
-            example: "Returns nathan on osu's most recent score."
+            result: "Returns nathan on osu's most recent score."
         },
         {
             run: "recent3 respektive",
-            example: "Returns respektive's most recent score."
+            result: "Returns respektive's most recent score."
         },
         {
             run: "recentpass",
-            example: "Returns your most recent pass."
+            result: "Returns your most recent pass."
         }
     ],
     configRequired: ['credentials.osu_api_key'],
