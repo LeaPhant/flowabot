@@ -193,33 +193,32 @@ function onMessage(msg){
                     user_ign,
                     last_beatmap,
                     last_message
-                })
+                });
 
                 Promise.resolve(promise).then(response => {
                     if(response){
-                        let ur_promise;
+                        let edit_promise;
 
-                        if(typeof response === 'object' && 'ur_promise' in response){
-                            ur_promise = response.ur_promise;
-                            delete response.ur_promise;
+                        if(typeof response === 'object' && 'edit_promise' in response){
+                            ({edit_promise} = response);
+                            delete response.edit_promise;
                         }
 
                         let message_promise = msg.channel.send(response);
 
-                        Promise.all([message_promise, ur_promise]).then(responses => {
+                        Promise.all([message_promise, edit_promise]).then(responses => {
                             let message = responses[0];
-                            let ur_response = responses[1];
+                            let edit_promise = responses[1];
 
-                            if(ur_response)
-                                message.edit(ur_response);
+                            if(edit_promise)
+                                message.edit(edit_promise);
                         });
                     }
                 }).catch(err => {
-                    if(typeof err === 'object'){
+                    if(typeof err === 'object')
                         msg.channel.send(err);
-                    }else{
+                    else
                         msg.channel.send(`Couldn't run command: \`${err}\``);
-                    }
 
                     helper.error(err);
                 });

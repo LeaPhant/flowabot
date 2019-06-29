@@ -51,7 +51,7 @@ module.exports = {
                         helper.updateLastBeatmap(recent, msg.channel.id, last_beatmap);
 
                         if(ur_promise){
-                            resolve({embed: embed, ur_promise: new Promise((resolve, reject) => {
+                            resolve({embed: embed, edit_promise: new Promise((resolve, reject) => {
                                 ur_promise.then(recent => {
                                     embed = osu.format_embed(recent);
                                     resolve({embed: embed});
