@@ -77,7 +77,6 @@ module.exports = {
                                 edit_promise: new Promise((resolve, reject) => {
                                     ur_promise.then(recent => {
                                         embed = osu.format_embed(recent);
-                                        helper.log('Calculated UR');
                                         resolve({embed});
                                     });
                                 })});
