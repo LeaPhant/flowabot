@@ -8,7 +8,7 @@ const path = require('path');
 
 const GifEncoder = require('gif-encoder');
 
-const { createCanvas } = require('canvas')
+const { createCanvas } = require('canvas');
 
 let enabled_mods = ["HR"];
 

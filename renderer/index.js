@@ -408,7 +408,6 @@ function variance(array){
 }
 
 function calculateUr(options, cb){
-    console.time("dl replay");
     axios.get('https://osu.ppy.sh/api/get_replay',
 	{
 		params: {
@@ -431,16 +430,11 @@ function calculateUr(options, cb){
         let replay_raw = Buffer.from(response.data.content, "base64");
         let replay = {lastCursor: 0, replay_data: parseReplay(replay_raw)};
 
-        console.timeEnd("process replay");
-        console.time("parse beatmap");
-
         if(!helper.downloadBeatmap(options.beatmap_id)){
             return false;
         }
 
         osuBeatmapParser.parseFile(path.resolve(config.osu_cache_path, `${options.beatmap_id}.osu`), function (err, beatmap){
-            console.timeEnd("parse beatmap");
-            console.time("process beatmap");
             let {cs, ar, od} = calculate_csarod(beatmap.CircleSize, beatmap.ApproachRate, beatmap.OverallDifficulty, options.mods);
             beatmap.CircleSize = cs;
             beatmap.ApproachRate = ar;
@@ -470,9 +464,6 @@ function calculateUr(options, cb){
                     beatmap.hitObjects[i].endTime = beatmap.hitObjects[i].startTime;
 
             let time = 0;
-
-            console.timeEnd("process beatmap");
-            console.time("simulate replay");
 
             while(time <= beatmap.hitObjects[beatmap.hitObjects.length - 1].endTime){
                 try{
@@ -550,9 +541,6 @@ function calculateUr(options, cb){
                 time = replayPoints.next.offset;
             }
 
-            console.timeEnd("simulate replay");
-            console.time("calculate values");
-
             if(allhits.length > 0)
                 unstablerate = variance(allhits) * 10;
 
@@ -561,10 +549,6 @@ function calculateUr(options, cb){
 
             if(latehits.length > 0)
                 errorlate  = math.mean(latehits);
-
-            console.timeEnd("calculate values");
-
-            console.log('misses', miss);
 
             cb(unstablerate);
 
