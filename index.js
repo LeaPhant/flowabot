@@ -211,7 +211,7 @@ function onMessage(msg){
                             let edit_promise = responses[1];
 
                             if(edit_promise)
-                                message.edit(edit_promise);
+                                message.edit(edit_promise).catch(helper.error);
                         });
                     }
                 }).catch(err => {
