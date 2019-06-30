@@ -38,7 +38,7 @@ if(helper.getItem('top_plays')){
 	helper.setItem('top_plays', JSON.stringify(top_plays));
 }
 
-let discord_client;
+let discord_client, last_beatmap;
 
 const DIFF_MODS = ["HR","EZ","DT","HT"];
 
@@ -659,8 +659,10 @@ function updateTrackedUsers(){
 												{
 													embed,
 													files: [{attachment: strains_bar, name: 'strains_bar.png'}]
-												})
-                                            .catch(console.error);
+												}
+											).then(() => {
+												helper.updateLastBeatmap(recent, channel.id, last_beatmap);
+											}).catch(console.error);
                                     });
                                 });
                             }else{
@@ -696,8 +698,9 @@ function updateTrackedUsers(){
 }
 
 module.exports = {
-    init: function(client, api_key){
+    init: function(client, api_key, _last_beatmap){
 		discord_client = client;
+		last_beatmap = _last_beatmap;
 
 		if(api_key){
 	        settings.api_key = api_key;

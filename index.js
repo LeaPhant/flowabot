@@ -12,9 +12,6 @@ client.on('error', console.error);
 
 const config = require('./config.json');
 
-if(config.credentials.osu_api_key && config.credentials.osu_api_key.length > 0)
-    osu.init(client, config.credentials.osu_api_key);
-
 let user_ign = {};
 
 if(helper.getItem('user_ign')){
@@ -38,6 +35,9 @@ if(helper.getItem('last_message')){
 }else{
 	helper.setItem('last_message', JSON.stringify(last_message));
 }
+
+if(config.credentials.osu_api_key && config.credentials.osu_api_key.length > 0)
+    osu.init(client, config.credentials.osu_api_key, last_beatmap);
 
 function checkCommand(msg, command){
     if(!msg.content.startsWith(config.prefix))
