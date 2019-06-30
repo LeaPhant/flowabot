@@ -5,7 +5,9 @@ const randomColor = require('randomcolor');
 const math = require('mathjs');
 const fs = require('fs-extra');
 const path = require('path');
-const { execFileSync } = require('child_process');
+const { execFile, spawn } = require('child_process');
+
+const MAX_SIZE = 8 * 1024 * 1024;
 
 const GifEncoder = require('gif-encoder');
 
@@ -750,6 +752,8 @@ module.exports = {
                 time = Math.max(time, firstNonSpinner[0].startTime);
             }
 
+            length = Math.min(400 * 1000, length);
+
             let time_max = Math.min(time + length, beatmap.hitObjects[beatmap.hitObjects.length - 1].endTime + 1500);
             let i = 0;
 
@@ -757,14 +761,18 @@ module.exports = {
 
             console.log('length', Math.round(actual_length / 1000) + 's');
 
-            if(actual_length > 200 * 1000)
-                size = [300, 224];
-
             prepareCanvas(size);
 
             let rnd = Math.round(1e9 * Math.random());
             let file_path;
             let time_frame = 20;
+
+            let bitrate = 500 * 1024;
+
+            if(actual_length > 200 * 1000){
+                crf = 26;
+                size = [300, 224];
+            }
 
             if(!('type' in options))
                 options.type = 'gif';
@@ -774,7 +782,7 @@ module.exports = {
 
             if(options.type == 'gif'){
                 var gif = new GifEncoder(...size, {
-                    highWaterMark: 50 * 1024 * 1024 // 5MB
+                    highWaterMark: 100 * 1024 * 1024
                 });
 
                 file_path = `/tmp/osu_${rnd}.gif`;
@@ -794,6 +802,8 @@ module.exports = {
             }else{
                 file_path = `/tmp/frames/${rnd}`;
                 fs.mkdirSync(file_path, { recursive: true});
+
+                bitrate = Math.min(bitrate, (0.8 * MAX_SIZE) * 8 / (actual_length / 1000) / 1024);
             }
 
             if(enabled_mods.includes('DT'))
@@ -831,20 +841,21 @@ module.exports = {
             if(options.type == 'gif'){
                 gif.finish();
             }else{
-                execFileSync('ffmpeg', [
+                execFile('ffmpeg', [
                     '-f', 'image2', '-r', '60', '-s', size.join('x'), '-pix_fmt', 'rgba', '-c:v', 'rawvideo',
                     '-i', `${file_path}/%d.rgba`,
-                    '-pix_fmt', 'yuv420p', '-c:v', 'libx264', '-preset', 'veryfast', '-an', `${file_path}/video.mp4`
-                ]);
+                    '-pix_fmt', 'yuv420p', '-c:v', 'libx264', '-b:v', `${bitrate}k`, '-preset', 'veryfast', '-an', `${file_path}/video.mp4`
+                ], err => {
+                    console.error(err);
+                    cb(`${file_path}/video.mp4`, file_path);
+                });
+            }
 
-                cb(`${file_path}/video.mp4`, file_path);
+            if(options.type == 'gif'){
+                file.on('finish', () => {
+                    cb(file_path, file_path);
+                });
             }
         });
-
-        if(options.type == 'gif'){
-            file.on('finish', () => {
-                cb(file_path, file_path);
-            });
-        }
     }
 };

@@ -204,7 +204,7 @@ function onMessage(msg){
                             delete response.edit_promise;
                         }
 
-                        if('remove_path' in response){
+                        if(typeof response === 'object' && 'remove_path' in response){
                             remove_path = response.remove_path;
                             delete response.remove_path;
                         }
