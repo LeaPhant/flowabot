@@ -8,6 +8,7 @@ const ur_calc = require('./renderer');
 const frame = require('./renderer/render_frame.js');
 const highcharts = require('highcharts-export-server');
 const {execFileSync} = require('child_process');
+const { createCanvas } = require('canvas');
 const Jimp = require('jimp');
 
 const MINUTE = 60 * 1000;
@@ -45,7 +46,7 @@ const TIME_MODS = ["DT", "HT"];
 
 const CHART_THEME = {
     chart: {
-        backgroundColor: 'rgba(38, 50, 56,0.9)',
+        backgroundColor: 'rgba(38, 50, 56, 0.9)',
         spacingBottom: 20,
         spacingTop: 20,
         marginTop: 100,
@@ -553,7 +554,17 @@ function getScore(recent_raw, cb){
 
 			helper.downloadBeatmap(recent_raw.beatmap_id);
 
-            if(replay && fs.existsSync(path.resolve(config.osu_cache_path, `${recent_raw.beatmap_id}.osu`))){
+			let beatmap_path = path.resolve(config.osu_cache_path, `${recent_raw.beatmap_id}.osu`);
+
+			let strains_bar;
+
+			if(fs.existsSync(beatmap_path)){
+				strains_bar = module.exports.get_strains_bar(beatmap_path, recent.mods.join(''), recent.fail_percent);
+				if(strains_bar)
+					recent.strains_bar = true;
+			}
+
+            if(replay && fs.existsSync(beatmap_path)){
                 let ur_promise = new Promise((resolve, reject) => {
 					helper.log('getting ur');
                     ur_calc.get_ur(
@@ -577,9 +588,9 @@ function getScore(recent_raw, cb){
                 recent.ur = -1;
                 if(recent.mods.includes("DT") || recent.mods.includes("HT"))
                     recent.cvur = -1;
-                cb(null, recent, ur_promise);
+                cb(null, recent, strains_bar, ur_promise);
             }else{
-                cb(null, recent);
+                cb(null, recent, strains_bar);
             }
         }).catch(err => {
             cb('Map not in the database, maps that are too new don\'t work yet');
@@ -627,9 +638,6 @@ function updateTrackedUsers(){
     for(user_id in tracked_users){
         let user = user_id;
 
-		if(tracked_users[user_id].channels.filter(a => a == discord_client.channels.keyArray()).length == 0)
-			continue;
-
         api.get('/get_user_best', {params: { u: user, limit: tracked_users[user].top, mode: 0 }}).then(response => {
             response = response.data;
 
@@ -637,7 +645,7 @@ function updateTrackedUsers(){
                 response.forEach(score => {
                     score.score_id = Number(score.score_id);
                     if(!top_plays[user].includes(Number(score.score_id))){
-                        getScore(score, (err, recent, ur_promise) => {
+                        getScore(score, (err, recent, strains_bar, ur_promise) => {
                             if(err)
                                 return false;
 
@@ -647,7 +655,11 @@ function updateTrackedUsers(){
                                     tracked_users[user].channels.forEach(channel_id => {
                                         let channel = discord_client.channels.get(channel_id);
                                         if(channel)
-                                            channel.send(`${recent.username} got a new #${recent.pb} top play!`, { embed: embed })
+                                            channel.send(`${recent.username} got a new #${recent.pb} top play!`,
+												{
+													embed,
+													files: [{attachment: strains_bar, name: 'strains_bar.png'}]
+												})
                                             .catch(console.error);
                                     });
                                 });
@@ -656,7 +668,11 @@ function updateTrackedUsers(){
                                 tracked_users[user].channels.forEach(channel_id => {
                                     let channel = discord_client.channels.get(channel_id);
                                     if(channel)
-                                        channel.send(`${recent.username} got a new #${recent.pb} top play!`, { embed: embed })
+                                        channel.send(`${recent.username} got a new #${recent.pb} top play!`,
+											{
+												embed,
+												files: [{attachment: strains_bar, name: 'strains_bar.png'}]
+											})
                                         .catch(console.error);
                                 });
                             }
@@ -914,6 +930,12 @@ module.exports = {
         embed.url = `https://osu.ppy.sh/b/${recent.beatmap_id}`;
         if(recent.pb)
             embed.description = `**__#${recent.pb} Top Play!__**`;
+
+		if(recent.strains_bar){
+			embed.image = {
+				url: 'attachment://strains_bar.png'
+			};
+		}
 
         let ranked_text = 'Submitted';
 
@@ -1541,6 +1563,75 @@ module.exports = {
         });
     },
 
+	get_strains_bar: function(osu_file_path, mods_string, progress){
+		let { strains, max_strain } = module.exports.get_strains(osu_file_path, mods_string);
+
+		if(strains){
+			let bar = createCanvas(399, 40);
+			let ctx = bar.getContext('2d');
+
+			ctx.fillStyle = 'transparent';
+			ctx.fillRect(0, 0, 399, 40);
+
+			let points = [];
+			let strain_chunks = [];
+
+			let max_chunks = 100;
+            let chunk_size = Math.ceil(strains.length / max_chunks);
+
+            for(let i = 0; i < strains.length; i += chunk_size){
+                let _strains = strains.slice(i, i + chunk_size);
+                strain_chunks.push(Math.max(..._strains));
+            }
+
+			strain_chunks.forEach((strain, index) => {
+				let _strain = strain / max_strain;
+				let x = index / strain_chunks.length * 399;
+				let y = Math.min(30, 5 + 35 - _strain * 35);
+				points.push({x, y});
+			});
+
+			ctx.fillStyle = '#F06292';
+			ctx.moveTo(0, 40);
+			ctx.lineTo(0, 30);
+
+			for(let i = 1; i < points.length - 2; i++){
+		        var xc = (points[i].x + points[i + 1].x) / 2;
+		        var yc = (points[i].y + points[i + 1].y) / 2;
+		        ctx.quadraticCurveTo(points[i].x, points[i].y, xc, yc);
+		    }
+
+			ctx.lineTo(399,30);
+			ctx.lineTo(399,40);
+			ctx.closePath();
+			ctx.fill();
+
+			ctx.clearRect(progress * 399, 0, 399 - progress * 399, 40);
+
+			ctx.fillStyle = 'transparent';
+			ctx.fillRect(progress * 399, 0, 399 - progress * 399, 40);
+
+			ctx.fillStyle = 'rgba(244, 143, 177, 0.5)';
+			ctx.moveTo(0, 40);
+			ctx.lineTo(0, 30);
+
+			for(let i = 1; i < points.length - 2; i++){
+		        var xc = (points[i].x + points[i + 1].x) / 2;
+		        var yc = (points[i].y + points[i + 1].y) / 2;
+		        ctx.quadraticCurveTo(points[i].x, points[i].y, xc, yc);
+		    }
+
+			ctx.lineTo(399,30);
+			ctx.lineTo(399,40);
+			ctx.closePath();
+			ctx.fill();
+
+			return bar.toBuffer();
+		}else{
+			return false;
+		}
+	},
+
     get_strains: function(osu_file_path, mods_string, type){
         try{
             let parser = new ojsama.parser().feed(fs.readFileSync(osu_file_path, 'utf8'));
@@ -1615,6 +1706,7 @@ module.exports = {
             };
         }catch(e){
             console.log(e);
+			return false;
         }
     },
 

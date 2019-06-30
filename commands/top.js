@@ -52,7 +52,7 @@ module.exports = {
 
                 return false;
             }else{
-                osu.get_top({user: top_user, index: index, rb: rb, ob: ob}, (err, recent, ur_promise) => {
+                osu.get_top({user: top_user, index: index, rb: rb, ob: ob}, (err, recent, strains_bar, ur_promise) => {
                     if(err){
                         helper.error(err);
                         reject(err);
@@ -62,14 +62,20 @@ module.exports = {
                         helper.updateLastBeatmap(recent, msg.channel.id, last_beatmap);
 
                         if(ur_promise){
-                            resolve({embed: embed, ur_promise: new Promise((resolve, reject) => {
-                                ur_promise.then(recent => {
-                                    embed = osu.format_embed(recent);
-                                    resolve({embed: embed});
-                                });
-                            })});
+                            resolve({
+                                embed: embed,
+                                files: [{attachment: strains_bar, name: 'strains_bar.png'}],
+                                edit_promise: new Promise((resolve, reject) => {
+                                    ur_promise.then(recent => {
+                                        embed = osu.format_embed(recent);
+                                        resolve({embed});
+                                    });
+                                })});
                         }else{
-                            resolve({embed: embed});
+                            resolve({
+                                embed: embed,
+                                files: [{attachment: strains_bar, name: 'strains_bar.png'}]
+                            });
                         }
                     }
                 });
