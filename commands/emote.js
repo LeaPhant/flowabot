@@ -21,15 +21,18 @@ module.exports = {
 
             if(emoji.hasEmoji(emoteName))
                 emote = emoji.find(emoteName).emoji;
+            else if(msg.channel.type == 'text')
+                emote = helper.emote(emoteName, msg.guild, client);
             else
-                emote = helper.emote(emoteName, client, msg.guild);
+                emote = helper.emote(emoteName, null, client);
 
             if(emote){
                 output += emote.toString();
-            }else{
-                return `Emote \`${emoteName}\` not found.`;
             }
         });
+
+        if(output.length == 0)
+            output = "No emote found";
 
         return output;
     }
