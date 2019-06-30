@@ -1,5 +1,6 @@
 const axios = require('axios');
 const helper = require('../helper.js');
+const cheerio = require('cheerio');
 
 const emojipedia = axios.create({
     baseURL: 'https://emojipedia.org',
@@ -19,10 +20,10 @@ module.exports = {
         return new Promise((resolve, reject) => {
             let { argv, msg } = obj;
 
-            let emoji = encodeURIComponent(argv[1].trim());
+            let emoji = encodeURIComponent(argv.slice(1).join('').trim());
 
-            axios.get(`/${emoji}/`).then(response => {
-                let $ = cheerio.load(body);
+            emojipedia.get(`/${emoji}/`).then(response => {
+                let $ = cheerio.load(response.data);
                 let embeds = [], promises = [];
 
                 $('.vendor-rollout-target').each(function(){
@@ -30,15 +31,15 @@ module.exports = {
                         let vendor_name = vendor.text();
                         let vendor_url = "https://emojipedia.org" + vendor.attr('href');
                         let img = $(this).find('img').attr('srcset').replace('/240/', '/60/').split(" ")[0];
-                        embeds.push(new Discord.RichEmbed(
+                        embeds.push({ embed:
                             {
-                                "title": vendor_name,
-                                "url": vendor_url,
-                                "thumbnail": {
-                                    "url": img
+                                title: vendor_name,
+                                url: vendor_url,
+                                thumbnail: {
+                                    url: img
                                 }
                             }
-                        ));
+                        });
                 });
 
                 embeds.forEach(function(embed){
