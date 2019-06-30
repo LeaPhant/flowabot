@@ -3,12 +3,13 @@ const osuBeatmapParser = require('osu-parser');
 const osuReplayParser = require('osureplayparser');
 const randomColor = require('randomcolor');
 const math = require('mathjs');
-const fs = require('fs');
+const fs = require('fs-extra');
 const path = require('path');
+const { execFileSync } = require('child_process');
 
 const GifEncoder = require('gif-encoder');
 
-const { createCanvas } = require('canvas')
+const { createCanvas } = require('canvas');
 
 let enabled_mods = ["HR"];
 
@@ -501,6 +502,10 @@ function processFrame(time, options){
     hitObjectsOnScreen.forEach(function(hitObject, index){
         if(index < hitObjectsOnScreen.length - 1){
             let nextObject = hitObjectsOnScreen[index + 1];
+
+            if(isNaN(hitObject.endPosition) && isNaN(nextObject.position))
+                return false;
+
             let distance = vectorDistance(hitObject.endPosition, nextObject.position);
 
             if(time >= (nextObject.startTime - beatmap.TimeFadein) && time < (nextObject.startTime + beatmap.HitWindow50) && distance > 80){
@@ -722,26 +727,6 @@ module.exports = {
     },
 
     get_frames: function(beatmap_path, time, length, enabled_mods, size, options, cb){
-        let gif = new GifEncoder(...size, {
-            highWaterMark: 50 * 1024 * 1024 // 5MB
-        });
-
-        let rnd = Math.round(1e9 * Math.random());
-        let path = `/tmp/osu_${rnd}.gif`;
-        let file = require('fs').createWriteStream(path);
-        gif.pipe(file);
-
-        prepareCanvas(size);
-
-        gif.writeHeader();
-
-        gif.setQuality(200);
-        gif.setRepeat(0);
-
-        gif.setDispose(2);
-
-        gif.setDelay(20);
-
         prepareBeatmap(beatmap_path, enabled_mods, options, () => {
             if(time == 0 && options.percent){
                 time = beatmap.hitObjects[Math.floor(options.percent * beatmap.hitObjects.length)].startTime - 2000;
@@ -765,46 +750,101 @@ module.exports = {
                 time = Math.max(time, firstNonSpinner[0].startTime);
             }
 
-            console.log('time', time);
-            console.log('length', length);
-
-            let time_max = time + length;
+            let time_max = Math.min(time + length, beatmap.hitObjects[beatmap.hitObjects.length - 1].endTime + 1500);
             let i = 0;
 
+            let actual_length = time_max - time;
+
+            console.log('length', Math.round(actual_length / 1000) + 's');
+
+            if(actual_length > 200 * 1000)
+                size = [300, 224];
+
+            prepareCanvas(size);
+
+            let rnd = Math.round(1e9 * Math.random());
+            let file_path;
             let time_frame = 20;
 
+            if(!('type' in options))
+                options.type = 'gif';
+
+            if(options.type == 'mp4')
+                time_frame = 16;
+
+            if(options.type == 'gif'){
+                var gif = new GifEncoder(...size, {
+                    highWaterMark: 50 * 1024 * 1024 // 5MB
+                });
+
+                file_path = `/tmp/osu_${rnd}.gif`;
+
+                var file = fs.createWriteStream(file_path);
+
+                gif.pipe(file);
+
+                gif.writeHeader();
+
+                gif.setQuality(200);
+                gif.setRepeat(0);
+
+                gif.setDispose(2);
+
+                gif.setDelay(20);
+            }else{
+                file_path = `/tmp/frames/${rnd}`;
+                fs.mkdirSync(file_path, { recursive: true});
+            }
+
             if(enabled_mods.includes('DT'))
-                time_frame = 30;
+                time_frame *= 1.5;
 
             if(enabled_mods.includes('HT'))
-                time_frame = 15;
+                time_frame *= 0.75;
 
             while(time < time_max){
                 processFrame(time, options);
 
                 let image_data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
 
-                for(let i = 0; i < image_data.length; i += 4){
-                    if(image_data[i + 3] > 0){
-                        let scale = Math.round(image_data[i + 0] * image_data[i + 3] / 255);
-                        image_data[i] = scale;
-                        image_data[i + 1] = scale;
-                        image_data[i + 2] = scale;
-                        image_data[i + 3] = 255;
+                if(options.type == 'gif'){
+                    for(let i = 0; i < image_data.length; i += 4){
+                        if(image_data[i + 3] > 0){
+                            let scale = Math.round(image_data[i + 0] * image_data[i + 3] / 255);
+                            image_data[i] = scale;
+                            image_data[i + 1] = scale;
+                            image_data[i + 2] = scale;
+                            image_data[i + 3] = 255;
+                        }
                     }
                 }
 
-                gif.addFrame(image_data);
+                if(options.type == 'gif')
+                    gif.addFrame(image_data);
+                else
+                    fs.writeFileSync(path.resolve(file_path, `${i}.rgba`), Buffer.from(image_data));
+
                 i++;
                 time += time_frame;
             }
 
-            gif.finish();
+            if(options.type == 'gif'){
+                gif.finish();
+            }else{
+                execFileSync('ffmpeg', [
+                    '-f', 'image2', '-r', '60', '-s', size.join('x'), '-pix_fmt', 'rgba', '-c:v', 'rawvideo',
+                    '-i', `${file_path}/%d.rgba`,
+                    '-pix_fmt', 'yuv420p', '-c:v', 'libx264', '-preset', 'veryfast', '-an', `${file_path}/video.mp4`
+                ]);
 
+                cb(`${file_path}/video.mp4`, file_path);
+            }
         });
 
-        file.on('finish', () => {
-            cb(path);
-        });
+        if(options.type == 'gif'){
+            file.on('finish', () => {
+                cb(file_path, file_path);
+            });
+        }
     }
 };

@@ -1,5 +1,5 @@
 const Discord = require('discord.js');
-const fs = require('fs');
+const fs = require('fs-extra');
 const path = require('path');
 const objectPath = require("object-path");
 
@@ -197,11 +197,16 @@ function onMessage(msg){
 
                 Promise.resolve(promise).then(response => {
                     if(response){
-                        let ur_promise;
+                        let ur_promise, remove_path;
 
                         if(typeof response === 'object' && 'ur_promise' in response){
                             ur_promise = response.ur_promise;
                             delete response.ur_promise;
+                        }
+
+                        if('remove_path' in response){
+                            remove_path = response.remove_path;
+                            delete response.remove_path;
                         }
 
                         let message_promise = msg.channel.send(response);
@@ -212,6 +217,9 @@ function onMessage(msg){
 
                             if(ur_response)
                                 message.edit(ur_response);
+
+                            if(remove_path)
+                                fs.remove(remove_path, helper.error);
                         });
                     }
                 }).catch(err => {

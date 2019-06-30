@@ -10,7 +10,7 @@ const config = require('../config.json');
 module.exports = {
     command: ['render', 'frame', 'fail'],
     description: "Render picture or gif of a beatmap at a specific time.",
-    usage: '[beatmap url] [+mods] [AR8] [CS6] [strains/aim/speed/fail] [mm:ss] [4s]',
+    usage: '[beatmap url] [+mods] [AR8] [CS6] [strains/aim/speed/fail] [mp4] [mm:ss] [4s]',
     example: [
         {
             run: "render strains",
@@ -26,7 +26,7 @@ module.exports = {
         },
         {
             run: "render speed 10s",
-            result: "Returns a 10 second gif of the streamiest part on the last beatmap."
+            result: "Returns a 10 second video of the streamiest part on the last beatmap."
         }
     ],
     configRequired: ['debug'],
@@ -36,7 +36,7 @@ module.exports = {
 
             let beatmap_id, beatmap_url, mods = [], time = 0,
             ar, cs, length = 0, percent = 0, custom_url = false,
-            size = [400, 300], type, objects;
+            size = [400, 300], type, objects, video_type = 'gif';
 
             if(argv[0].toLowerCase() == 'fail'){
                 if(msg.channel.id in last_beatmap){
@@ -66,6 +66,8 @@ module.exports = {
                 }else if(arg == 'strains' || arg == 'aim' || arg == 'speed'){
                     type = arg;
                     length = 4;
+                }else if(arg == 'mp4'){
+                    video_type = 'mp4';
                 }else if(arg.endsWith('s')){
                     length = parseFloat(arg);
                 }else if(/^([0-9]+)$/g.test(arg)){
@@ -103,12 +105,8 @@ module.exports = {
             if(config.debug)
                 console.log('render length', length);
 
-            if(length > 10){
-                size = [300, 225];
-                if(length > 120){
-                    length = 120;
-                }
-            }
+            if(length >= 10)
+                video_type = 'mp4';
 
             if(config.debug)
                 console.log('specified ar', ar);
@@ -142,8 +140,10 @@ module.exports = {
             }
 
             if(length > 0 || objects){
-                frame.get_frames(download_path, time, length * 1000, mods, size, {cs: cs, ar: ar, black: false, fill: false, noshadow: true, percent: percent, border: false, objects: objects}, buf => {
-                    resolve({file: buf, name: 'render.gif'});
+                frame.get_frames(download_path, time, length * 1000, mods, size, {
+                    type: video_type, cs: cs, ar: ar, black: video_type == 'mp4', fill: video_type == 'mp4', noshadow: true, percent: percent, border: false, objects: objects
+                }, (send, remove_path) => {
+                    resolve({file: send, name: 'render.gif', remove_path});
                 });
             }else{
                 frame.get_frame(download_path, time, mods, [800, 600], {cs: cs, ar: ar, black: true, fill: true, percent: percent}, buf => {
