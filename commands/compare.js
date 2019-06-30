@@ -59,7 +59,7 @@ module.exports = {
 
                 if(compare_user != '*')
                     options.user = compare_user;
-                else
+                else if(compare_mods)
                     compare_mods.splice(1, 0);
 
                 osu.get_compare(options, (err, recent, strains_bar, ur_promise) => {
