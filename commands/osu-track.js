@@ -25,7 +25,7 @@ module.exports = {
                     top = _top;
                 }else{
                     return false;
-                    reject(helper.commandUsage('osu-track'));
+                    reject(helper.commandHelp('osu-track'));
                 }
             }
 

@@ -52,7 +52,7 @@ module.exports = {
             });
 
             if(!(msg.channel.id in last_beatmap)){
-                reject(helper.commandUsage('strains'))
+                reject(helper.commandHelp('strains'))
                 return false;
             }else if(!beatmap_id && !custom_url){
                 beatmap_id = last_beatmap[msg.channel.id].beatmap_id;

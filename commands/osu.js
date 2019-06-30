@@ -18,9 +18,9 @@ module.exports = {
 
             if(!osu_user){
                 if(user_ign[msg.author.id] == undefined)
-                    reject(helper.commandUsage('ign-set'));
+                    reject(helper.commandHelp('ign-set'));
                 else
-                    reject(helper.commandUsage('osu'));
+                    reject(helper.commandHelp('osu'));
 
                 return false;
             }

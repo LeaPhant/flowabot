@@ -51,7 +51,7 @@ module.exports = {
                     add_to_user = argv[2];
             }else{
                 if(user_ign[msg.author.id] === undefined){
-                    reject(helper.commandUsage('ign-set'));
+                    reject(helper.commandHelp('ign-set'));
                 }else{
                     add_to_user = user_ign[msg.author.id];
                 }
@@ -71,7 +71,7 @@ module.exports = {
                     resolve(output);
                 });
             }else{
-                reject(helper.commandUsage('addpp'));
+                reject(helper.commandHelp('addpp'));
             }
         });
     }

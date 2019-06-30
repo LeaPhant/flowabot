@@ -52,9 +52,9 @@ module.exports = {
 
             if(!score_user || !options.beatmap_id){
                 if(user_ign[msg.author.id] == undefined)
-                    reject(helper.commandUsage('ign-set'));
+                    reject(helper.commandHelp('ign-set'));
                 else
-                    reject(helper.commandUsage('score'));
+                    reject(helper.commandHelp('score'));
                 return false;
             }else{
                 osu.get_score(options, (err, recent, strains_bar, ur_promise) => {

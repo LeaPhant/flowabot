@@ -38,9 +38,9 @@ module.exports = {
 
             if(!recent_user){
                 if(user_ign[msg.author.id] == undefined)
-                    reject(helper.commandUsage('ign-set'));
+                    reject(helper.commandHelp('ign-set'));
                 else
-                    reject(helper.commandUsage('recent'));
+                    reject(helper.commandHelp('recent'));
             }else{
                 osu.get_recent({user: recent_user, pass: pass, index: index}, (err, recent, strains_bar, ur_promise) => {
                     if(err){

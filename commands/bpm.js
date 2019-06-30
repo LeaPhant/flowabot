@@ -36,7 +36,7 @@ module.exports = {
             });
 
             if(!(msg.channel.id in last_beatmap)){
-                msg.channel.send(helper.commandUsage('bpm'));
+                msg.channel.send(helper.commandHelp('bpm'));
                 return;
             }else if(!beatmap_id && !custom_url){
                 beatmap_id = last_beatmap[msg.channel.id].beatmap_id;
