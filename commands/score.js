@@ -52,7 +52,7 @@ module.exports = {
 
             if(!score_user || !options.beatmap_id){
                 if(user_ign[msg.author.id] == undefined)
-                    reject(helper.ignSetHelp());
+                    reject(helper.commandUsage('ign-set'));
                 else
                     reject(helper.commandUsage('score'));
                 return false;

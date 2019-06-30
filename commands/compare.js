@@ -47,7 +47,7 @@ module.exports = {
 
             if(!compare_user){
                 if(user_ign[msg.author.id] == undefined)
-                    reject(helper.ignSetHelp());
+                    reject(helper.commandUsage('ign-set'));
                 else
                     reject(helper.commandUsage('compare'));
                 return false;

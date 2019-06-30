@@ -1,11 +1,11 @@
 const helper = require('../helper.js');
 
 module.exports = {
-    command: 'ign set',
+    command: 'ign-set',
     description: "Sets your osu! username so you can use osu! commands without specifying a username.",
-    usage: 'ign set <osu! username>',
+    usage: 'ign-set <osu! username>',
     example: {
-        run: "ign set nathan on osu",
+        run: "ign-set nathan on osu",
         result: "Sets your osu! username to nathan on osu."
     },
     call: obj => {
@@ -15,7 +15,7 @@ module.exports = {
             let split = helper.splitWithTail(msg.content, ' ', 2);
 
             if(split.length < 3){
-                reject(helper.commandUsage('ign_set'));
+                reject(helper.commandUsage('ign-set'));
                 return false;
             }
 

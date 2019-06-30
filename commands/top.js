@@ -44,7 +44,7 @@ module.exports = {
 
             if(!top_user){
                 if(user_ign[msg.author.id] == undefined){
-                    reject(helper.ignSetHelp());
+                    reject(helper.commandUsage('ign-set'));
                     msg.channel.send(msg.author.username + " hasn't set their ingame name (`!ign set <ingame name>)`");
                 }else{
                     reject(helper.commandUsage('top'));
