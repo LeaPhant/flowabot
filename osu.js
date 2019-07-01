@@ -350,23 +350,23 @@ function calculateCsArOdHp(cs_raw, ar_raw, od_raw, hp_raw, mods_enabled){
 function getRankEmoji(rank){
     switch(rank){
         case 'XH':
-            return '<:XH_Rank:591169639380156419>';
+            return helper.emote('XH_Rank', null, discord_client) || "Silver SS";
         case 'X':
-            return '<:X_Rank:591169603678502934>';
+            return helper.emote('X_Rank', null, discord_client) || "SS";
         case 'SH':
-            return '<:SH_Rank:591169653984854046>';
+            return helper.emote('SH_Rank', null, discord_client) || "Silver S";
         case 'S':
-            return '<:S_Rank:591169623555047454> ';
+            return helper.emote('S_Rank', null, discord_client) || "S";
         case 'A':
-            return '<:A_Rank:591169677837860874>';
+            return helper.emote('A_Rank', null, discord_client) || "A";
         case 'B':
-            return '<:B_Rank:591169695735087106>';
+            return helper.emote('B_Rank', null, discord_client) || "B";
         case 'C':
-            return '<:C_Rank:591169712331817000>';
+            return helper.emote('C_Rank', null, discord_client) || "C";
         case 'D':
-            return '<:D_Rank:591169728991723521>';
+            return helper.emote('D_Rank', null, discord_client) || "D";
         case 'F':
-            return '<:F_Rank:544595116334120967>';
+            return helper.emote('F_Rank', null, discord_client) || "Fail";
     }
 }
 
