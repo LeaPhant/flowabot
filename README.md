@@ -1,4 +1,4 @@
-<p align="center"><img width="100" height="100" src="https://raw.githubusercontent.com/LeaPhant/flowabot/master/res/logo.png"></p>
+<p align="center"><img width="100" height="100" src="https://i.imgur.com/LJjnN1r.png"></p>
 
 <h1 align="center">flowabot</h1>
 
