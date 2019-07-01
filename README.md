@@ -9,7 +9,7 @@
 
 <h2 align="center">Main Features</h2>
 
-<h3 align="center">Scorecards with unique information like a graph of the map difficulty or Unstable Rate</h3>
+<h3 align="center">Scorecards with unique information like a difficulty graph or the unstable rate</h3>
 
 <p align="center"><img src="https://i.imgur.com/WoJ4Dve.png"></img></p>
 
