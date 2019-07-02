@@ -763,9 +763,23 @@ module.exports = {
 
             prepareCanvas(size);
 
+            console.log('fps wanted', options.fps);
+
             let rnd = Math.round(1e9 * Math.random());
             let file_path;
-            let time_frame = 20;
+            let fps = options.fps || 60;
+
+            if(!('type' in options))
+                options.type = 'gif';
+
+            if(options.type == 'gif')
+                fps = 50;
+
+            console.log('fps', fps);
+
+            let time_frame = 1000 / fps;
+
+            console.log('time frame', time_frame);
 
             let bitrate = 500 * 1024;
 
@@ -773,12 +787,6 @@ module.exports = {
                 crf = 26;
                 size = [300, 224];
             }
-
-            if(!('type' in options))
-                options.type = 'gif';
-
-            if(options.type == 'mp4')
-                time_frame = 1000 / 60;
 
             if(options.type == 'gif'){
                 var gif = new GifEncoder(...size, {
@@ -842,7 +850,7 @@ module.exports = {
                 gif.finish();
             }else{
                 execFile('ffmpeg', [
-                    '-f', 'image2', '-r', '60', '-s', size.join('x'), '-pix_fmt', 'rgba', '-c:v', 'rawvideo',
+                    '-f', 'image2', '-r', fps, '-s', size.join('x'), '-pix_fmt', 'rgba', '-c:v', 'rawvideo',
                     '-i', `${file_path}/%d.rgba`,
                     '-pix_fmt', 'yuv420p', '-c:v', 'libx264', '-b:v', `${bitrate}k`, '-preset', 'veryfast', '-an', `${file_path}/video.mp4`
                 ], err => {
