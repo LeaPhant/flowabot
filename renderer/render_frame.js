@@ -778,7 +778,7 @@ module.exports = {
                 options.type = 'gif';
 
             if(options.type == 'mp4')
-                time_frame = 16;
+                time_frame = 1000 / 60;
 
             if(options.type == 'gif'){
                 var gif = new GifEncoder(...size, {
