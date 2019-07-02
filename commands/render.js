@@ -10,7 +10,7 @@ const config = require('../config.json');
 module.exports = {
     command: ['render', 'frame', 'fail'],
     description: "Render picture or gif of a beatmap at a specific time.",
-    usage: '[beatmap url] [+mods] [AR8] [CS6] [strains/aim/speed/fail] [mp4] [mm:ss] [4s]',
+    usage: '[beatmap url] [+mods] [AR8] [CS6] [strains/aim/speed/fail] [mp4] [120fps] [mm:ss] [4s]',
     example: [
         {
             run: "render strains",
@@ -27,6 +27,10 @@ module.exports = {
         {
             run: "render speed 10s",
             result: "Returns a 10 second video of the streamiest part on the last beatmap."
+        },
+        {
+            run: "render strains 120fps",
+            result: "Returns a 120fps video of the hardest part on the last beatmap."
         }
     ],
     configRequired: ['debug'],
@@ -44,6 +48,8 @@ module.exports = {
                     length = 4;
                 }
             }
+
+            let fps = 60;
 
             argv.map(arg => arg.toLowerCase());
 
@@ -68,6 +74,12 @@ module.exports = {
                     length = 4;
                 }else if(arg == 'mp4'){
                     video_type = 'mp4';
+                }else if(arg.endsWith('fps')){
+                    let _fps = parseInt(arg);
+                    if(!isNaN(_fps)){
+                        fps = Math.max(1, Math.min(240, _fps));
+                        video_type = 'mp4';
+                    }
                 }else if(arg.endsWith('s')){
                     length = parseFloat(arg);
                 }else if(/^([0-9]+)$/g.test(arg)){
@@ -141,7 +153,7 @@ module.exports = {
 
             if(length > 0 || objects){
                 frame.get_frames(download_path, time, length * 1000, mods, size, {
-                    type: video_type, cs: cs, ar: ar, black: video_type == 'mp4', fill: video_type == 'mp4', noshadow: true, percent: percent, border: false, objects: objects
+                    type: video_type, cs: cs, ar: ar, black: video_type == 'mp4', fps: fps, fill: video_type == 'mp4', noshadow: true, percent: percent, border: false, objects: objects
                 }, (send, remove_path) => {
                     resolve({file: send, name: 'render.gif', remove_path});
                 });
