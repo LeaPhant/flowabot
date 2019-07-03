@@ -19,7 +19,7 @@
 
 <h3 align="center">Render a video or picture of any osu! beatmap</h3>
 
-<p align="center"><img src="https://i.imgur.com/1BAx5iz.gif"></img></p>
+<p align="center"><img src="https://i.imgur.com/sJWN51M.gif"></img></p>
 
 <h3 align="center">Get a graph with the hardest parts of the beatmap</h3>
 
