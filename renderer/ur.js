@@ -1,5 +1,4 @@
 const osuBeatmapParser = require('osu-parser');
-const osuReplayParser = require('osureplayparser');
 const math = require('mathjs');
 const lzma = require('lzma');
 const axios = require('axios');
@@ -428,6 +427,8 @@ function calculateUr(options, cb){
         }
 
         let replay_raw = Buffer.from(response.data.content, "base64");
+		fs.mkdirSync('/tmp/replays', { recursive: true });
+		fs.writeFileSync(`/tmp/replays/${options.score_id}`, replay_raw);
         let replay = {lastCursor: 0, replay_data: parseReplay(replay_raw)};
 
         if(!helper.downloadBeatmap(options.beatmap_id)){

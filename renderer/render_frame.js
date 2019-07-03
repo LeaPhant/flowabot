@@ -1,10 +1,10 @@
 
 const osuBeatmapParser = require('osu-parser');
-const osuReplayParser = require('osureplayparser');
 const randomColor = require('randomcolor');
 const math = require('mathjs');
 const fs = require('fs-extra');
 const path = require('path');
+const lzma = require('lzma');
 const { execFile, spawn } = require('child_process');
 
 const MAX_SIZE = 8 * 1024 * 1024;
@@ -59,6 +59,74 @@ const keys_enum = {
     "M2": Math.pow(2,1),
     "K1": Math.pow(2,2),
     "K2": Math.pow(2,3)
+}
+
+function parseKeysPressed(num){
+    let keys = Number(num);
+    let output_keys = {
+        K1: false,
+        K2: false,
+        M1: false,
+        M2: false
+    };
+
+    for(key in keys_enum){
+        output_keys[key] = false;
+        if(keys_enum[key] & keys)
+            output_keys[key] = true;
+    }
+
+    if(output_keys.K1 && output_keys.M1)
+        output_keys.M1 = false;
+
+    if(output_keys.K2 && output_keys.M2)
+        output_keys.M2 = false;
+
+    return output_keys;
+}
+
+function parseReplay(buf){
+    let replay_data = lzma.decompress(buf);
+    let replay_frames = replay_data.split(",");
+
+    let output_frames = [];
+
+    let offset = 0;
+
+    for(let i = 0; i < replay_frames.length; i++){
+        let replay_frame = replay_frames[i].split("|");
+
+        if(replay_frame.length < 4)
+            continue;
+
+        let output_frame = {
+            offset: Number(replay_frame[0]) + offset,
+            timeSinceLastAction: Number(replay_frame[0]),
+            x: Number(replay_frame[1]),
+            y: Number(replay_frame[2]),
+            keys: parseKeysPressed(replay_frame[3])
+        };
+
+        let keys = parseKeysPressed(replay_frame[3]);
+
+        output_frame = Object.assign(keys, output_frame);
+
+        output_frames.push(output_frame);
+
+        offset = output_frames[output_frames.length - 1].offset;
+    }
+
+    return output_frames;
+}
+
+function getCursorAt(timestamp, replay){
+    while(replay.lastCursor < replay.replay_data.length && replay.replay_data[replay.lastCursor].offset <= timestamp){
+        replay.lastCursor++;
+    }
+
+    let current = replay.replay_data[replay.lastCursor - 1];
+    let next = replay.replay_data[replay.lastCursor];
+    return {current: current, next: next};
 }
 
 function coordsOnBezier(pointArray, t){
@@ -449,6 +517,15 @@ function prepareBeatmap(beatmap_path, mods, options, cb){
 
         beatmap = _beatmap;
 
+        let replay;
+
+        if(options.score_id){
+            let replay_path = `/tmp/replays/${options.score_id}`;
+
+            if(fs.existsSync(replay_path))
+                replay = {lastCursor: 0, replay_data: parseReplay(fs.readFileSync(replay_path))};
+        }
+
         speed_multiplier = 1;
 
         if(mods.includes("DT")){
@@ -462,6 +539,13 @@ function prepareBeatmap(beatmap_path, mods, options, cb){
         beatmap.CircleSize = cs;
         beatmap.ApproachRate = ar;
         beatmap.OverallDifficulty = od;
+
+        if(replay){
+            beatmap.Replay = replay;
+            console.log('score has replay');
+        }else{
+            console.log('score has no replay');
+        }
 
         console.log('ar option', options.ar);
 
@@ -699,6 +783,27 @@ function processFrame(time, options){
             }
         }
     });
+
+    if(beatmap.Replay){
+        let replay_point = getCursorAt(time, beatmap.Replay);
+
+        if(replay_point){
+            let { current } = replay_point;
+
+            let position = playfieldPosition(current.x, current.y);
+
+            ctx.globalAlpha = 1;
+
+            if(options.fill)
+                ctx.fillStyle = '#ed6161';
+            else
+                ctx.fillStyle = 'white';
+
+            ctx.beginPath();
+            ctx.arc(position[0], position[1], scale_multiplier * 13, 0, 2 * Math.PI, false);
+            ctx.fill();
+        }
+    }
 
     if(options.border){
         ctx.strokeStyle = "rgb(200,200,200)";

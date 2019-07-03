@@ -233,6 +233,9 @@ module.exports = {
             fail_percent: recent.fail_percent
         };
 
+        if(recent.score_id)
+            last_beatmap[channel_id].score_id = recent.score_id;
+
         module.exports.setItem('last_beatmap', JSON.stringify(last_beatmap));
     }
 }

@@ -4,7 +4,7 @@ const helper = require('./helper.js');
 const ojsama = require('ojsama');
 const path = require('path');
 const fs = require('fs');
-const ur_calc = require('./renderer');
+const ur_calc = require('./renderer/ur.js');
 const frame = require('./renderer/render_frame.js');
 const highcharts = require('highcharts-export-server');
 const {execFileSync} = require('child_process');
@@ -450,6 +450,7 @@ function getScore(recent_raw, cb){
         }
 
         recent = Object.assign({
+			score_id: best_score.score_id,
             pb: pb,
             lb: lb,
             username: user.username,
@@ -573,6 +574,7 @@ function getScore(recent_raw, cb){
                             player: recent_raw.user_id,
                             beatmap_id: recent_raw.beatmap_id,
                             mods_enabled: recent_raw.enabled_mods,
+							score_id: recent.score_id,
                             mods: recent.mods
                         }, ur => {
                             recent.ur = ur;

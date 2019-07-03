@@ -42,6 +42,8 @@ module.exports = {
             ar, cs, length = 0, percent = 0, custom_url = false,
             size = [400, 300], type, objects, video_type = 'gif';
 
+            let score_id;
+
             if(argv[0].toLowerCase() == 'fail'){
                 if(msg.channel.id in last_beatmap){
                     percent = last_beatmap[msg.channel.id].fail_percent;
@@ -110,6 +112,8 @@ module.exports = {
             }else if(!beatmap_id && !custom_url){
                 beatmap_id = last_beatmap[msg.channel.id].beatmap_id;
                 mods = last_beatmap[msg.channel.id].mods;
+                if(last_beatmap[msg.channel.id].score_id)
+                    ({ score_id } = last_beatmap[msg.channel.id]);
             }
 
             let download_path = path.resolve(config.osu_cache_path, `${beatmap_id}.osu`);
@@ -153,7 +157,7 @@ module.exports = {
 
             if(length > 0 || objects){
                 frame.get_frames(download_path, time, length * 1000, mods, size, {
-                    type: video_type, cs: cs, ar: ar, black: video_type == 'mp4', fps: fps, fill: video_type == 'mp4', noshadow: true, percent: percent, border: false, objects: objects
+                    type: video_type, cs: cs, ar: ar, black: video_type == 'mp4', score_id, fps: fps, fill: video_type == 'mp4', noshadow: true, percent: percent, border: false, objects: objects
                 }, (send, remove_path) => {
                     resolve({file: send, name: 'render.gif', remove_path});
                 });
