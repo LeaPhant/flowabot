@@ -52,11 +52,11 @@ module.exports = {
                     n50 = parseInt(argv[i]);
                 else if(argv[i].endsWith("m"))
                     nmiss = parseInt(argv[i]);
-                else if(argv[i].startsWith("od"))
+                else if(argv[i].toLowerCase().startsWith("od"))
                     od = parseFloat(argv[i].substr(2));
-                else if(argv[i].startsWith("ar"))
+                else if(argv[i].toLowerCase().startsWith("ar"))
                     ar = parseFloat(argv[i].substr(2));
-                else if(argv[i].startsWith("cs"))
+                else if(argv[i].toLowerCase().startsWith("cs"))
                     cs = parseFloat(argv[i].substr(2));
             }
 
