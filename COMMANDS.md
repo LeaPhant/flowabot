@@ -66,7 +66,7 @@ Returns BPM graph with DT for specific beatmap.
 ## !compare
 Search for best score on the last beatmap.
 
-**Variations**: `!compare`, ``!c`
+**Variations**: `!compare`, `!c`
 
 **Usage**: `!compare [username or * for all users] [+mods]`
 ### Examples:
@@ -90,7 +90,7 @@ Returns thinking emoji on all platforms.
 ## !emote
 Print one or multiple emotes the bot can use in chat.
 
-**Variations**: `!emote`, ``!e`
+**Variations**: `!emote`, `!e`
 
 **Usage**: `!emote <emote 1> [emote 2] [emote n]`
 ### Example:
@@ -210,7 +210,7 @@ Calculates pp on this beatmap with HD applied, 4 100s, 343 Combo and CS set to 2
 ## !recent
 Show recent score or pass.
 
-**Variations**: `!recent`, ``!rs`, ``!recentpass`, ``!rp`
+**Variations**: `!recent`, `!rs`, `!recentpass`, `!rp`
 
 **Usage**: `!recent [username]`
 ### Examples:
@@ -226,7 +226,7 @@ Returns your most recent pass.
 ## !render
 Render picture or gif of a beatmap at a specific time.
 
-**Variations**: `!render`, ``!frame`, ``!fail`
+**Variations**: `!render`, `!frame`, `!fail`
 
 **Usage**: `!render [beatmap url] [+mods] [AR8] [CS6] [strains/aim/speed/fail] [mp4] [120fps] [mm:ss] [4s]`
 ### Examples:
@@ -276,7 +276,7 @@ Returns aim strain graph for this beatmap.
 ## !top
 Show a specific top play.
 
-**Variations**: `!top`, ``!rb`, ``!recentbest`, ``!ob`, ``!oldbest`
+**Variations**: `!top`, `!rb`, `!recentbest`, `!ob`, `!oldbest`
 
 **Usage**: `!top [username]`
 ### Examples:
@@ -295,7 +295,7 @@ Returns your oldest top play (from your top 100).
 ## !uptime
 See how for long a Twitch channel has been live or for how long it hasn't been streaming.
 
-**Variations**: `!uptime`, ``!downtime`
+**Variations**: `!uptime`, `!downtime`
 
 **Usage**: `!uptime <twitch username>`
 ### Examples:

@@ -36,7 +36,7 @@ fs.readdir(commands_path, (err, items) => {
             output += `\n${command.description}`;
 
         if(command.command.length > 1)
-            output += `\n\n**Variations**: \`${config.prefix}${command.command.join('`, ``' + config.prefix)}\``;
+            output += `\n\n**Variations**: \`${config.prefix}${command.command.join('`, `' + config.prefix)}\``;
 
         output += `\n\n**Usage**: \`${config.prefix}${command.command[0]}`;
 
