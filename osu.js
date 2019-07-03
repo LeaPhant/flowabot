@@ -421,7 +421,7 @@ function getScore(recent_raw, cb){
         api.get('/get_user_best', { params: { u: recent_raw.user_id, limit: 100 } }),
         api.get('/get_scores', { params: { b: recent_raw.beatmap_id, limit: 100 } }),
         api.get('/get_scores', { params: { b: recent_raw.beatmap_id, u: recent_raw.user_id, mods: recent_raw.enabled_mods } }),
-        api.get('/get_user', { params: { u: recent_raw.user_id } });
+        api.get('/get_user', { params: { u: recent_raw.user_id } })
     ];
 
     Promise.all(requests).then(results => {
