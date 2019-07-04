@@ -1,5 +1,5 @@
 const {VM} = require('vm2');
-const fs = require('fs');
+const fs = require('fs-extra');
 
 const helper = require('../helper.js');
 

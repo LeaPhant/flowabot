@@ -1,5 +1,5 @@
 const axios = require('axios');
-const fs = require('fs');
+const fs = require('fs-extra');
 const helper = require('../helper.js');
 const Discord = require('discord.js');
 

@@ -1,6 +1,6 @@
 const { execFileSync } = require('child_process');
 const URL = require('url');
-const fs = require('fs');
+const fs = require('fs-extra');
 const path = require('path');
 const osu = require('../osu.js');
 const helper = require('../helper.js');

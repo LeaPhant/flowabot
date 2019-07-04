@@ -914,7 +914,7 @@ module.exports = {
             }
 
             file_path = `/tmp/frames/${rnd}`;
-            fs.mkdirSync(file_path, { recursive: true});
+            fs.ensureDirSync(file_path);
 
             let ffmpeg_args = [
                 '-f', 'image2', '-r', fps, '-s', size.join('x'), '-pix_fmt', 'rgba', '-c:v', 'rawvideo',

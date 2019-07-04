@@ -3,7 +3,7 @@ const math = require('mathjs');
 const lzma = require('lzma');
 const axios = require('axios');
 
-const fs = require('fs');
+const fs = require('fs-extra');
 const path = require('path');
 
 const helper = require('../helper.js');
@@ -427,7 +427,7 @@ function calculateUr(options, cb){
         }
 
         let replay_raw = Buffer.from(response.data.content, "base64");
-		fs.mkdirSync('/tmp/replays', { recursive: true });
+		fs.ensureDirSync('/tmp/replays');
 		fs.writeFileSync(`/tmp/replays/${options.score_id}`, replay_raw);
         let replay = {lastCursor: 0, replay_data: parseReplay(replay_raw)};
 

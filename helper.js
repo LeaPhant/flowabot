@@ -2,7 +2,7 @@ const LocalStorage = require('node-localstorage').LocalStorage;
 localStorage = new LocalStorage('./scratch');
 
 const moment = require('moment');
-const fs = require('fs');
+const fs = require('fs-extra');
 const path = require('path');
 const { execFileSync } = require('child_process');
 

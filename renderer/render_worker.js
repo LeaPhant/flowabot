@@ -1,6 +1,6 @@
 const { createCanvas } = require('canvas');
 const path = require('path');
-const fs = require('fs');
+const fs = require('fs-extra');
 
 process.on('message', obj => {
     let { PLAYFIELD_WIDTH, PLAYFIELD_HEIGHT, beatmap, start_time, end_time, time_frame, file_path, options, threads, current_frame, size, ctx } = obj;
