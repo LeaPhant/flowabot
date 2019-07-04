@@ -792,10 +792,10 @@ function processFrame(time, options){
 
             ctx.globalAlpha = 1;
 
-            if(options.fill)
+            //if(options.fill)
                 ctx.fillStyle = '#ed6161';
-            else
-                ctx.fillStyle = 'white';
+            //else
+            //    ctx.fillStyle = 'white';
 
             ctx.beginPath();
             ctx.arc(position[0], position[1], scale_multiplier * 13, 0, 2 * Math.PI, false);
@@ -908,10 +908,10 @@ module.exports = {
                 if(options.type == 'gif'){
                     for(let i = 0; i < image_data.length; i += 4){
                         if(image_data[i + 3] > 0){
-                            let scale = Math.round(image_data[i + 0] * image_data[i + 3] / 255);
-                            image_data[i] = scale;
-                            image_data[i + 1] = scale;
-                            image_data[i + 2] = scale;
+                            let scale = image_data[i + 3] / 255;
+                            image_data[i] = scale * image_data[i];
+                            image_data[i + 1] = scale * image_data[i + 1];
+                            image_data[i + 2] = scale * image_data[i + 2];
                             image_data[i + 3] = 255;
                         }
                     }
