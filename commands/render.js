@@ -162,7 +162,7 @@ module.exports = {
                     resolve({file: send, name: 'render.gif', remove_path});
                 });
             }else{
-                frame.get_frame(download_path, time, mods, [800, 600], {cs: cs, ar: ar, black: true, fill: true, percent: percent}, buf => {
+                frame.get_frame(download_path, time, mods, [800, 600], {cs: cs, ar: ar, score_id, black: true, fill: true, percent: percent}, buf => {
                     resolve({file: buf, name: 'frame.png'});
                 });
             }
