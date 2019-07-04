@@ -535,8 +535,6 @@ function prepareBeatmap(beatmap_path, mods, options, cb){
 
 module.exports = {
     get_frame: function(beatmap_path, time, enabled_mods, size, options, cb){
-        prepareCanvas(size);
-
         prepareBeatmap(beatmap_path, enabled_mods, options, () => {
             if(time == 0 && options.percent){
                 time = beatmap.hitObjects[Math.floor(options.percent * beatmap.hitObjects.length)].startTime - 2000;
