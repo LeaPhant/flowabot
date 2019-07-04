@@ -121,10 +121,21 @@ module.exports = {
         return "Couldn't find command.";
     },
 
+    validateBeatmap: beatmap_path => {
+        let file = fs.readFileSync(beatmap_path, 'utf8');
+        let lines = file.split("\n");
+        if(lines.length > 0 && !lines[0].startsWith('osu file format'))
+            return false;
+
+        return true;
+    },
+
     downloadBeatmap: beatmap_id => {
-        if(!fs.existsSync(path.resolve(config.osu_cache_path, `${beatmap_id}.osu`))){
-            execFileSync('curl', ['--silent', '--create-dirs', '-o', path.resolve(config.osu_cache_path, `${beatmap_id}.osu`), `https://osu.ppy.sh/osu/${beatmap_id}`]);
-            return true;
+        let beatmap_path = path.resolve(config.osu_cache_path, `${beatmap_id}.osu`);
+        if(!fs.existsSync(beatmap_path)){
+            execFileSync('curl', ['--silent', '--create-dirs', '-o', beatmap_path, `https://osu.ppy.sh/osu/${beatmap_id}`]);
+
+            return module.exports.validateBeatmap(beatmap_path);
         }else{
             return true;
         }

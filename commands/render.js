@@ -10,7 +10,7 @@ const config = require('../config.json');
 module.exports = {
     command: ['render', 'frame', 'fail'],
     description: "Render picture or gif of a beatmap at a specific time.",
-    usage: '[beatmap url] [+mods] [AR8] [CS6] [strains/aim/speed/fail] [mp4] [120fps] [mm:ss] [4s]',
+    usage: '[beatmap url] [+mods] [AR8] [CS6] [strains/aim/speed/fail] [mp4] [audio] [120fps] [mm:ss] [4s]',
     example: [
         {
             run: "render strains",
@@ -25,8 +25,8 @@ module.exports = {
             result: "Returns an image of the last beatmap at 1 minute and 5 seconds."
         },
         {
-            run: "render speed 10s",
-            result: "Returns a 10 second video of the streamiest part on the last beatmap."
+            run: "render speed 10s audio",
+            result: "Returns a 10 second video with sound of the streamiest part on the last beatmap."
         },
         {
             run: "render strains 120fps",
@@ -140,6 +140,9 @@ module.exports = {
                         console.log('downloading .osu file from', URL.format(download_url));
 
                     execFileSync('curl', ['--silent', '--create-dirs', '-o', download_path, URL.format(download_url)]);
+
+                    if(!helper.validateBeatmap(download_path))
+                        throw "invalid beatmap";
                 }catch(err){
                     helper.error(err);
                     reject("Couldn't download .osu file");

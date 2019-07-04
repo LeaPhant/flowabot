@@ -70,6 +70,9 @@ module.exports = {
                         console.log('downloading .osu file from', URL.format(download_url));
 
                     execFileSync('curl', ['--silent', '--create-dirs', '-o', download_path, URL.format(download_url)]);
+
+                    if(!helper.validateBeatmap(download_path))
+                        throw "invalid beatmap";
                 }catch(err){
                     helper.error(err);
                     reject("Couldn't download .osu file");
