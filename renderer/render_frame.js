@@ -1,16 +1,15 @@
 
 const osuBeatmapParser = require('osu-parser');
-const randomColor = require('randomcolor');
-const math = require('mathjs');
 const fs = require('fs-extra');
 const path = require('path');
 const lzma = require('lzma');
-const { execFile, execFileSync, fork } = require('child_process');
 const axios = require('axios');
+const { execFile, execFileSync, fork } = require('child_process');
 
 const MAX_SIZE = 8 * 1024 * 1024;
 
-const { createCanvas } = require('canvas');
+const PLAYFIELD_WIDTH = 512;
+const PLAYFIELD_HEIGHT = 384;
 
 let enabled_mods = ["HR"];
 
@@ -21,10 +20,6 @@ for(let i = 1; i <= 255; i++){
 
 const STACK_DISTANCE = 3;
 const OBJECT_RADIUS = 64;
-
-const PLAYFIELD_WIDTH = 512;
-const PLAYFIELD_HEIGHT = 384;
-const PLAYFIELD_PADDING = 85;
 
 const STACK_LENIENCE = 3;
 
@@ -118,16 +113,6 @@ function parseReplay(buf){
     return output_frames;
 }
 
-function getCursorAt(timestamp, replay){
-    while(replay.lastCursor < replay.replay_data.length && replay.replay_data[replay.lastCursor].offset <= timestamp){
-        replay.lastCursor++;
-    }
-
-    let current = replay.replay_data[replay.lastCursor - 1];
-    let next = replay.replay_data[replay.lastCursor];
-    return {current: current, next: next};
-}
-
 function downloadAudio(options, beatmap, audio_path){
     return new Promise((resolve, reject) => {
         if(options.type != 'mp4' || !options.audio){
@@ -137,9 +122,23 @@ function downloadAudio(options, beatmap, audio_path){
 
         console.log('downloading audio');
 
-        execFile('curl', ['-o', audio_path, `https://bloodcat.com/osu/a/${beatmap.BeatmapID}`], () => {
-            resolve(audio_path);
-            console.log('finished downloading audio');
+        axios.get(`https://bloodcat.com/osu/a/${beatmap.BeatmapID}`, {responseType: 'stream'}).then(response => {
+            if(Number(response.data.headers['content-length']) < 500){
+                reject();
+                return false;
+            }
+
+            let stream = response.data.pipe(fs.createWriteStream(audio_path));
+
+            stream.on('finish', () => {
+                resolve(audio_path);
+            });
+
+            stream.on('error', () => {
+                reject();
+            });
+        }).catch(() => {
+            reject();
         });
     });
 }
@@ -183,10 +182,6 @@ function binomialCoef(n, k){
 function vectorDistance(hitObject1, hitObject2){
     return Math.sqrt((hitObject2[0] - hitObject1[0]) * (hitObject2[0] - hitObject1[0])
         + (hitObject2[1] - hitObject1[1]) * (hitObject2[1] - hitObject1[1]));
-}
-
-function withinCircle(x, y, centerX,  centerY, radius){
-    return Math.pow((x - centerX), 2) + Math.pow((y - centerY), 2) < Math.pow(radius, 2);
 }
 
 function difficultyRange(difficulty, min, mid, max){
@@ -484,46 +479,7 @@ function processBeatmap(beatmap, enabled_mods){
     });
 }
 
-let canvas, ctx;
-
-var active_area_width;;
-var active_playfield_width, active_playfield_height, scale_multiplier;
-
 let beatmap, speed_multiplier;
-
-function resize(){
-    active_playfield_width = canvas.width * 0.7;
-    active_playfield_height = active_playfield_width * (3/4);
-    var position = playfieldPosition(0, 0);
-    var size = playfieldPosition(PLAYFIELD_WIDTH, PLAYFIELD_HEIGHT);
-    scale_multiplier = (size[0] - position[0]) / PLAYFIELD_WIDTH;
-}
-
-function playfieldPosition(x, y){
-    var ratio_x = x / PLAYFIELD_WIDTH;
-    var ratio_y = y / PLAYFIELD_HEIGHT;
-
-    return [
-        active_playfield_width * ratio_x + canvas.width * 0.15,
-        active_playfield_height * ratio_y + canvas.height * 0.15
-    ];
-}
-
-function variance(array, total){
-    let sum = 0;
-    array.forEach(a => sum += a);
-	var avg = sum / total;
-	var _array = array.map(function(a){ return Math.pow(a - avg, 2); });
-    let _sum = 0;
-    _array.forEach(a => _sum += a);
-	return Math.sqrt(_sum / total);
-}
-
-function prepareCanvas(size){
-    canvas = createCanvas(...size);
-    ctx = canvas.getContext("2d");
-    resize();
-}
 
 function prepareBeatmap(beatmap_path, mods, options, cb){
     osuBeatmapParser.parseFile(beatmap_path, function(err, _beatmap){
@@ -577,260 +533,6 @@ function prepareBeatmap(beatmap_path, mods, options, cb){
     });
 }
 
-function processFrame(time, options){
-    let hitObjectsOnScreen = [];
-
-    ctx.globalAlpha = 1;
-
-    beatmap.hitObjects.forEach(hitObject => {
-        if(time >= hitObject.startTime - beatmap.TimeFadein && hitObject.endTime - time > -200)
-            hitObjectsOnScreen.push(hitObject);
-    });
-
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    if(options.black){
-        ctx.fillStyle = 'black';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-    }
-
-    hitObjectsOnScreen.sort(function(a, b){ return a.startTime - b.startTime; });
-
-    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
-    ctx.lineWidth = 3 * scale_multiplier;
-    ctx.shadowColor = 'transparent';
-
-    hitObjectsOnScreen.forEach(function(hitObject, index){
-        if(index < hitObjectsOnScreen.length - 1){
-            let nextObject = hitObjectsOnScreen[index + 1];
-
-            if(isNaN(hitObject.endPosition) && isNaN(nextObject.position))
-                return false;
-
-            let distance = vectorDistance(hitObject.endPosition, nextObject.position);
-
-            if(time >= (nextObject.startTime - beatmap.TimeFadein) && time < (nextObject.startTime + beatmap.HitWindow50) && distance > 80){
-                let start_position = playfieldPosition(...hitObject.endPosition);
-                let end_position = playfieldPosition(...nextObject.position);
-
-                let progress_0 = nextObject.startTime - beatmap.TimeFadein
-
-                let a = progress_0;
-
-                progress_0 += time - progress_0;
-                let progress_1 = nextObject.startTime - beatmap.TimePreempt;
-
-                progress_1 -= a
-                progress_0 -= a;
-
-                let progress = Math.min(1, progress_0 / progress_1 * 2);
-
-                let v = [
-                    end_position[0] - start_position[0],
-                    end_position[1] - start_position[1]
-                ];
-
-                v[0] *= progress;
-                v[1] *= progress;
-
-
-                ctx.beginPath();
-                ctx.moveTo(...start_position);
-                ctx.lineTo(start_position[0] + v[0], start_position[1] + v[1]);
-                ctx.stroke();
-
-                //then shift x by cos(angle)*radius and y by sin(angle)*radius
-            }
-        }
-    });
-
-    hitObjectsOnScreen.reverse();
-
-    hitObjectsOnScreen.forEach(function(hitObject, index){
-        if(time < hitObject.startTime || hitObject.objectName != "circle" && time < hitObject.endTime){
-            let opacity = (time - (hitObject.startTime - beatmap.TimeFadein)) / (beatmap.TimeFadein - beatmap.TimePreempt);
-            let approachCircle = 1 - (time - (hitObject.startTime - beatmap.TimePreempt)) / beatmap.TimePreempt;
-            if(approachCircle < 0) approachCircle = 0;
-            if(opacity > 1) opacity = 1;
-            ctx.globalAlpha = opacity;
-            ctx.shadowBlur = 4 * scale_multiplier;
-            ctx.fillStyle = "rgba(40,40,40,0.2)";
-            let followpoint_dot;
-
-            if(hitObject.objectName == "slider"){
-
-                let render_dots = [];
-
-                for(let x = 0; x < hitObject.SliderDots.length; x += 20){
-                    render_dots.push(hitObject.SliderDots[x]);
-                }
-
-
-                ctx.lineWidth = 6 * scale_multiplier;
-                ctx.strokeStyle = "white";
-
-                ctx.beginPath();
-                ctx.lineCap = "round";
-                ctx.strokeStyle = 'rgba(255,255,255,0.2)';
-                ctx.shadowColor = 'transparent';
-                ctx.lineJoin = "round"
-
-                ctx.lineWidth = scale_multiplier * beatmap.Radius * 2;
-
-                render_dots.forEach(function(dot, index){
-                    var position = playfieldPosition(dot[0], dot[1]);
-                    if(index == 0){
-                        ctx.moveTo(position[0], position[1]);
-                    }else{
-                        ctx.lineTo(position[0], position[1]);
-                    }
-                });
-
-                ctx.stroke();
-
-                if(time >= hitObject.startTime && time <= hitObject.endTime){
-                    var currentTurn = Math.floor((time - hitObject.startTime) / (hitObject.duration / hitObject.repeatCount));
-                    var currentOffset = (time - hitObject.startTime) / (hitObject.duration / hitObject.repeatCount) - currentTurn;
-
-                    if(currentTurn % 2 == 0)
-                        followpoint_dot = hitObject.SliderDots[Math.floor(currentOffset * hitObject.SliderDots.length)];
-                    else
-                        followpoint_dot = hitObject.SliderDots[Math.floor((1 - currentOffset) * hitObject.SliderDots.length)];
-                }
-            }
-
-            if(hitObject.objectName != "spinner"){
-
-                if(!options.noshadow)
-                    ctx.shadowColor = "rgba(0,0,0,0.7)";
-
-                ctx.lineWidth = 6 * scale_multiplier;
-                ctx.beginPath();
-                ctx.strokeStyle = "rgba(255,255,255,0.85)";
-
-                var position = playfieldPosition(hitObject.position[0], hitObject.position[1]);
-
-                if(options.fill){
-                    ctx.beginPath();
-                    ctx.fillStyle = hitObject.Color;
-                    ctx.arc(position[0], position[1], scale_multiplier * beatmap.Radius, 0, 2 * Math.PI, false);
-                    ctx.fill();
-                }
-
-                ctx.beginPath();
-                ctx.arc(position[0], position[1], scale_multiplier * beatmap.Radius - ctx.lineWidth / 2, 0, 2 * Math.PI, false);
-                ctx.stroke();
-
-                ctx.fillStyle = 'white';
-                ctx.textBaseline = "middle";
-                ctx.textAlign = "center";
-
-                let fontSize = 16;
-                fontSize += 16 * (1 - (beatmap.CircleSize / 10));
-
-                fontSize *= scale_multiplier;
-
-                ctx.font = `${fontSize}px sans-serif`;
-                ctx.fillText(hitObject.ComboNumber, position[0], position[1]);
-
-                if(approachCircle > 0){
-                    ctx.strokeStyle = 'white';
-                    ctx.lineWidth = 2 * scale_multiplier;
-                    ctx.beginPath();
-                    var position = playfieldPosition(hitObject.position[0], hitObject.position[1]);
-                    ctx.arc(position[0], position[1], scale_multiplier * (beatmap.Radius + approachCircle * (beatmap.Radius * 2)), 0, 2 * Math.PI, false);
-                    ctx.stroke();
-                }
-
-                if(followpoint_dot){
-                    ctx.fillStyle = "rgba(255,255,255,0.3)";
-                    ctx.beginPath();
-                    var position = playfieldPosition(followpoint_dot[0], followpoint_dot[1]);
-                    ctx.arc(position[0], position[1], scale_multiplier * beatmap.Radius, 0, 2 * Math.PI, false);
-                    ctx.fill();
-                    ctx.fillStyle = "rgba(255,255,255,0.8)";
-                    ctx.beginPath();
-                    var position = playfieldPosition(followpoint_dot[0], followpoint_dot[1]);
-                    ctx.arc(position[0], position[1], scale_multiplier * (beatmap.Radius * 3), 0, 2 * Math.PI, false);
-                    ctx.stroke();
-                }
-
-            }
-        }else if(hitObject.startTime - time > -200){
-            if(hitObject.objectName != "spinner"){
-                let timeSince = Math.abs(hitObject.endTime - time) / 200;
-                let opacity = 1 - timeSince;
-                let sizeFactor = 1 + timeSince * 0.3;
-
-                ctx.globalAlpha = opacity;
-
-                if(!options.noshadow)
-                    ctx.shadowColor = "rgba(0,0,0,0.7)";
-
-                ctx.lineWidth = 6 * scale_multiplier;
-                ctx.beginPath();
-                ctx.strokeStyle = "rgba(255,255,255,0.85)";
-
-                var position = playfieldPosition(hitObject.position[0], hitObject.position[1]);
-
-                if(options.fill){
-                    ctx.beginPath();
-                    ctx.fillStyle = hitObject.Color;
-                    ctx.arc(position[0], position[1], sizeFactor * scale_multiplier * beatmap.Radius, 0, 2 * Math.PI, false);
-                    ctx.fill();
-                }
-
-                ctx.beginPath();
-                ctx.arc(position[0], position[1], sizeFactor * scale_multiplier * beatmap.Radius - ctx.lineWidth / 2, 0, 2 * Math.PI, false);
-                ctx.stroke();
-
-                ctx.fillStyle = 'white';
-                ctx.textBaseline = "middle";
-                ctx.textAlign = "center";
-
-                let fontSize = 16;
-                fontSize += 16 * (1 - (beatmap.CircleSize / 10));
-
-                fontSize *= scale_multiplier * sizeFactor;
-
-                ctx.font = `${fontSize}px sans-serif`;
-                ctx.fillText(hitObject.ComboNumber, position[0], position[1]);
-            }
-        }
-    });
-
-    if(beatmap.Replay){
-        let replay_point = getCursorAt(time, beatmap.Replay);
-
-        if(replay_point){
-            let { current } = replay_point;
-
-            let position = playfieldPosition(current.x, current.y);
-
-            ctx.globalAlpha = 1;
-
-            //if(options.fill)
-                ctx.fillStyle = '#ed6161';
-            //else
-            //    ctx.fillStyle = 'white';
-
-            ctx.beginPath();
-            ctx.arc(position[0], position[1], scale_multiplier * 13, 0, 2 * Math.PI, false);
-            ctx.fill();
-        }
-    }
-
-    if(options.border){
-        ctx.strokeStyle = "rgb(200,200,200)";
-        ctx.lineWidth = 1;
-        ctx.globalAlpha = 1;
-
-        var position = playfieldPosition(0, 0);
-        var size = playfieldPosition(PLAYFIELD_WIDTH, PLAYFIELD_HEIGHT);
-        ctx.strokeRect(position[0], position[1], size[0] - position[0], size[1] - position[1]);
-    }
-}
-
 module.exports = {
     get_frame: function(beatmap_path, time, enabled_mods, size, options, cb){
         prepareCanvas(size);
@@ -843,8 +545,18 @@ module.exports = {
                 time = Math.max(time, firstNonSpinner[0].startTime);
             }
 
-            processFrame(time, options);
-            cb(canvas.toBuffer());
+            let worker = fork(path.resolve(__dirname, 'render_worker.js'));
+
+            worker.on('message', buffer => {
+                cb(Buffer.from(buffer, 'base64'));
+            });
+
+            worker.send({
+                beatmap,
+                start_time: time,
+                options,
+                size
+            });
         });
     },
 
@@ -908,9 +620,14 @@ module.exports = {
 
             let bitrate = 500 * 1024;
 
-            if(actual_length > 200 * 1000){
-                crf = 26;
-                size = [300, 224];
+            if(actual_length > 160 * 1000 && actual_length < 210 * 1000)
+                size = [250, 262];
+            else if(actual_length >= 210 * 1000)
+                size = [180, 128];
+
+            if(actual_length > 360 * 1000){
+                actual_length = 360 * 1000;
+                max_time = time + actual_length;
             }
 
             file_path = `/tmp/frames/${rnd}`;
@@ -926,7 +643,7 @@ module.exports = {
             let audioPromise = downloadAudio(options, beatmap, audio_path);
 
             if(options.type == 'mp4')
-                bitrate = Math.min(bitrate, (0.8 * MAX_SIZE) * 8 / (actual_length / 1000) / 1024);
+                bitrate = Math.min(bitrate, (0.7 * MAX_SIZE) * 8 / (actual_length / 1000) / 1024);
 
             time_frame *= time_scale;
 
@@ -946,8 +663,6 @@ module.exports = {
 
             workers.forEach((worker, index) => {
                 worker.send({
-                    PLAYFIELD_WIDTH,
-                    PLAYFIELD_HEIGHT,
                     beatmap,
                     start_time: time + index * time_frame,
                     end_time: time + index * time_frame + time_scale * actual_length,

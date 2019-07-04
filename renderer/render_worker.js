@@ -2,8 +2,11 @@ const { createCanvas } = require('canvas');
 const path = require('path');
 const fs = require('fs-extra');
 
+const PLAYFIELD_WIDTH = 512;
+const PLAYFIELD_HEIGHT = 384;
+
 process.on('message', obj => {
-    let { PLAYFIELD_WIDTH, PLAYFIELD_HEIGHT, beatmap, start_time, end_time, time_frame, file_path, options, threads, current_frame, size, ctx } = obj;
+    let { beatmap, start_time, end_time, time_frame, file_path, options, threads, current_frame, size, ctx } = obj;
 
     function resize(){
         active_playfield_width = canvas.width * 0.7;
@@ -222,6 +225,21 @@ process.on('message', obj => {
                         ctx.stroke();
                     }
 
+                }else{
+                    ctx.strokeStyle = "white";
+                    ctx.globalAlpha = opacity;
+
+                    ctx.lineWidth = 10 * scale_multiplier;
+                    ctx.beginPath();
+                    var position = playfieldPosition(PLAYFIELD_WIDTH / 2, PLAYFIELD_HEIGHT / 2);
+                    ctx.arc(position[0], position[1], scale_multiplier * 240, 0, 2 * Math.PI, false);
+                    ctx.stroke();
+
+                    ctx.lineWidth = 10 * scale_multiplier;
+                    ctx.beginPath();
+                    var position = playfieldPosition(PLAYFIELD_WIDTH / 2, PLAYFIELD_HEIGHT / 2);
+                    ctx.arc(position[0], position[1], scale_multiplier * 30, 0, 2 * Math.PI, false);
+                    ctx.stroke();
                 }
             }else if(hitObject.startTime - time > -200){
                 if(hitObject.objectName != "spinner"){
@@ -302,28 +320,35 @@ process.on('message', obj => {
 
     prepareCanvas(size);
 
-    while(time < end_time){
-        processFrame(time, options);
+    if(end_time){
+        while(time < end_time){
+            processFrame(time, options);
 
-        let image_data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+            let image_data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
 
-        if(options.type == 'gif'){
-            for(let i = 0; i < image_data.length; i += 4){
-                if(image_data[i + 3] > 0){
-                    let scale = Math.round(image_data[i + 0] * image_data[i + 3] / 255);
-                    image_data[i] = scale;
-                    image_data[i + 1] = scale;
-                    image_data[i + 2] = scale;
-                    image_data[i + 3] = 255;
+            if(options.type == 'gif'){
+                for(let i = 0; i < image_data.length; i += 4){
+                    if(image_data[i + 3] > 0){
+                        let scale = Math.round(image_data[i + 0] * image_data[i + 3] / 255);
+                        image_data[i] = scale;
+                        image_data[i + 1] = scale;
+                        image_data[i + 2] = scale;
+                        image_data[i + 3] = 255;
+                    }
                 }
             }
+
+            fs.writeFileSync(path.resolve(file_path, `${current_frame}.rgba`), Buffer.from(image_data));
+
+            current_frame += threads;
+            time += time_frame;
         }
 
-        fs.writeFileSync(path.resolve(file_path, `${current_frame}.rgba`), Buffer.from(image_data));
+        process.exit(0);
+    }else{
+        processFrame(time, options);
 
-        current_frame += threads;
-        time += time_frame;
+        process.send(canvas.toBuffer().toString('base64'));
+        process.exit(0);
     }
-
-    process.exit(0);
 });
