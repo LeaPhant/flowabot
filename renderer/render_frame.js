@@ -979,7 +979,7 @@ module.exports = {
                                 console.log("couldn't resolve");
                             }).finally(() => {
                                 ffmpeg_args.push(
-                                    '-pix_fmt', 'yuv420p', '-c:v', 'libx264', '-b:v', `${bitrate}k`, '-preset', 'veryfast', `${file_path}/video.mp4`
+                                    '-pix_fmt', 'yuv420p', '-c:v', 'libx264', '-b:v', `${bitrate}k`, '-shortest', '-preset', 'veryfast', `${file_path}/video.mp4`
                                 );
 
                                 execFile('ffmpeg', ffmpeg_args, { shell: true }, err => {
