@@ -5,7 +5,8 @@ const math = require('mathjs');
 const fs = require('fs-extra');
 const path = require('path');
 const lzma = require('lzma');
-const { execFile, spawn } = require('child_process');
+const { execFile, execFileSync } = require('child_process');
+const axios = require('axios');
 
 const MAX_SIZE = 8 * 1024 * 1024;
 
@@ -857,7 +858,8 @@ module.exports = {
 
             length = Math.min(400 * 1000, length);
 
-            let time_max = Math.min(time + length, beatmap.hitObjects[beatmap.hitObjects.length - 1].endTime + 1500);
+            let start_time = time;
+            let time_max = Math.min(time + length + 1000, beatmap.hitObjects[beatmap.hitObjects.length - 1].endTime + 1500);
 
             let actual_length = time_max - time;
 
@@ -866,6 +868,14 @@ module.exports = {
             let fps = options.fps || 60;
 
             let i = 0;
+
+            let time_scale = 1;
+
+            if(enabled_mods.includes('DT'))
+                time_scale *= 1.5;
+
+            if(enabled_mods.includes('HT'))
+                time_scale *= 0.75;
 
             prepareCanvas(size);
 
@@ -891,14 +901,22 @@ module.exports = {
             file_path = `/tmp/frames/${rnd}`;
             fs.mkdirSync(file_path, { recursive: true});
 
+            let ffmpeg_args = [
+                '-f', 'image2', '-r', fps, '-s', size.join('x'), '-pix_fmt', 'rgba', '-c:v', 'rawvideo',
+                '-i', `${file_path}/%d.rgba`
+            ];
+
+            let audio_path = path.resolve(file_path, 'audio.mp3');
+
+            if(options.type == 'mp4' && options.audio){
+                execFileSync('curl', ['-o', audio_path, `https://bloodcat.com/osu/a/${beatmap.BeatmapID}`]);
+                ffmpeg_args.push('-ss', start_time / time_scale / 1000, '-i', audio_path, '-filter:a', `atempo=${time_scale}`);
+            }
+
             if(options.type == 'mp4')
                 bitrate = Math.min(bitrate, (0.8 * MAX_SIZE) * 8 / (actual_length / 1000) / 1024);
 
-            if(enabled_mods.includes('DT'))
-                time_frame *= 1.5;
-
-            if(enabled_mods.includes('HT'))
-                time_frame *= 0.75;
+            time_frame *= time_scale;
 
             while(time < time_max){
                 processFrame(time, options);
@@ -923,16 +941,11 @@ module.exports = {
                 time += time_frame;
             }
 
-            let ffmpeg_args = [
-                '-f', 'image2', '-r', fps, '-s', size.join('x'), '-pix_fmt', 'rgba', '-c:v', 'rawvideo',
-                '-i', `${file_path}/%d.rgba`,
-            ];
-
             if(options.type == 'gif')
                 ffmpeg_args.push(`${file_path}/video.gif`);
             else
                 ffmpeg_args.push(
-                    '-pix_fmt', 'yuv420p', '-c:v', 'libx264', '-b:v', `${bitrate}k`, '-preset', 'veryfast', '-an', `${file_path}/video.mp4`
+                    '-shortest', '-pix_fmt', 'yuv420p', '-c:v', 'libx264', '-b:v', `${bitrate}k`, '-preset', 'veryfast', `${file_path}/video.mp4`
                 );
 
             execFile('ffmpeg', ffmpeg_args, err => {
