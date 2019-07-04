@@ -40,7 +40,8 @@ module.exports = {
 
             let beatmap_id, beatmap_url, mods = [], time = 0,
             ar, cs, length = 0, percent = 0, custom_url = false,
-            size = [400, 300], type, objects, video_type = 'gif';
+            size = [400, 300], type, objects,
+            video_type = 'gif', audio = false;
 
             let score_id;
 
@@ -57,7 +58,7 @@ module.exports = {
 
             argv.slice(1).forEach(arg => {
                 if(arg.startsWith('+'))
-                    mods = arg.substr(1).match(/.{1,2}/g);
+                    mods = arg.substr(1).toUpperCase().match(/.{1,2}/g);
                 else if(/^([0-9]+)\:([0-9]+)\:([0-9]+)$/g.test(arg)){
                     let parts = arg.split(':');
                     if(parts.length > 2){
@@ -76,6 +77,9 @@ module.exports = {
                     length = 4;
                 }else if(arg == 'mp4'){
                     video_type = 'mp4';
+                }else if(arg == 'audio'){
+                    audio = true;
+                    video_type = 'mp4';
                 }else if(arg.endsWith('fps')){
                     let _fps = parseInt(arg);
                     if(!isNaN(_fps)){
@@ -86,9 +90,9 @@ module.exports = {
                     length = parseFloat(arg);
                 }else if(/^([0-9]+)$/g.test(arg)){
                     time += parseInt(arg) * 1000;
-                }else if(arg.startsWith('ar')){
+                }else if(arg.toLowerCase().startsWith('ar')){
                     ar = parseFloat(arg.substr(2));
-                }else if(arg.startsWith('cs')){
+                }else if(arg.toLowerCase().startsWith('cs')){
                     cs = parseFloat(arg.substr(2));
                 }else if(arg.startsWith('(') && arg.endsWith(')')){
                     objects = arg.substr(1, arg.length - 1).split(',').length;
@@ -157,7 +161,7 @@ module.exports = {
 
             if(length > 0 || objects){
                 frame.get_frames(download_path, time, length * 1000, mods, size, {
-                    type: video_type, cs: cs, ar: ar, black: video_type == 'mp4', score_id, fps: fps, fill: video_type == 'mp4', noshadow: true, percent: percent, border: false, objects: objects
+                    type: video_type, cs, ar, black: video_type == 'mp4', score_id, audio, fps, fill: video_type == 'mp4', noshadow: true, percent, border: false, objects
                 }, (send, remove_path) => {
                     resolve({file: send, name: 'render.gif', remove_path});
                 });
