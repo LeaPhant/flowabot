@@ -5,7 +5,7 @@ const math = require('mathjs');
 const fs = require('fs-extra');
 const path = require('path');
 const lzma = require('lzma');
-const { execFile, execFileSync } = require('child_process');
+const { execFile, execFileSync, fork } = require('child_process');
 const axios = require('axios');
 
 const MAX_SIZE = 8 * 1024 * 1024;
@@ -126,6 +126,22 @@ function getCursorAt(timestamp, replay){
     let current = replay.replay_data[replay.lastCursor - 1];
     let next = replay.replay_data[replay.lastCursor];
     return {current: current, next: next};
+}
+
+function downloadAudio(options, beatmap, audio_path){
+    return new Promise((resolve, reject) => {
+        if(options.type != 'mp4' || !options.audio){
+            reject();
+            return false;
+        }
+
+        console.log('downloading audio');
+
+        execFile('curl', ['-o', audio_path, `https://bloodcat.com/osu/a/${beatmap.BeatmapID}`], () => {
+            resolve(audio_path);
+            console.log('finished downloading audio');
+        });
+    });
 }
 
 function coordsOnBezier(pointArray, t){
@@ -859,6 +875,7 @@ module.exports = {
             length = Math.min(400 * 1000, length);
 
             let start_time = time;
+
             let time_max = Math.min(time + length + 1000, beatmap.hitObjects[beatmap.hitObjects.length - 1].endTime + 1500);
 
             let actual_length = time_max - time;
@@ -877,15 +894,13 @@ module.exports = {
             if(enabled_mods.includes('HT'))
                 time_scale *= 0.75;
 
-            prepareCanvas(size);
+            //prepareCanvas(size);
 
             if(!('type' in options))
                 options.type = 'gif';
 
             if(options.type == 'gif')
                 fps = 50;
-
-            console.log('fps', fps);
 
             let time_frame = 1000 / fps;
 
@@ -908,15 +923,76 @@ module.exports = {
 
             let audio_path = path.resolve(file_path, 'audio.mp3');
 
-            if(options.type == 'mp4' && options.audio){
-                execFileSync('curl', ['-o', audio_path, `https://bloodcat.com/osu/a/${beatmap.BeatmapID}`]);
-                ffmpeg_args.push('-ss', start_time / time_scale / 1000, '-i', audio_path, '-filter:a', `atempo=${time_scale}`);
-            }
+            let audioPromise = downloadAudio(options, beatmap, audio_path);
 
             if(options.type == 'mp4')
                 bitrate = Math.min(bitrate, (0.8 * MAX_SIZE) * 8 / (actual_length / 1000) / 1024);
 
             time_frame *= time_scale;
+
+            let workers = [];
+            let threads = require('os').cpus().length;
+
+            for(let i = 0; i < threads; i++){
+                workers.push(
+                    fork(path.resolve(__dirname, 'render_worker.js'))
+                );
+            }
+
+            let done = 0;
+
+            console.log('start_time', time);
+            console.log('time_max', time_max);
+
+            workers.forEach((worker, index) => {
+                worker.send({
+                    PLAYFIELD_WIDTH,
+                    PLAYFIELD_HEIGHT,
+                    beatmap,
+                    start_time: time + index * time_frame,
+                    end_time: time + index * time_frame + time_scale * actual_length,
+                    time_frame: time_frame * threads,
+                    file_path,
+                    options,
+                    threads,
+                    current_frame: index,
+                    size
+                });
+
+                worker.on('close', () => {
+                    done++;
+
+                    if(done == threads){
+                        if(options.type == 'gif'){
+                            ffmpeg_args.push(`${file_path}/video.gif`);
+
+                            execFile('ffmpeg', ffmpeg_args, err => {
+                                console.error(err);
+                                cb(`${file_path}/video.${options.type}`, file_path);
+                            });
+                        }else{
+                            console.log('resolving audio promise');
+                            Promise.resolve(audioPromise).then(audio_path => {
+                                console.log('promise resolved');
+                                ffmpeg_args.push('-ss', start_time / 1000, '-i', audio_path, '-filter:a', `"atempo=${time_scale},volume=0.7"`);
+                            }).catch(() => {
+                                console.log("couldn't resolve");
+                            }).finally(() => {
+                                ffmpeg_args.push(
+                                    '-pix_fmt', 'yuv420p', '-c:v', 'libx264', '-b:v', `${bitrate}k`, '-preset', 'veryfast', `${file_path}/video.mp4`
+                                );
+
+                                execFile('ffmpeg', ffmpeg_args, { shell: true }, err => {
+                                    console.error(err);
+                                    cb(`${file_path}/video.${options.type}`, file_path);
+                                });
+                            });
+                        }
+                    }
+                });
+            });
+
+            /*
 
             while(time < time_max){
                 processFrame(time, options);
@@ -951,7 +1027,7 @@ module.exports = {
             execFile('ffmpeg', ffmpeg_args, err => {
                 console.error(err);
                 cb(`${file_path}/video.${options.type}`, file_path);
-            });
+            });*/
         });
     }
 };
