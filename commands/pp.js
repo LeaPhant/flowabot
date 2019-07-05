@@ -2,6 +2,7 @@ const { execFileSync, execFile } = require('child_process');
 const fs = require('fs-extra');
 const path = require('path');
 const URL = require('url');
+const request = require('sync-request');
 
 const helper = require('../helper.js');
 const osu = require('../osu.js');
@@ -26,7 +27,7 @@ module.exports = {
         result: "Calculates pp on this beatmap with HD applied, 4 100s, 343 Combo and CS set to 2."
     },
     configRequired: ['pp_path', 'debug', 'osu_cache_path'],
-    call: obj => {
+    call: async obj => {
         return new Promise((resolve, reject) => {
             let { argv } = obj;
 
@@ -66,9 +67,14 @@ module.exports = {
                 try{
                     let download_url = URL.parse(beatmap_url);
                     download_path = `/tmp/${Math.floor(Math.random() * 1000000) + 1}.osu`;
-                    execFileSync('curl', ['--silent', '--create-dirs', '-o', download_path, URL.format(download_url)]);
+
+                    let response = request('GET', download_url);
+                    fs.writeFileSync(download_path, response.getBody());
+
+                    if(!helper.validateBeatmap(download_path))
+                        throw "invalid beatmap";
                 }catch(e){
-                    console.error(e);
+                    helper.error(e);
                 }
             }
 
@@ -80,7 +86,7 @@ module.exports = {
             let beatmap_path = download_path ? download_path : path.resolve(config.osu_cache_path, `${beatmap_id}.osu`);
 
             if(config.debug)
-                console.log(beatmap_path);
+                helper.log(beatmap_path);
 
             if(!helper.downloadBeatmap(beatmap_id)){
                 reject("Couldn't download beatmap");
@@ -106,7 +112,7 @@ module.exports = {
                 fs.writeFileSync(beatmap_path, beatmap_new);
 
                 if(config.debug)
-                    console.log(beatmap_path);
+                    helper.log(beatmap_path);
             }
 
             let args = [

@@ -34,7 +34,7 @@ client.on('ready', () => {
 
     rl.question('Server to upload the emotes to (server index): ', answer => {
         let index = Number(answer);
-        
+
         if(isNaN(index))
             throw "Input is not a number";
 

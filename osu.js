@@ -1,11 +1,13 @@
 const axios = require('axios');
 const moment = require('moment');
-const helper = require('./helper.js');
 const ojsama = require('ojsama');
 const path = require('path');
 const fs = require('fs-extra');
+
 const ur_calc = require('./renderer/ur.js');
 const frame = require('./renderer/render_frame.js');
+const helper = require('./helper.js');
+
 const highcharts = require('highcharts-export-server');
 const {execFileSync} = require('child_process');
 const { createCanvas } = require('canvas');
@@ -596,11 +598,11 @@ function getScore(recent_raw, cb){
             }
         }).catch(err => {
             cb('Map not in the database, maps that are too new don\'t work yet');
-            console.log(err);
+            helper.log(err);
             return;
         });
     }).catch(err => {
-        console.log(err);
+        helper.log(err);
     });
 }
 
@@ -664,7 +666,7 @@ function updateTrackedUsers(){
 												}
 											).then(() => {
 												helper.updateLastBeatmap(recent, channel.id, last_beatmap);
-											}).catch(console.error);
+											}).catch(helper.error);
                                     });
                                 });
                             }else{
@@ -677,7 +679,7 @@ function updateTrackedUsers(){
 												embed,
 												files: [{attachment: strains_bar, name: 'strains_bar.png'}]
 											})
-                                        .catch(console.error);
+                                        .catch(helper.error);
                                 });
                             }
                         });
@@ -867,9 +869,9 @@ module.exports = {
                     cb(output_message);
 
                     if(config.debug){
-                        console.log("Current pp: " + pp_full);
-                        console.log("Added pp: " + adding_pp + " -> " + (pp_no_bonus - pp_full).toFixed(1));
-                        console.log("Result: " + pp_no_bonus.toFixed(1));
+                        helper.log("Current pp: " + pp_full);
+                        helper.log("Added pp: " + adding_pp + " -> " + (pp_no_bonus - pp_full).toFixed(1));
+                        helper.log("Result: " + pp_no_bonus.toFixed(1));
                     }
 
                 }, 350);
@@ -884,8 +886,8 @@ module.exports = {
         if(!mods_array)
             var mods_array = [];
 
-        console.log(mods_string);
-        console.log(mods_array);
+        helper.log(mods_string);
+        helper.log(mods_array);
         var speed = 1, ar_multiplier = 1, ar, ar_ms;
 
         if(mods_array.indexOf("dt") > -1){
@@ -1056,7 +1058,7 @@ module.exports = {
     },
 
     get_recent: function(options, cb){
-        console.log(options);
+        helper.log(options);
         let limit = options.pass ? 50 : options.index;
 
         api.get('/get_user_recent', { params: { u: options.user, limit: limit } }).then(response => {
@@ -1229,7 +1231,7 @@ module.exports = {
     get_pp: function(options, cb){
         axios.get(`${config.beatmap_api}/b/${options.beatmap_id}`).then(response => {
             response = response.data;
-            console.log(response);
+            helper.log(response);
 
             let beatmap = response.beatmap;
 
@@ -1280,7 +1282,7 @@ module.exports = {
             if(!accuracies.includes(custom_acc))
                 accuracies.push(custom_acc);
 
-            console.log(custom_acc, '%');
+            helper.log(custom_acc, '%');
 
             accuracies = accuracies.sort((a, b) => a - b);
 
@@ -1353,7 +1355,7 @@ module.exports = {
             cb(null, embed);
         }).catch(e => {
             cb('Map not in the database, maps that are too new don\'t work yet');
-            console.error(e);
+            helper.error(e);
             return false;
         });
     },
@@ -1383,7 +1385,7 @@ module.exports = {
     },
 
     get_bpm_graph: function(osu_file_path, mods_string, cb){
-        console.log(osu_file_path);
+        helper.log(osu_file_path);
         try{
             let parser = new ojsama.parser().feed(fs.readFileSync(osu_file_path, 'utf8'));
 
@@ -1474,7 +1476,7 @@ module.exports = {
             });
         }catch(e){
             cb('An error occured creating the graph');
-            console.error(e);
+            helper.error(e);
             return;
         }
     },
@@ -1483,7 +1485,7 @@ module.exports = {
         api.get('/get_user', {params: {u: user}}).then(response => {
             response = response.data;
 
-			console.log(response);
+			helper.log(response);
 
 			if(response.length == 0){
 				cb("Couldn't find user");
@@ -1554,7 +1556,7 @@ module.exports = {
                 ]
             };
 
-            console.log(embed);
+            helper.log(embed);
 
             cb(null, embed);
         }).catch(err => {
@@ -1563,7 +1565,7 @@ module.exports = {
 			else
 	            cb("Couldn't reach osu!api");
 
-            console.error(err);
+            helper.error(err);
             return;
         });
     },
@@ -1710,7 +1712,7 @@ module.exports = {
                 map: map
             };
         }catch(e){
-            console.log(e);
+            helper.log(e);
 			return false;
         }
     },
@@ -1752,7 +1754,7 @@ module.exports = {
 			else
 				cb("Couldn't reach osu!api");
 
-			console.error(err);
+			helper.error(err);
 			return false;
         });
     },
@@ -1794,7 +1796,7 @@ module.exports = {
 			else
 				cb("Couldn't reach osu!api");
 
-			console.error(err);
+			helper.error(err);
 			return false;
         });
     },
@@ -1804,7 +1806,7 @@ module.exports = {
             let strains = this.get_strains(osu_file_path, mods_string, type);
             let {map, mods_array, max_strain_time_real} = strains;
 
-            console.log('max strain time', max_strain_time_real);
+            helper.log('max strain time', max_strain_time_real);
 
             let chosen_strains = strains.strains;
 
@@ -1875,7 +1877,7 @@ module.exports = {
                 if(err) cb('An error occured creating the graph')
                 else{
                     frame.get_frame(osu_file_path, max_strain_time_real - map.objects[0].time % 400, mods_array, [468, 351], {ar: ar, cs: cs}, output_frame => {
-                        Jimp.read(new Buffer(res.data, 'base64')).then(_graph => {
+                        Jimp.read(Buffer.from(res.data, 'base64')).then(_graph => {
                             Jimp.read(output_frame).then(_frame => {
                                 _graph.blit(_frame, 75, 20);
                                 _graph.getBufferAsync('image/png').then(buffer => {
@@ -1889,7 +1891,7 @@ module.exports = {
             });
         }catch(e){
             cb('An error occured creating the graph');
-            console.error(e);
+            helper.error(e);
             return;
         }
     }

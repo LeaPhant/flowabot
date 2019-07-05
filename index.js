@@ -8,7 +8,7 @@ const helper = require('./helper.js');
 
 const client = new Discord.Client({autoReconnect:true});
 
-client.on('error', console.error);
+client.on('error', helper.error);
 
 const config = require('./config.json');
 
@@ -179,7 +179,7 @@ function onMessage(msg){
     argv[0] = argv[0].substr(config.prefix.length);
 
     if(config.debug)
-        console.log(msg.author.username, ':', msg.content);
+        helper.log(msg.author.username, ':', msg.content);
 
     commands.forEach(command => {
         let check_command = checkCommand(msg, command);
@@ -219,7 +219,7 @@ function onMessage(msg){
                                 message.edit(edit_promise).catch(helper.error);
 
                             if(remove_path)
-                                fs.remove(remove_path, helper.error);
+                                fs.remove(remove_path, err => { if(err) helper.error });
                         });
                     }
                 }).catch(err => {

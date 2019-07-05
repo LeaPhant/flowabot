@@ -5,6 +5,7 @@ const moment = require('moment');
 const fs = require('fs-extra');
 const path = require('path');
 const { execFileSync } = require('child_process');
+const request = require('sync-request');
 
 const config = require('./config.json');
 
@@ -132,10 +133,20 @@ module.exports = {
 
     downloadBeatmap: beatmap_id => {
         let beatmap_path = path.resolve(config.osu_cache_path, `${beatmap_id}.osu`);
-        if(!fs.existsSync(beatmap_path)){
-            execFileSync('curl', ['--silent', '--create-dirs', '-o', beatmap_path, `https://osu.ppy.sh/osu/${beatmap_id}`]);
 
-            return module.exports.validateBeatmap(beatmap_path);
+        fs.ensureDirSync(path.dirname(beatmap_path));
+
+        if(!fs.existsSync(beatmap_path)){
+            try{
+                let response = request('GET', `https://osu.ppy.sh/osu/${beatmap_id}`);
+                fs.writeFileSync(beatmap_path, response.getBody());
+
+                return module.exports.validateBeatmap(beatmap_path);
+            }catch(e){
+                console.log(e);
+                return false;
+            }
+
         }else{
             return true;
         }

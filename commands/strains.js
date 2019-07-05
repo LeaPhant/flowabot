@@ -1,6 +1,8 @@
 const { execFileSync } = require('child_process');
 const URL = require('url');
 const path = require('path');
+const fs = require('fs-extra');
+const request = require('sync-request');
 
 const osu = require('../osu.js');
 const helper = require('../helper.js');
@@ -67,9 +69,10 @@ module.exports = {
                     download_path = `/tmp/${Math.floor(Math.random() * 1000000) + 1}.osu`;
 
                     if(config.debug)
-                        console.log('downloading .osu file from', URL.format(download_url));
+                        helper.log('downloading .osu file from', URL.format(download_url));
 
-                    execFileSync('curl', ['--silent', '--create-dirs', '-o', download_path, URL.format(download_url)]);
+                    let response = request('GET', download_url);
+                    fs.writeFileSync(download_path, response.getBody());
 
                     if(!helper.validateBeatmap(download_path))
                         throw "invalid beatmap";

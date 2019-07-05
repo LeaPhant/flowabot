@@ -220,7 +220,6 @@ function processBeatmap(beatmap, enabled_mods){
     while (end < 0)
       end += nObj;
     let stackThreshold = beatmap.TimeFadein * beatmap.StackLeniency;
-    // console.log("stack leniency:", stackLeniency);
 
     // reset stacking first
     for (let i = end; i >= start; --i)
@@ -471,7 +470,7 @@ function calculateUr(options, cb){
                     replayPoints = getCursorAt(time, replay);
                     currentReplayPoint = replayPoints.current;
                 }catch(e){
-                    console.log(e);
+                    helper.error(e);
                 }
 
                 if(currentReplayPoint.K1 && currentReplayPoint.K1 != previousKeyStateK1) currentPresses++;
@@ -552,8 +551,6 @@ function calculateUr(options, cb){
                 errorlate  = math.mean(latehits);
 
             cb(unstablerate);
-
-            //console.log(unstablerate, errorearly, errorlate);
         });
     });
 }

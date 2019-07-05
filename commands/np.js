@@ -148,7 +148,7 @@ module.exports = {
                 }
             }).catch(err => {
                 if(config.debug)
-                    console.error(err);
+                    helper.error(err);
 
                 reject('User not found');
             });

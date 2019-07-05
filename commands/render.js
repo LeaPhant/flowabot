@@ -2,6 +2,8 @@ const { execFileSync } = require('child_process');
 const URL = require('url');
 const fs = require('fs-extra');
 const path = require('path');
+const request = require('sync-request');
+
 const osu = require('../osu.js');
 const helper = require('../helper.js');
 const frame = require('../renderer/render_frame.js')
@@ -123,13 +125,13 @@ module.exports = {
             let download_path = path.resolve(config.osu_cache_path, `${beatmap_id}.osu`);
 
             if(config.debug)
-                console.log('render length', length);
+                helper.log('render length', length);
 
             if(length >= 10)
                 video_type = 'mp4';
 
             if(config.debug)
-                console.log('specified ar', ar);
+                helper.log('specified ar', ar);
 
             if(!beatmap_id || custom_url){
                 try{
@@ -137,9 +139,10 @@ module.exports = {
                     download_path = `/tmp/${Math.floor(Math.random() * 1000000) + 1}.osu`;
 
                     if(config.debug)
-                        console.log('downloading .osu file from', URL.format(download_url));
+                        helper.log('downloading .osu file from', URL.format(download_url));
 
-                    execFileSync('curl', ['--silent', '--create-dirs', '-o', download_path, URL.format(download_url)]);
+                    let response = request('GET', download_url);
+                    fs.writeFileSync(download_path, response.getBody());
 
                     if(!helper.validateBeatmap(download_path))
                         throw "invalid beatmap";
@@ -157,7 +160,7 @@ module.exports = {
 
             if(type == 'strains' || type == 'aim' || type == 'speed'){
                 if(config.debug)
-                    console.log('getting strains for mods', mods);
+                    helper.log('getting strains for mods', mods);
 
                 time = osu.get_strains(download_path, mods.join(''), type).max_strain_time_real - 2000;
             }
@@ -165,11 +168,17 @@ module.exports = {
             if(length > 0 || objects){
                 frame.get_frames(download_path, time, length * 1000, mods, size, {
                     type: video_type, cs, ar, black: video_type == 'mp4', score_id, audio, fps, fill: video_type == 'mp4', noshadow: true, percent, border: false, objects
-                }, (send, remove_path) => {
+                }, (err, send, remove_path) => {
+                    if(err)
+                        reject(err);
+
                     resolve({file: send, name: 'render.gif', remove_path});
                 });
             }else{
-                frame.get_frame(download_path, time, mods, [800, 600], {cs: cs, ar: ar, score_id, black: true, fill: true, percent: percent}, buf => {
+                frame.get_frame(download_path, time, mods, [800, 600], {cs: cs, ar: ar, score_id, black: true, fill: true, percent: percent}, (err, buf) => {
+                    if(err)
+                        reject(err);
+
                     resolve({file: buf, name: 'frame.png'});
                 });
             }
