@@ -209,7 +209,9 @@ function onMessage(msg){
                             delete response.remove_path;
                         }
 
-                        let message_promise = msg.channel.send(response);
+                        let message_promise = msg.channel.send(response).catch(err => {
+							msg.channel.send(`Couldn't run command: \`${err}\``);
+						});
 
                         Promise.all([message_promise, edit_promise]).then(responses => {
                             let message = responses[0];
