@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "start": "node index",
     "test": "echo \"Error: no test specified\" && exit 1",
     "commands": "node generate-commands-md"
   },
@@ -28,6 +29,7 @@
     "object-path": "^0.11.4",
     "ojsama": "^1.2.1",
     "osu-parser": "^0.3.3",
+    "readline-sync": "^1.4.9",
     "vm2": "^3.6.10"
   }
 }
