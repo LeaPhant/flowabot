@@ -1366,8 +1366,9 @@ module.exports = {
 	            beatmap_url = beatmap_url.substring(1, beatmap_url.length - 1);
 
 	        let beatmap_id;
-	        let _id_only = id_only;
-	        if(id_only === undefined) _id_only = false;
+
+	        if(id_only === undefined)
+				id_only = false;
 
 	        if(beatmap_url.includes("#osu/"))
 	            beatmap_id = parseInt(beatmap_url.split("#osu/").pop());

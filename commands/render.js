@@ -115,8 +115,6 @@ module.exports = {
                 }
             });
 
-            console.log(beatmap_promise);
-
             Promise.resolve(beatmap_promise).then(() => {
                 if(!(msg.channel.id in last_beatmap)){
                     reject(helper.commandHelp('render'));
@@ -159,7 +157,8 @@ module.exports = {
 
                     if(length > 0 || objects){
                         frame.get_frames(download_path, time, length * 1000, mods, size, {
-                            type: video_type, cs, ar, black: video_type == 'mp4', score_id, audio, fps, fill: video_type == 'mp4', noshadow: true, percent, border: false, objects
+                            type: video_type, cs, ar, black: video_type == 'mp4', score_id, audio, fps,
+                            fill: video_type == 'mp4', noshadow: true, percent, border: false, objects
                         }, (err, send, remove_path) => {
                             if(err)
                                 reject(err);
@@ -167,7 +166,9 @@ module.exports = {
                             resolve({file: send, name: 'render.gif', remove_path});
                         });
                     }else{
-                        frame.get_frame(download_path, time, mods, [800, 600], {cs: cs, ar: ar, score_id, black: true, fill: true, percent: percent}, (err, buf) => {
+                        frame.get_frame(download_path, time, mods, [800, 600], {
+                            cs: cs, ar: ar, score_id, black: true, fill: true, percent: percent
+                        }, (err, buf) => {
                             if(err)
                                 reject(err);
 
