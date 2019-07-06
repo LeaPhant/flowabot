@@ -17,26 +17,17 @@
     "diskusage": "^1.1.2",
     "ffmpeg-static": "^2.4.0",
     "fs-extra": "^8.1.0",
-    "gif-encoder": "^0.7.2",
     "highcharts-export-server": "^2.0.16",
     "jimp": "^0.6.0",
     "lzma": "^2.3.2",
     "mathjs": "^6.0.2",
     "moment": "^2.24.0",
     "moment-duration-format": "^2.2.2",
-    "moment-timezone": "^0.5.23",
-    "nan": "^2.14.0",
     "node-emoji": "^1.8.1",
     "node-localstorage": "^1.3.0",
-    "node-persist": "^2.1.0",
     "object-path": "^0.11.4",
     "ojsama": "^1.2.1",
     "osu-parser": "^0.3.3",
-    "oxford-dictionary": "^1.4.1",
-    "randomcolor": "^0.5.4",
-    "twitch-helix": "^1.0.7",
-    "url": "^0.11.0",
-    "vm2": "^3.6.10",
-    "ws": "^6.2.1"
+    "vm2": "^3.6.10"
   }
 }

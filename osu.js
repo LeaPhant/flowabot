@@ -10,7 +10,6 @@ const helper = require('./helper.js');
 
 const highcharts = require('highcharts-export-server');
 const {execFileSync} = require('child_process');
-const { createCanvas } = require('canvas');
 const Jimp = require('jimp');
 
 const MINUTE = 60 * 1000;
