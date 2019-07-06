@@ -18,6 +18,11 @@ module.exports = {
 
         emotes.forEach(emoteName => {
             let emote;
+            
+            if(emoteName.startsWith("<:") && emoteName.split(":").length > 1)
+                emoteName = emoteName.split(":")[1];
+                
+            console.log(emote);
 
             if(emoji.hasEmoji(emoteName))
                 emote = emoji.find(emoteName).emoji;
