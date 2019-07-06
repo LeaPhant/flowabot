@@ -430,127 +430,128 @@ function calculateUr(options, cb){
 		fs.writeFileSync(`/tmp/replays/${options.score_id}`, replay_raw);
         let replay = {lastCursor: 0, replay_data: parseReplay(replay_raw)};
 
-        if(!helper.downloadBeatmap(options.beatmap_id)){
-            return false;
-        }
 
-        osuBeatmapParser.parseFile(path.resolve(config.osu_cache_path, `${options.beatmap_id}.osu`), function (err, beatmap){
-            let {cs, ar, od} = calculate_csarod(beatmap.CircleSize, beatmap.ApproachRate, beatmap.OverallDifficulty, options.mods);
-            beatmap.CircleSize = cs;
-            beatmap.ApproachRate = ar;
-            beatmap.OverallDifficulty = od;
-            processBeatmap(beatmap, options.mods);
-            let hitObjectsOnScreen = [];
-            let alreadyAppeared = [];
-            let hitObjectIndex = 0;
-            let previousKeyStateK1 = false;
-            let previousKeyStateK2 = false;
-            let previousKeyStateM1 = false;
-            let previousKeyStateM2 = false;
-            let currentPresses = 0;
-            let currentReplayPoint = replay.replay_data[0];
-            let unstablerate = 0;
-            let errorearly = 0;
-            let errorlate = 0;
-            let allhits = [];
-            let allhitsraw = [];
-            let earlyhits = [];
-            let latehits = [];
-            let replayPoints = {};
-            let miss = 0;
+        helper.downloadBeatmap(options.beatmap_id)
+		.catch(helper.error)
+		.then(() => {
+	        osuBeatmapParser.parseFile(path.resolve(config.osu_cache_path, `${options.beatmap_id}.osu`), function (err, beatmap){
+	            let {cs, ar, od} = calculate_csarod(beatmap.CircleSize, beatmap.ApproachRate, beatmap.OverallDifficulty, options.mods);
+	            beatmap.CircleSize = cs;
+	            beatmap.ApproachRate = ar;
+	            beatmap.OverallDifficulty = od;
+	            processBeatmap(beatmap, options.mods);
+	            let hitObjectsOnScreen = [];
+	            let alreadyAppeared = [];
+	            let hitObjectIndex = 0;
+	            let previousKeyStateK1 = false;
+	            let previousKeyStateK2 = false;
+	            let previousKeyStateM1 = false;
+	            let previousKeyStateM2 = false;
+	            let currentPresses = 0;
+	            let currentReplayPoint = replay.replay_data[0];
+	            let unstablerate = 0;
+	            let errorearly = 0;
+	            let errorlate = 0;
+	            let allhits = [];
+	            let allhitsraw = [];
+	            let earlyhits = [];
+	            let latehits = [];
+	            let replayPoints = {};
+	            let miss = 0;
 
-            for(let i = 0; i < beatmap.hitObjects.length; i++)
-                if(beatmap.hitObjects[i].objectName == 'circle')
-                    beatmap.hitObjects[i].endTime = beatmap.hitObjects[i].startTime;
+	            for(let i = 0; i < beatmap.hitObjects.length; i++)
+	                if(beatmap.hitObjects[i].objectName == 'circle')
+	                    beatmap.hitObjects[i].endTime = beatmap.hitObjects[i].startTime;
 
-            let time = 0;
+	            let time = 0;
 
-            while(time <= beatmap.hitObjects[beatmap.hitObjects.length - 1].endTime){
-                try{
-                    replayPoints = getCursorAt(time, replay);
-                    currentReplayPoint = replayPoints.current;
-                }catch(e){
-                    helper.error(e);
-                }
+	            while(time <= beatmap.hitObjects[beatmap.hitObjects.length - 1].endTime){
+	                try{
+	                    replayPoints = getCursorAt(time, replay);
+	                    currentReplayPoint = replayPoints.current;
+	                }catch(e){
+	                    helper.error(e);
+	                }
 
-                if(currentReplayPoint.K1 && currentReplayPoint.K1 != previousKeyStateK1) currentPresses++;
-                if(currentReplayPoint.K2 && currentReplayPoint.K2 != previousKeyStateK2) currentPresses++;
-                if(currentReplayPoint.M1 && currentReplayPoint.M1 != previousKeyStateM1) currentPresses++;
-                if(currentReplayPoint.M2 && currentReplayPoint.M2 != previousKeyStateM2) currentPresses++;
+	                if(currentReplayPoint.K1 && currentReplayPoint.K1 != previousKeyStateK1) currentPresses++;
+	                if(currentReplayPoint.K2 && currentReplayPoint.K2 != previousKeyStateK2) currentPresses++;
+	                if(currentReplayPoint.M1 && currentReplayPoint.M1 != previousKeyStateM1) currentPresses++;
+	                if(currentReplayPoint.M2 && currentReplayPoint.M2 != previousKeyStateM2) currentPresses++;
 
-                previousKeyStateK1 = currentReplayPoint.K1;
-                previousKeyStateK2 = currentReplayPoint.K2;
-                previousKeyStateM1 = currentReplayPoint.M1;
-                previousKeyStateM2 = currentReplayPoint.M2;
+	                previousKeyStateK1 = currentReplayPoint.K1;
+	                previousKeyStateK2 = currentReplayPoint.K2;
+	                previousKeyStateM1 = currentReplayPoint.M1;
+	                previousKeyStateM2 = currentReplayPoint.M2;
 
-                if(beatmap.hitObjects[hitObjectIndex] != undefined && time >= beatmap.hitObjects[hitObjectIndex].startTime - beatmap.TimeFadein){
-                    hitObjectsOnScreen.push(beatmap.hitObjects[hitObjectIndex]);
-                    hitObjectIndex++;
-                }
+	                if(beatmap.hitObjects[hitObjectIndex] != undefined && time >= beatmap.hitObjects[hitObjectIndex].startTime - beatmap.TimeFadein){
+	                    hitObjectsOnScreen.push(beatmap.hitObjects[hitObjectIndex]);
+	                    hitObjectIndex++;
+	                }
 
-                hitObjectsOnScreen.sort(function(a, b){ return a.startTime - b.startTime; });
+	                hitObjectsOnScreen.sort(function(a, b){ return a.startTime - b.startTime; });
 
-                let hitRangeCircles = [];
+	                let hitRangeCircles = [];
 
 
-                for(var x = 0; x < hitObjectsOnScreen.length; x++){
-                    if(time >= hitObjectsOnScreen[x].startTime - beatmap.HitWindow50 && time <= hitObjectsOnScreen[x].startTime + beatmap.HitWindow50){
-                        hitObjectsOnScreen[x].masterIndex = x;
-                        if((hitObjectsOnScreen[x].objectName == "circle" || hitObjectsOnScreen[x].objectName == "slider") && !hitObjectsOnScreen[x].fadeOut) hitRangeCircles.push(hitObjectsOnScreen[x]);
-                    }
-                }
+	                for(var x = 0; x < hitObjectsOnScreen.length; x++){
+	                    if(time >= hitObjectsOnScreen[x].startTime - beatmap.HitWindow50 && time <= hitObjectsOnScreen[x].startTime + beatmap.HitWindow50){
+	                        hitObjectsOnScreen[x].masterIndex = x;
+	                        if((hitObjectsOnScreen[x].objectName == "circle" || hitObjectsOnScreen[x].objectName == "slider") && !hitObjectsOnScreen[x].fadeOut) hitRangeCircles.push(hitObjectsOnScreen[x]);
+	                    }
+	                }
 
-                hitRangeCircles.sort(function(a, b){ return a.startTime - b.startTime; });
+	                hitRangeCircles.sort(function(a, b){ return a.startTime - b.startTime; });
 
-                for(var x = currentPresses; x > 0; x--){
-                    let _currentPresses = currentPresses;
-                    currentPresses--;
-                    allhitsraw.push(currentReplayPoint.offset);
-                    if(hitRangeCircles.length > 0){
-                        if(withinCircle(currentReplayPoint.x, currentReplayPoint.y,
-                        hitRangeCircles[0].position[0], hitRangeCircles[0].position[1], beatmap.Radius)
-                        && !hitRangeCircles[0].hit
-                        ){
-                            hitRangeCircles[0].hit = true;
-                            let offsetraw = currentReplayPoint.offset - hitRangeCircles[0].startTime;
-                            let offset = Math.abs(offsetraw);
+	                for(var x = currentPresses; x > 0; x--){
+	                    let _currentPresses = currentPresses;
+	                    currentPresses--;
+	                    allhitsraw.push(currentReplayPoint.offset);
+	                    if(hitRangeCircles.length > 0){
+	                        if(withinCircle(currentReplayPoint.x, currentReplayPoint.y,
+	                        hitRangeCircles[0].position[0], hitRangeCircles[0].position[1], beatmap.Radius)
+	                        && !hitRangeCircles[0].hit
+	                        ){
+	                            hitRangeCircles[0].hit = true;
+	                            let offsetraw = currentReplayPoint.offset - hitRangeCircles[0].startTime;
+	                            let offset = Math.abs(offsetraw);
 
-                            if(offset <= beatmap.HitWindow50){
-                                allhits.push(offsetraw);
-                                if(offsetraw < 0) earlyhits.push(offsetraw);
-                                if(offsetraw >= 0) latehits.push(offsetraw);
-                            }
+	                            if(offset <= beatmap.HitWindow50){
+	                                allhits.push(offsetraw);
+	                                if(offsetraw < 0) earlyhits.push(offsetraw);
+	                                if(offsetraw >= 0) latehits.push(offsetraw);
+	                            }
 
-                            let masterIndex = hitRangeCircles[0].masterIndex;
+	                            let masterIndex = hitRangeCircles[0].masterIndex;
 
-                            hitObjectsOnScreen.splice(masterIndex, 1);
-                        }
-                    }
-                }
+	                            hitObjectsOnScreen.splice(masterIndex, 1);
+	                        }
+	                    }
+	                }
 
-                hitObjectsOnScreen.forEach(function(hitObject, index){
-                    if(time > hitObject.endTime + beatmap.HitWindow50){
-                        if(!hitObject.hit)
-                            miss++;
-                        hitObjectsOnScreen.splice(index, 1);
-                    }
-                });
+	                hitObjectsOnScreen.forEach(function(hitObject, index){
+	                    if(time > hitObject.endTime + beatmap.HitWindow50){
+	                        if(!hitObject.hit)
+	                            miss++;
+	                        hitObjectsOnScreen.splice(index, 1);
+	                    }
+	                });
 
-                hitObjectsOnScreen.reverse();
+	                hitObjectsOnScreen.reverse();
 
-                time = replayPoints.next.offset;
-            }
+	                time = replayPoints.next.offset;
+	            }
 
-            if(allhits.length > 0)
-                unstablerate = variance(allhits) * 10;
+	            if(allhits.length > 0)
+	                unstablerate = variance(allhits) * 10;
 
-            if(earlyhits.length > 0)
-                errorearly = math.mean(earlyhits);
+	            if(earlyhits.length > 0)
+	                errorearly = math.mean(earlyhits);
 
-            if(latehits.length > 0)
-                errorlate  = math.mean(latehits);
+	            if(latehits.length > 0)
+	                errorlate  = math.mean(latehits);
 
-            cb(unstablerate);
+	            cb(unstablerate);
+			});
         });
     });
 }

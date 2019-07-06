@@ -5,7 +5,7 @@ const moment = require('moment');
 const fs = require('fs-extra');
 const path = require('path');
 const { execFileSync } = require('child_process');
-const request = require('sync-request');
+const axios = require('axios');
 
 const config = require('./config.json');
 
@@ -131,27 +131,47 @@ module.exports = {
         return true;
     },
 
+    downloadFile: (file_path, url) => {
+        return new Promise((resolve, reject) => {
+            fs.ensureDirSync(path.dirname(file_path));
+
+            axios.get(url, {responseType: 'stream'}).then(response => {
+                let stream = response.data.pipe(fs.createWriteStream(file_path));
+
+                stream.on('finish', () => {
+                    if(!module.exports.validateBeatmap(file_path))
+                        reject("Couldn't download file");
+
+                    resolve();
+                });
+
+                stream.on('error', () => {
+                    reject("Couldn't download file");
+                });
+            }).catch(() => {
+                reject("Couldn't download file");
+            });
+        });
+    },
+
     downloadBeatmap: beatmap_id => {
-        let beatmap_path = path.resolve(config.osu_cache_path, `${beatmap_id}.osu`);
+        module.exports.log('downloading', beatmap_id);
+        return new Promise((resolve, reject) => {
+            let beatmap_path = path.resolve(config.osu_cache_path, `${beatmap_id}.osu`);
 
-        fs.ensureDirSync(path.dirname(beatmap_path));
+            fs.ensureDirSync(path.dirname(beatmap_path));
 
-        if(!fs.existsSync(beatmap_path)){
-            try{
-                let response = request('GET', `https://osu.ppy.sh/osu/${beatmap_id}`);
-                fs.writeFileSync(beatmap_path, response.getBody());
+            if(!fs.existsSync(beatmap_path)){
+                module.exports.downloadFile(beatmap_path, `https://osu.ppy.sh/osu/${beatmap_id}`).then(() => {
+                    if(!module.exports.validateBeatmap(beatmap_path))
+                        reject();
 
-                return module.exports.validateBeatmap(beatmap_path);
-            }catch(e){
-                console.log(e);
-                return false;
+                    resolve();
+                }).catch(reject);
+            }else{
+                resolve();
             }
-
-        }else{
-            return true;
-        }
-
-        return false;
+        });
     },
 
     emote: (emoteName, guild, client) => {

@@ -555,47 +555,47 @@ function getScore(recent_raw, cb){
                 return;
             }
 
-			helper.downloadBeatmap(recent_raw.beatmap_id);
+			helper.downloadBeatmap(recent_raw.beatmap_id).finally(() => {
+				let beatmap_path = path.resolve(config.osu_cache_path, `${recent_raw.beatmap_id}.osu`);
 
-			let beatmap_path = path.resolve(config.osu_cache_path, `${recent_raw.beatmap_id}.osu`);
+				let strains_bar;
 
-			let strains_bar;
+				if(fs.existsSync(beatmap_path)){
+					strains_bar = module.exports.get_strains_bar(beatmap_path, recent.mods.join(''), recent.fail_percent);
+					if(strains_bar)
+						recent.strains_bar = true;
+				}
 
-			if(fs.existsSync(beatmap_path)){
-				strains_bar = module.exports.get_strains_bar(beatmap_path, recent.mods.join(''), recent.fail_percent);
-				if(strains_bar)
-					recent.strains_bar = true;
-			}
+	            if(replay && fs.existsSync(beatmap_path)){
+	                let ur_promise = new Promise((resolve, reject) => {
+						helper.log('getting ur');
+	                    ur_calc.get_ur(
+	                        {
+	                            apikey: settings.api_key,
+	                            player: recent_raw.user_id,
+	                            beatmap_id: recent_raw.beatmap_id,
+	                            mods_enabled: recent_raw.enabled_mods,
+								score_id: recent.score_id,
+	                            mods: recent.mods
+	                        }, ur => {
+	                            recent.ur = ur;
 
-            if(replay && fs.existsSync(beatmap_path)){
-                let ur_promise = new Promise((resolve, reject) => {
-					helper.log('getting ur');
-                    ur_calc.get_ur(
-                        {
-                            apikey: settings.api_key,
-                            player: recent_raw.user_id,
-                            beatmap_id: recent_raw.beatmap_id,
-                            mods_enabled: recent_raw.enabled_mods,
-							score_id: recent.score_id,
-                            mods: recent.mods
-                        }, ur => {
-                            recent.ur = ur;
+	                            if(recent.mods.includes("DT"))
+	                                recent.cvur = ur / 1.5;
+	                            else if(recent.mods.includes("HT"))
+	                                recent.cvur = ur * 1.5;
 
-                            if(recent.mods.includes("DT"))
-                                recent.cvur = ur / 1.5;
-                            else if(recent.mods.includes("HT"))
-                                recent.cvur = ur * 1.5;
-
-                            resolve(recent);
-                        });
-                });
-                recent.ur = -1;
-                if(recent.mods.includes("DT") || recent.mods.includes("HT"))
-                    recent.cvur = -1;
-                cb(null, recent, strains_bar, ur_promise);
-            }else{
-                cb(null, recent, strains_bar);
-            }
+	                            resolve(recent);
+	                        });
+	                });
+	                recent.ur = -1;
+	                if(recent.mods.includes("DT") || recent.mods.includes("HT"))
+	                    recent.cvur = -1;
+	                cb(null, recent, strains_bar, ur_promise);
+	            }else{
+	                cb(null, recent, strains_bar);
+	            }
+			});
         }).catch(err => {
             cb('Map not in the database, maps that are too new don\'t work yet');
             helper.log(err);
@@ -1361,27 +1361,51 @@ module.exports = {
     },
 
     parse_beatmap_url: function(beatmap_url, id_only){
-        if(beatmap_url.startsWith('<') && beatmap_url.endsWith('>'))
-            beatmap_url = beatmap_url.substring(1, beatmap_url.length - 1);
+		return new Promise((resolve, reject) => {
+			if(beatmap_url.startsWith('<') && beatmap_url.endsWith('>'))
+	            beatmap_url = beatmap_url.substring(1, beatmap_url.length - 1);
 
-        let beatmap_id;
-        let _id_only = id_only;
-        if(id_only === undefined) _id_only = false;
+	        let beatmap_id;
+	        let _id_only = id_only;
+	        if(id_only === undefined) _id_only = false;
 
-        if(beatmap_url.includes("#osu/"))
-            beatmap_id = parseInt(beatmap_url.split("#osu/").pop());
-        else if(beatmap_url.includes("/b/"))
-            beatmap_id = parseInt(beatmap_url.split("/b/").pop());
-        else if(beatmap_url.includes("/osu/"))
-            beatmap_id = parseInt(beatmap_url.split("/osu/").pop());
-        else if(beatmap_url.includes("/beatmaps/"))
-            beatmap_id = parseInt(beatmap_url.split("/beatmaps/").pop());
-        else if(parseInt(beatmap_url) == beatmap_url && _id_only)
-            beatmap_id = parseInt(beatmap_url);
+	        if(beatmap_url.includes("#osu/"))
+	            beatmap_id = parseInt(beatmap_url.split("#osu/").pop());
+	        else if(beatmap_url.includes("/b/"))
+	            beatmap_id = parseInt(beatmap_url.split("/b/").pop());
+	        else if(beatmap_url.includes("/osu/"))
+	            beatmap_id = parseInt(beatmap_url.split("/osu/").pop());
+	        else if(beatmap_url.includes("/beatmaps/"))
+	            beatmap_id = parseInt(beatmap_url.split("/beatmaps/").pop());
+	        else if(parseInt(beatmap_url) == beatmap_url && _id_only)
+	            beatmap_id = parseInt(beatmap_url);
 
-		helper.downloadBeatmap(beatmap_id);
+			helper.downloadBeatmap(beatmap_id).finally(() => {
+				resolve(beatmap_id);
+			});
+		});
+    },
 
-        return beatmap_id;
+	parse_beatmap_url_sync: function(beatmap_url, id_only){
+			if(beatmap_url.startsWith('<') && beatmap_url.endsWith('>'))
+	            beatmap_url = beatmap_url.substring(1, beatmap_url.length - 1);
+
+	        let beatmap_id;
+	        let _id_only = id_only;
+	        if(id_only === undefined) _id_only = false;
+
+	        if(beatmap_url.includes("#osu/"))
+	            beatmap_id = parseInt(beatmap_url.split("#osu/").pop());
+	        else if(beatmap_url.includes("/b/"))
+	            beatmap_id = parseInt(beatmap_url.split("/b/").pop());
+	        else if(beatmap_url.includes("/osu/"))
+	            beatmap_id = parseInt(beatmap_url.split("/osu/").pop());
+	        else if(beatmap_url.includes("/beatmaps/"))
+	            beatmap_id = parseInt(beatmap_url.split("/beatmaps/").pop());
+	        else if(parseInt(beatmap_url) == beatmap_url && _id_only)
+	            beatmap_id = parseInt(beatmap_url);
+
+			return beatmap_id;
     },
 
     get_bpm_graph: function(osu_file_path, mods_string, cb){
@@ -1874,18 +1898,20 @@ module.exports = {
             };
 
             highcharts.export(highcharts_settings, (err, res) => {
-                if(err) cb('An error occured creating the graph')
+                if(err) cb('An error occured creating the graph');
                 else{
-                    frame.get_frame(osu_file_path, max_strain_time_real - map.objects[0].time % 400, mods_array, [468, 351], {ar: ar, cs: cs}, output_frame => {
-                        Jimp.read(Buffer.from(res.data, 'base64')).then(_graph => {
-                            Jimp.read(output_frame).then(_frame => {
-                                _graph.blit(_frame, 75, 20);
-                                _graph.getBufferAsync('image/png').then(buffer => {
-                                    cb(null, buffer);
-                                });
-                            });
-                        });
-
+                    frame.get_frame(osu_file_path, max_strain_time_real - map.objects[0].time % 400, mods_array, [468, 351], {ar: ar, cs: cs}, (err, output_frame) => {
+						if(err) cb(err);
+                        else{
+							Jimp.read(Buffer.from(res.data, 'base64')).then(_graph => {
+	                            Jimp.read(output_frame).then(_frame => {
+	                                _graph.blit(_frame, 75, 20);
+	                                _graph.getBufferAsync('image/png').then(buffer => {
+	                                    cb(null, buffer);
+	                                }).catch(helper.error);
+	                            }).catch(helper.error);
+	                        }).catch(helper.error);
+						}
                     });
                 }
             });

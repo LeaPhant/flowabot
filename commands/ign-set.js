@@ -14,12 +14,12 @@ module.exports = {
 
             let split = helper.splitWithTail(msg.content, ' ', 2);
 
-            if(split.length < 3){
+            if(split.length < 2){
                 reject(helper.commandHelp('ign-set'));
                 return false;
             }
 
-            let ign = split[2];
+            let ign = split[1];
             let user_id = msg.author.id;
 
             user_ign[user_id] = ign;

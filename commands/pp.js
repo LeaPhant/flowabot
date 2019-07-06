@@ -2,7 +2,6 @@ const { execFileSync, execFile } = require('child_process');
 const fs = require('fs-extra');
 const path = require('path');
 const URL = require('url');
-const request = require('sync-request');
 
 const helper = require('../helper.js');
 const osu = require('../osu.js');
@@ -33,7 +32,7 @@ module.exports = {
 
             let beatmap_url = argv[1];
             let mods = [];
-            let download_path;
+            let download_path, download_promise;
 
             let acc_percent, combo, n100, n50, nmiss, od, ar, cs;
 
@@ -61,132 +60,121 @@ module.exports = {
                     cs = parseFloat(argv[i].substr(2));
             }
 
-            let beatmap_id = osu.parse_beatmap_url(beatmap_url, true);
+            osu.parse_beatmap_url(beatmap_url, true).then(response => {
+                let beatmap_id = response;
 
-            if(!beatmap_id){
-                try{
+                if(!beatmap_id){
                     let download_url = URL.parse(beatmap_url);
                     download_path = `/tmp/${Math.floor(Math.random() * 1000000) + 1}.osu`;
 
-                    let response = request('GET', download_url);
-                    fs.writeFileSync(download_path, response.getBody());
-
-                    if(!helper.validateBeatmap(download_path))
-                        throw "invalid beatmap";
-                }catch(e){
-                    helper.error(e);
+                    download_promise = helper.downloadFile(download_path, download_url);
+                    download_promise.catch(reject);
                 }
-            }
 
-            if(beatmap_id === undefined && download_path === undefined){
-                reject('Invalid beatmap url');
-                return false;
-            }
-
-            let beatmap_path = download_path ? download_path : path.resolve(config.osu_cache_path, `${beatmap_id}.osu`);
-
-            if(config.debug)
-                helper.log(beatmap_path);
-
-            if(!helper.downloadBeatmap(beatmap_id)){
-                reject("Couldn't download beatmap");
-                return false;
-            }
-
-            if(!isNaN(cs) || !isNaN(ar) || !isNaN(od)){
-                let beatmap = fs.readFileSync(beatmap_path, 'utf8');
-                let beatmap_new = "";
-                let lines = beatmap.split("\n");
-                lines.forEach(function(line){
-                let _line = line;
-                if(!isNaN(ar) && line.startsWith("ApproachRate:"))
-                    _line = "ApproachRate:" + ar;
-                if(!isNaN(od) && line.startsWith("OverallDifficulty:"))
-                    _line = "OverallDifficulty:" + od;
-                if(!isNaN(cs) && line.startsWith("CircleSize:"))
-                    _line = "CircleSize:" + cs;
-
-                beatmap_new += _line + "\n";
-                });
-                beatmap_path = `/tmp/${Math.floor(Math.random() * 1000000) + 1}.osu`;
-                fs.writeFileSync(beatmap_path, beatmap_new);
-
-                if(config.debug)
-                    helper.log(beatmap_path);
-            }
-
-            let args = [
-                config.pp_path,
-                'simulate',
-                'osu'
-            ];
-
-            let args_diff = [
-                config.pp_path,
-                'difficulty'
-            ];
-
-            args.push(beatmap_path);
-
-            if(mods.length > 0){
-                mods.forEach(function(mod){
-                    args.push('-m', mod);
-                });
-            }
-
-            if(acc_percent)
-                args.push('-a', acc_percent);
-
-            if(combo)
-                args.push('-c', combo);
-
-            if(n100)
-                args.push('-G', n100);
-
-            if(n50)
-                args.push('-M', n50);
-
-            if(nmiss)
-                args.push('-X', nmiss);
-
-            execFile('dotnet', args, (err, stdout, stderr) => {
-                if(err || stderr){
-                    if(err){
-                        helper.error(err);
-                        reject(err);
+                Promise.resolve(download_promise).then(() => {
+                    if(beatmap_id === undefined && download_path === undefined){
+                        reject('Invalid beatmap url');
                         return false;
                     }
 
-                    let error = stderr.split("\n")[1];
-                    reject(error);
+                    let beatmap_path = download_path ? download_path : path.resolve(config.osu_cache_path, `${beatmap_id}.osu`);
 
-                    if(config.debug)
-                        helper.error(stderr);
+                    if(!isNaN(cs) || !isNaN(ar) || !isNaN(od)){
+                        let beatmap = fs.readFileSync(beatmap_path, 'utf8');
+                        let beatmap_new = "";
+                        let lines = beatmap.split("\n");
+                        lines.forEach(function(line){
+                        let _line = line;
+                        if(!isNaN(ar) && line.startsWith("ApproachRate:"))
+                            _line = "ApproachRate:" + ar;
+                        if(!isNaN(od) && line.startsWith("OverallDifficulty:"))
+                            _line = "OverallDifficulty:" + od;
+                        if(!isNaN(cs) && line.startsWith("CircleSize:"))
+                            _line = "CircleSize:" + cs;
 
-                    return false;
-                }else{
-                    let lines = stdout.split("\n");
+                        beatmap_new += _line + "\n";
+                        });
+                        beatmap_path = `/tmp/${Math.floor(Math.random() * 1000000) + 1}.osu`;
+                        fs.writeFileSync(beatmap_path, beatmap_new);
 
-                    let aim_pp, speed_pp, acc_pp, pp;
+                        if(config.debug)
+                            helper.log(beatmap_path);
+                    }
 
-                    lines.forEach(line => {
-                        if(line.startsWith('Aim'))
-                            aim_pp = parseLine(line, 2);
+                    let args = [
+                        config.pp_path,
+                        'simulate',
+                        'osu'
+                    ];
 
-                        if(line.startsWith('Speed'))
-                            speed_pp = parseLine(line, 2);
+                    let args_diff = [
+                        config.pp_path,
+                        'difficulty'
+                    ];
 
-                        if(line.startsWith('Accuracy'))
-                            acc_pp = parseLine(line, 2);
+                    args.push(beatmap_path);
 
-                        if(line.startsWith('pp'))
-                            pp = parseLine(line, 2);
+                    if(mods.length > 0){
+                        mods.forEach(function(mod){
+                            args.push('-m', mod);
+                        });
+                    }
+
+                    if(acc_percent)
+                        args.push('-a', acc_percent);
+
+                    if(combo)
+                        args.push('-c', combo);
+
+                    if(n100)
+                        args.push('-G', n100);
+
+                    if(n50)
+                        args.push('-M', n50);
+
+                    if(nmiss)
+                        args.push('-X', nmiss);
+
+                    execFile('dotnet', args, (err, stdout, stderr) => {
+                        if(err || stderr){
+                            if(err){
+                                helper.error(err);
+                                reject(err);
+                                return false;
+                            }
+
+                            let error = stderr.split("\n")[1];
+                            reject(error);
+
+                            if(config.debug)
+                                helper.error(stderr);
+
+                            return false;
+                        }else{
+                            let lines = stdout.split("\n");
+
+                            let aim_pp, speed_pp, acc_pp, pp;
+
+                            lines.forEach(line => {
+                                if(line.startsWith('Aim'))
+                                    aim_pp = parseLine(line, 2);
+
+                                if(line.startsWith('Speed'))
+                                    speed_pp = parseLine(line, 2);
+
+                                if(line.startsWith('Accuracy'))
+                                    acc_pp = parseLine(line, 2);
+
+                                if(line.startsWith('pp'))
+                                    pp = parseLine(line, 2);
+                            });
+
+                            let output = `\`\`\`\n${pp}pp (${aim_pp} aim pp, ${speed_pp} speed pp, ${acc_pp} acc pp)\`\`\``;
+
+                            resolve(output);
+                        }
                     });
-
-                    let output = `\`\`\`\n${pp}pp (${aim_pp} aim pp, ${speed_pp} speed pp, ${acc_pp} acc pp)\`\`\``;
-
-                    resolve(output);
-                }
+                });
             });
         });
     }

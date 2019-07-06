@@ -2,7 +2,6 @@ const { execFileSync } = require('child_process');
 const URL = require('url');
 const path = require('path');
 const fs = require('fs-extra');
-const request = require('sync-request');
 
 const osu = require('../osu.js');
 const helper = require('../helper.js');
@@ -31,7 +30,7 @@ module.exports = {
         return new Promise((resolve, reject) => {
             let { argv, msg, last_beatmap } = obj;
 
-            let beatmap_id, beatmap_url, mods = "", ar = 2, cs, custom_url = false, type;
+            let beatmap_id, beatmap_url, beatmap_promise, mods = "", ar = 2, cs, custom_url = false, type;
 
             argv.map(arg => arg.toLowerCase());
 
@@ -48,46 +47,44 @@ module.exports = {
                     type = 'speed';
                 }else{
                     beatmap_url = arg;
-                    beatmap_id = osu.parse_beatmap_url(beatmap_url);
-                    if(!beatmap_id) custom_url = true;
+                    beatmap_promise = osu.parse_beatmap_url(beatmap_url);
+                    beatmap_promise.then(response => {
+                        beatmap_id = response;
+                        if(!beatmap_id) custom_url = true;
+                    });
                 }
             });
 
-            if(!(msg.channel.id in last_beatmap)){
-                reject(helper.commandHelp('strains'))
-                return false;
-            }else if(!beatmap_id && !custom_url){
-                beatmap_id = last_beatmap[msg.channel.id].beatmap_id;
-                mods = last_beatmap[msg.channel.id].mods.join('');
-            }
+            Promise.resolve(beatmap_promise).finally(() => {
+                if(!(msg.channel.id in last_beatmap)){
+                    reject(helper.commandHelp('strains'))
+                    return false;
+                }else if(!beatmap_id && !custom_url){
+                    beatmap_id = last_beatmap[msg.channel.id].beatmap_id;
+                    download_promise = helper.downloadBeatmap(beatmap_id);
 
-            let download_path = path.resolve(config.osu_cache_path, `${beatmap_id}.osu`);
+                    mods = last_beatmap[msg.channel.id].mods.join('');
+                }
 
-            if(!beatmap_id || custom_url){
-                try{
+                let download_path = path.resolve(config.osu_cache_path, `${beatmap_id}.osu`);
+
+                if(!beatmap_id || custom_url){
                     let download_url = URL.parse(beatmap_url);
                     download_path = `/tmp/${Math.floor(Math.random() * 1000000) + 1}.osu`;
 
-                    if(config.debug)
-                        helper.log('downloading .osu file from', URL.format(download_url));
+                    download_promise = helper.downloadFile(download_path, download_url);
 
-                    let response = request('GET', download_url);
-                    fs.writeFileSync(download_path, response.getBody());
-
-                    if(!helper.validateBeatmap(download_path))
-                        throw "invalid beatmap";
-                }catch(err){
-                    helper.error(err);
-                    reject("Couldn't download .osu file");
-                    return false;
+                    download_promise.catch(reject);
                 }
-            }
 
-            osu.get_strains_graph(download_path, mods, cs, ar, type, (err, buf) => {
-               if(err)
-                   reject(err);
-               else
-                   resolve({file: buf, name: 'strains.png'});
+                Promise.resolve(download_promise).then(() => {
+                    osu.get_strains_graph(download_path, mods, cs, ar, type, (err, buf) => {
+                       if(err)
+                           reject(err);
+                       else
+                           resolve({file: buf, name: 'strains.png'});
+                    });
+                });
             });
         });
     }

@@ -2,7 +2,6 @@ const { execFileSync } = require('child_process');
 const URL = require('url');
 const fs = require('fs-extra');
 const path = require('path');
-const request = require('sync-request');
 
 const osu = require('../osu.js');
 const helper = require('../helper.js');
@@ -40,10 +39,10 @@ module.exports = {
         return new Promise((resolve, reject) => {
             let { argv, msg, last_beatmap } = obj;
 
-            let beatmap_id, beatmap_url, mods = [], time = 0,
+            let beatmap_id, beatmap_url, beatmap_promise, mods = [], time = 0,
             ar, cs, length = 0, percent = 0, custom_url = false,
             size = [400, 300], type, objects,
-            video_type = 'gif', audio = false;
+            video_type = 'gif', audio = false, download_promise;
 
             let score_id;
 
@@ -106,82 +105,77 @@ module.exports = {
                 }else{
                     if(arg.startsWith('http://') || arg.startsWith('https://')){
                         beatmap_url = arg;
-                        beatmap_id = osu.parse_beatmap_url(beatmap_url);
-                        if(!beatmap_id) custom_url = true;
+                        beatmap_promise = osu.parse_beatmap_url(beatmap_url);
+                        beatmap_promise.then(response => {
+                            beatmap_id = response;
+                            if(!beatmap_id) custom_url = true;
+                        });
+
                     }
                 }
             });
 
-            if(!(msg.channel.id in last_beatmap)){
-                reject(helper.commandHelp('render'));
-                return false;
-            }else if(!beatmap_id && !custom_url){
-                beatmap_id = last_beatmap[msg.channel.id].beatmap_id;
-                mods = last_beatmap[msg.channel.id].mods;
-                if(last_beatmap[msg.channel.id].score_id)
-                    ({ score_id } = last_beatmap[msg.channel.id]);
-            }
+            console.log(beatmap_promise);
 
-            let download_path = path.resolve(config.osu_cache_path, `${beatmap_id}.osu`);
+            Promise.resolve(beatmap_promise).then(() => {
+                if(!(msg.channel.id in last_beatmap)){
+                    reject(helper.commandHelp('render'));
+                    return false;
+                }else if(!beatmap_id && !custom_url){
+                    beatmap_id = last_beatmap[msg.channel.id].beatmap_id;
+                    download_promise = helper.downloadBeatmap(beatmap_id);
 
-            if(config.debug)
-                helper.log('render length', length);
+                    mods = last_beatmap[msg.channel.id].mods;
+                    if(last_beatmap[msg.channel.id].score_id)
+                        ({ score_id } = last_beatmap[msg.channel.id]);
+                }
 
-            if(length >= 10)
-                video_type = 'mp4';
+                let download_path = path.resolve(config.osu_cache_path, `${beatmap_id}.osu`);
 
-            if(config.debug)
-                helper.log('specified ar', ar);
+                if(config.debug)
+                    helper.log('render length', length);
 
-            if(!beatmap_id || custom_url){
-                try{
+                if(length >= 10)
+                    video_type = 'mp4';
+
+                if(config.debug)
+                    helper.log('specified ar', ar);
+
+                if(!beatmap_id || custom_url){
                     let download_url = URL.parse(beatmap_url);
                     download_path = `/tmp/${Math.floor(Math.random() * 1000000) + 1}.osu`;
 
-                    if(config.debug)
-                        helper.log('downloading .osu file from', URL.format(download_url));
-
-                    let response = request('GET', download_url);
-                    fs.writeFileSync(download_path, response.getBody());
-
-                    if(!helper.validateBeatmap(download_path))
-                        throw "invalid beatmap";
-                }catch(err){
-                    helper.error(err);
-                    reject("Couldn't download .osu file");
-                    return false;
+                    download_promise = helper.downloadFile(download_path, download_url);
+                    download_promise.catch(reject);
                 }
-            }else{
-                if(!helper.downloadBeatmap(beatmap_id)){
-                    reject("Couldn't download beatmap");
-                    return false;
-                }
-            }
 
-            if(type == 'strains' || type == 'aim' || type == 'speed'){
-                if(config.debug)
-                    helper.log('getting strains for mods', mods);
+                Promise.resolve(download_promise).then(() => {
+                    if(type == 'strains' || type == 'aim' || type == 'speed'){
+                        if(config.debug)
+                            helper.log('getting strains for mods', mods);
 
-                time = osu.get_strains(download_path, mods.join(''), type).max_strain_time_real - 2000;
-            }
+                        time = osu.get_strains(download_path, mods.join(''), type).max_strain_time_real - 2000;
+                    }
 
-            if(length > 0 || objects){
-                frame.get_frames(download_path, time, length * 1000, mods, size, {
-                    type: video_type, cs, ar, black: video_type == 'mp4', score_id, audio, fps, fill: video_type == 'mp4', noshadow: true, percent, border: false, objects
-                }, (err, send, remove_path) => {
-                    if(err)
-                        reject(err);
+                    if(length > 0 || objects){
+                        frame.get_frames(download_path, time, length * 1000, mods, size, {
+                            type: video_type, cs, ar, black: video_type == 'mp4', score_id, audio, fps, fill: video_type == 'mp4', noshadow: true, percent, border: false, objects
+                        }, (err, send, remove_path) => {
+                            if(err)
+                                reject(err);
 
-                    resolve({file: send, name: 'render.gif', remove_path});
+                            resolve({file: send, name: 'render.gif', remove_path});
+                        });
+                    }else{
+                        frame.get_frame(download_path, time, mods, [800, 600], {cs: cs, ar: ar, score_id, black: true, fill: true, percent: percent}, (err, buf) => {
+                            if(err)
+                                reject(err);
+
+                            resolve({file: buf, name: 'frame.png'});
+                        });
+                    }
                 });
-            }else{
-                frame.get_frame(download_path, time, mods, [800, 600], {cs: cs, ar: ar, score_id, black: true, fill: true, percent: percent}, (err, buf) => {
-                    if(err)
-                        reject(err);
-
-                    resolve({file: buf, name: 'frame.png'});
-                });
-            }
+            });
         });
     }
 };

@@ -28,6 +28,8 @@ module.exports = {
 
             let score_user = helper.getUsername(argv, msg, user_ign);
 
+            let beatmap_promise;
+
             let index = 1;
             let match = argv[0].match(/\d+/);
             let _index = match > 0 ? match[0] : 1;
@@ -42,7 +44,7 @@ module.exports = {
                     options.mods = arg.toUpperCase().substr(1).match(/.{1,2}/g);
                 if(arg == '*')
                     score_user = '*';
-                let b =  osu.parse_beatmap_url(arg, false);
+                let b = osu.parse_beatmap_url_sync(arg, false);
                 if(b)
                     options.beatmap_id = b;
             });
