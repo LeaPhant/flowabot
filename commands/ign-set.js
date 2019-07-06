@@ -22,6 +22,11 @@ module.exports = {
             let ign = split[1];
             let user_id = msg.author.id;
 
+            if(ign.length == 0){
+                reject(helper.commandHelp('ign-set'));
+                return false;
+            }
+
             user_ign[user_id] = ign;
             helper.setItem('user_ign', JSON.stringify(user_ign));
 
