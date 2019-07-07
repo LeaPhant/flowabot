@@ -461,11 +461,12 @@ function getScore(recent_raw, cb){
         }, recent);
 
         if(best_score){
-			recent.score_id = best_score.score_id;
-            if(compareScores(best_score, recent_raw))
+            if(compareScores(best_score, recent_raw)){
                 replay = Number(best_score.replay_available);
-            else
+				recent.score_id = best_score.score_id;
+            }else{
                 recent.unsubmitted = true;
+			}
         }
 
         axios.get(`${config.beatmap_api}/b/${recent.beatmap_id}`).then(response => {
