@@ -155,7 +155,6 @@ module.exports = {
     },
 
     downloadBeatmap: beatmap_id => {
-        module.exports.log('downloading', beatmap_id);
         return new Promise((resolve, reject) => {
             let beatmap_path = path.resolve(config.osu_cache_path, `${beatmap_id}.osu`);
 
