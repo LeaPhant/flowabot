@@ -4,6 +4,8 @@ const ojsama = require('ojsama');
 const path = require('path');
 const fs = require('fs-extra');
 
+const { createCanvas } = require('canvas');
+
 const ur_calc = require('./renderer/ur.js');
 const frame = require('./renderer/render_frame.js');
 const helper = require('./helper.js');
@@ -451,7 +453,6 @@ function getScore(recent_raw, cb){
         }
 
         recent = Object.assign({
-			score_id: best_score.score_id,
             pb: pb,
             lb: lb,
             username: user.username,
@@ -460,6 +461,7 @@ function getScore(recent_raw, cb){
         }, recent);
 
         if(best_score){
+			recent.score_id = best_score.score_id;
             if(compareScores(best_score, recent_raw))
                 replay = Number(best_score.replay_available);
             else
@@ -817,7 +819,7 @@ module.exports = {
                 }
 
                 if(beatmap){
-                    if(isNumeric(beatmap)){
+                    if(Number.isInteger(Number(beatmap))){
                         let index = findWithAttr(pp_array, "beatmap_id", beatmap);
                         if(index < 0){
                             cb("https://osu.ppy.sh/b/" + beatmap + ": beatmap not found in top scores");
