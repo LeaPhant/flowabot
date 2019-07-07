@@ -9,6 +9,7 @@ const disk = require('diskusage');
 
 const { execFile, fork } = require('child_process');
 
+const config = require('../config.json');
 const helper = require('../helper.js');
 
 const MAX_SIZE = 8 * 1024 * 1024;
@@ -187,6 +188,11 @@ function binomialCoef(n, k){
 function vectorDistance(hitObject1, hitObject2){
     return Math.sqrt((hitObject2[0] - hitObject1[0]) * (hitObject2[0] - hitObject1[0])
         + (hitObject2[1] - hitObject1[1]) * (hitObject2[1] - hitObject1[1]));
+}
+
+function vectorDistanceSquared(hitObject1, hitObject2){
+    return (hitObject2[0] - hitObject1[0]) * (hitObject2[0] - hitObject1[0])
+        + (hitObject2[1] - hitObject1[1]) * (hitObject2[1] - hitObject1[1]);
 }
 
 function difficultyRange(difficulty, min, mid, max){
@@ -454,7 +460,7 @@ function processBeatmap(beatmap, enabled_mods){
                 for(var x = 0; x <= 1; x += 0.001){
                     var slider_dot = coordsOnBezier(part, x);
                     if(last_slider_dot){
-                        if(vectorDistance(slider_dot, last_slider_dot) >= 0.1){
+                        if(vectorDistanceSquared(slider_dot, last_slider_dot) >= 0.01){
                             slider_dots.push(slider_dot);
                             last_slider_dot = slider_dot;
                         }
@@ -523,15 +529,11 @@ function prepareBeatmap(beatmap_path, mods, options, cb){
             helper.log('score has no replay');
         }
 
-        helper.log('ar option', options.ar);
-
         if(!isNaN(options.cs) && !(options.cs === undefined))
             beatmap.CircleSize = options.cs;
 
         if(!isNaN(options.ar) && !(options.ar === undefined))
             beatmap.ApproachRate = options.ar;
-
-        helper.log('AR', beatmap.ApproachRate);
 
         processBeatmap(beatmap, mods);
         cb();
@@ -564,7 +566,13 @@ module.exports = {
     },
 
     get_frames: function(beatmap_path, time, length, enabled_mods, size, options, cb){
+        if(config.debug)
+            console.time('process beatmap');
+
         prepareBeatmap(beatmap_path, enabled_mods, options, () => {
+            if(config.debug)
+                console.timeEnd('process beatmap');
+
             if(time == 0 && options.percent){
                 time = beatmap.hitObjects[Math.floor(options.percent * beatmap.hitObjects.length)].startTime - 2000;
             }else if(options.objects){
@@ -616,8 +624,6 @@ module.exports = {
                 fps = 50;
 
             let time_frame = 1000 / fps;
-
-            helper.log('time frame', time_frame);
 
             let bitrate = 500 * 1024;
 
@@ -675,8 +681,8 @@ module.exports = {
 
                 let done = 0;
 
-                helper.log('start_time', time);
-                helper.log('time_max', time_max);
+                if(config.debug)
+                    console.time('render beatmap');
 
                 workers.forEach((worker, index) => {
                     worker.send({
@@ -695,12 +701,20 @@ module.exports = {
                         done++;
 
                         if(done == threads){
+                            if(config.debug){
+                                console.timeEnd('render beatmap');
+                                console.time('encode video');
+                            }
+
                             if(options.type == 'gif'){
                                 ffmpeg_args.push(`${file_path}/video.gif`);
 
                                 execFile(ffmpeg.path, ffmpeg_args, err => {
                                     if(err)
                                         helper.error(err);
+
+                                    if(config.debug)
+                                        console.timeEnd('encode video');
 
                                     cb(null, `${file_path}/video.${options.type}`, file_path);
                                 });
@@ -717,6 +731,9 @@ module.exports = {
                                     execFile(ffmpeg.path, ffmpeg_args, { shell: true }, err => {
                                         if(err)
                                             helper.error(err);
+
+                                        if(config.debug)
+                                            console.timeEnd('encode video');
 
                                         cb(null, `${file_path}/video.${options.type}`, file_path);
                                     });
