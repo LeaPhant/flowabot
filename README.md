@@ -21,7 +21,7 @@
 
 <p align="center"><img src="https://i.imgur.com/d3FlFMD.gif"></img></p>
 
-<h3 align="center">Get a graph with the hardest parts of the beatmap</h3>
+<h3 align="center">Get a graph with the hardest parts of a beatmap</h3>
 
 <p align="center"><img src="https://i.imgur.com/C2dDkA5.png"></img></p>
 
