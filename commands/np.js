@@ -135,7 +135,6 @@ module.exports = {
                             url: track.image[2]["#text"]
                         },
                         title: `**${track.artist["#text"]}** – ${track.name}`,
-                        description: `⠀\nAlbum: **${track.album["#text"]}**`,
                         url: track.url,
                         author: {
                             name: user.name,
@@ -143,6 +142,9 @@ module.exports = {
                             icon_url: user.image["0"]["#text"]
                         }
                     };
+                    
+                    if(track.album["#text"].length > 0)
+                        embed.description = `⠀\nAlbum: **${track.album["#text"]}**`
 
                     resolve({ embed: embed });
                 }
