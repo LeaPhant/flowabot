@@ -31,7 +31,7 @@ module.exports = {
                 },
                 {
                     name: "Prefix",
-                    value: `The command prefix on this server is \`${config.prefix}\``
+                    value: `The command prefix on this server is \`${config.prefix}\`.`
                 }
             ]
         };
