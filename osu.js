@@ -681,7 +681,9 @@ function updateTrackedUsers(){
 												embed,
 												files: [{attachment: strains_bar, name: 'strains_bar.png'}]
 											})
-                                        .catch(helper.error);
+										.then(() => {
+											helper.updateLastBeatmap(recent, channel.id, last_beatmap);
+										}).catch(helper.error);
                                 });
                             }
                         });
