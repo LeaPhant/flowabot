@@ -2,13 +2,14 @@
 ### Table of contents
 - [!addpp](#addpp)
 - [!ar](#ar)
+- [!bmi](#bmi)
 - [!bpm](#bpm)
 - [!compare](#compare)
 - [!emojipedia](#emojipedia)
 - [!emote](#emote)
 - [!eval](#eval)
 - [!fantasychange](#fantasychange)
-- [!fantasychange](#fantasychange)
+- [!fantasyname](#fantasyname)
 - [!ffz](#ffz)
 - [!flowa](#flowa)
 - [!flowabot](#flowabot)
@@ -52,6 +53,17 @@ Calculate Approach Rate values and miliseconds with mods applied.
 
     !ar 8 +DT
 Returns AR of AR8 with DT applied.
+## !bmi
+Calculate your BMI.
+
+**Usage**: `!bmi <height in m or cm> <weight in kg>`
+### Examples:
+
+    !bmi 185cm 70kg
+undefined
+
+    !bmi 1.56m 56kg
+undefined
 ## !bpm
 Show a visual BPM graph over time for a beatmap.
 
@@ -116,13 +128,13 @@ Generates a fantasy name and changes your nickname to it.,Available types: `huma
 
     !fantasychange elf medium
 Generates a medium-length elf name and sets it as your nickname.
-## !fantasychange
+## !fantasyname
 Generates a fantasy name.,Available types: `human`, `elf`, `dwarf`, `hobbit`, `barbarian`, `orc`, `evil`, `asian`, `arabic`, `surname`, `sci-fi`, `lovecraft`, `reptilian`, `aztec`, `ratman`, `demon`, `dragon`, `wizard`, `mixed`, `english`, `place`, `title`, `military`, `hero/villain`, `rockband`,Available lengths: `short`, `medium`, `long`,Data from <https://www.fantasynamegen.com/>.
 
-**Usage**: `!fantasychange <type> [length]`
+**Usage**: `!fantasyname <type> [length]`
 ### Example:
 
-    !fantasychange elf medium
+    !fantasyname elf medium
 Returns a medium-length elf name.
 ## !ffz
 Show an FFZ emote by name. Emotes from <https://frankerfacez.com/>.
