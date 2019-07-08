@@ -137,21 +137,23 @@ function downloadMedia(options, beatmap, beatmap_path, size, download_path){
                 return false;
             }
 
-            let md5_hash = crypto.createHash('md5').update(content).digest("hex");
+            let params = {
+                k: config.credentials.osu_api_key
+            };
 
-            axios.get('https://osu.ppy.sh/api/get_beatmaps', { params:
-                {
-                    k: config.credentials.osu_api_key,
-                    h: md5_hash
-                }
-            }).then(response => {
+            if(beatmap.BeatmapID){
+                params.b = beatmap.BeatmapID;
+            }else{
+                let md5_hash = crypto.createHash('md5').update(content).digest("hex");
+                params.h = md5_hash;
+            }
+
+            axios.get('https://osu.ppy.sh/api/get_beatmaps', { params }).then(response => {
                 response = response.data;
                 if(response.length == 0){
                     reject();
                     return false;
                 }
-
-                helper.log(response);
 
                 let beatmapset_id = response[0].beatmapset_id;
 
@@ -189,8 +191,14 @@ function downloadMedia(options, beatmap, beatmap_path, size, download_path){
                                         output.background_path = path.resolve(extraction_path, 'bg.png');
 
                                         resolve(output);
-                                    }).catch(reject);
-                                }).catch(reject);
+                                    }).catch(err => {
+                                        output.background_path = null;
+                                        resolve(output);
+                                    });
+                                }).catch(err => {
+                                    output.background_path = null;
+                                    resolve(output);
+                                });
                             }else{
                                 if(Object.keys(output).length == 0){
                                     reject();
@@ -216,7 +224,7 @@ function downloadMedia(options, beatmap, beatmap_path, size, download_path){
         });
 
         if(config.debug)
-            helper.log('downloading audio');
+            helper.log('downloading beatmap osz');
     });
 }
 
@@ -792,7 +800,11 @@ module.exports = {
                                 });
                             }else{
                                 Promise.resolve(mediaPromise).then(media => {
-                                    ffmpeg_args.unshift('-loop', '1', '-r', fps, '-i', `"${media.background_path}"`);
+                                    if(media.background_path)
+                                        ffmpeg_args.unshift('-loop', '1', '-r', fps, '-i', `"${media.background_path}"`);
+                                    else
+                                        ffmpeg_args.unshift('-f', 'lavfi', '-r', fps, '-i', `color=c=black:s=${size.join("x")}`);
+
                                     ffmpeg_args.push('-ss', start_time / 1000, '-i', `"${media.audio_path}"`, '-filter:a', `"atempo=${time_scale},volume=0.7"`);
                                 }).catch(() => {
                                     ffmpeg_args.unshift('-f', 'lavfi', '-r', fps, '-i', `color=c=black:s=${size.join("x")}`);
