@@ -2,6 +2,7 @@ const { execFileSync } = require('child_process');
 const URL = require('url');
 const fs = require('fs-extra');
 const path = require('path');
+const { fork } = require('child_process');
 
 const osu = require('../osu.js');
 const helper = require('../helper.js');
@@ -156,14 +157,19 @@ module.exports = {
                     }
 
                     if(length > 0 || objects){
-                        frame.get_frames(download_path, time, length * 1000, mods, size, {
-                            type: video_type, cs, ar, black: false, score_id, audio, fps,
-                            fill: video_type == 'mp4', noshadow: true, percent, border: false, objects
-                        }, (err, send, remove_path) => {
-                            if(err)
-                                reject(err);
+                        resolve({
+                            content: 'Rendering...',
+                            replace_promise: new Promise((resolve, reject) => {
+                                frame.get_frames(download_path, time, length * 1000, mods, size, {
+                                    type: video_type, cs, ar, black: false, score_id, audio, fps,
+                                    fill: video_type == 'mp4', noshadow: true, percent, border: false, objects
+                                }, (err, send, remove_path) => {
+                                    if(err)
+                                        reject(err);
 
-                            resolve({file: send, name: 'render.gif', remove_path});
+                                    resolve({file: send, name: 'render.gif', remove_path});
+                                });
+                            })
                         });
                     }else{
                         frame.get_frame(download_path, time, mods, [800, 600], {

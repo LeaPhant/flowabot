@@ -197,28 +197,55 @@ function onMessage(msg){
 
                 Promise.resolve(promise).then(response => {
                     if(response){
-                        let edit_promise, remove_path;
+                        let message_promise, edit_promise, replace_promise, remove_path, content;
 
                         if(typeof response === 'object' && 'edit_promise' in response){
                             ({edit_promise} = response);
                             delete response.edit_promise;
                         }
 
+						if(typeof response === 'object' && 'replace_promise' in response){
+                            ({replace_promise} = response);
+                            delete response.replace_promise;
+                        }
+
                         if(typeof response === 'object' && 'remove_path' in response){
-                            remove_path = response.remove_path;
+							({remove_path} = response);
                             delete response.remove_path;
                         }
 
-                        let message_promise = msg.channel.send(response).catch(err => {
+						if(typeof response === 'object' && 'content' in response){
+							({content} = response);
+                            delete response.content;
+						}
+
+						if(content)
+	                        message_promise = msg.channel.send(content, response);
+						else
+							message_promise = msg.channel.send(response);
+
+						message_promise.catch(err => {
 							msg.channel.send(`Couldn't run command: \`${err}\``);
 						});
 
-                        Promise.all([message_promise, edit_promise]).then(responses => {
+
+                        Promise.all([message_promise, edit_promise, replace_promise]).then(responses => {
                             let message = responses[0];
                             let edit_promise = responses[1];
+							let replace_promise = responses[2];
 
                             if(edit_promise)
                                 message.edit(edit_promise).catch(helper.error);
+
+							if(replace_promise){
+
+								msg.channel.send(replace_promise)
+								.catch(err => {
+									msg.channel.send(`Couldn't run command: \`${err}\``);
+								}).finally(() => {
+									message.delete();
+								});
+							}
 
                             if(remove_path)
                                 fs.remove(remove_path, err => { if(err) helper.error });
