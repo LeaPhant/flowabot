@@ -157,7 +157,7 @@ module.exports = {
 
                     if(length > 0 || objects){
                         frame.get_frames(download_path, time, length * 1000, mods, size, {
-                            type: video_type, cs, ar, black: video_type == 'mp4', score_id, audio, fps,
+                            type: video_type, cs, ar, black: false, score_id, audio, fps,
                             fill: video_type == 'mp4', noshadow: true, percent, border: false, objects
                         }, (err, send, remove_path) => {
                             if(err)

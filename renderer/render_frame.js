@@ -4,7 +4,10 @@ const fs = require('fs-extra');
 const path = require('path');
 const lzma = require('lzma');
 const axios = require('axios');
+const Jimp = require('jimp');
+const crypto = require('crypto');
 const ffmpeg = require('ffmpeg-static');
+const unzip = require('unzip');
 const disk = require('diskusage');
 
 const { execFile, fork } = require('child_process');
@@ -119,33 +122,101 @@ function parseReplay(buf){
     return output_frames;
 }
 
-function downloadAudio(options, beatmap, audio_path){
+function downloadMedia(options, beatmap, beatmap_path, size, download_path){
     return new Promise((resolve, reject) => {
-        if(options.type != 'mp4' || !options.audio){
+        let output = {};
+
+        if(options.type != 'mp4' || !options.audio || !config.credentials.osu_api_key){
             reject();
             return false;
         }
 
-        helper.log('downloading audio');
-
-        axios.get(`https://bloodcat.com/osu/a/${beatmap.BeatmapID}`, {responseType: 'stream'}).then(response => {
-            if(Number(response.data.headers['content-length']) < 500){
+        fs.readFile(beatmap_path, 'utf8', (err, content) => {
+            if(err){
                 reject();
                 return false;
             }
 
-            let stream = response.data.pipe(fs.createWriteStream(audio_path));
+            let md5_hash = crypto.createHash('md5').update(content).digest("hex");
 
-            stream.on('finish', () => {
-                resolve(audio_path);
-            });
+            axios.get('https://osu.ppy.sh/api/get_beatmaps', { params:
+                {
+                    k: config.credentials.osu_api_key,
+                    h: md5_hash
+                }
+            }).then(response => {
+                response = response.data;
+                if(response.length == 0){
+                    reject();
+                    return false;
+                }
 
-            stream.on('error', () => {
-                reject();
-            });
-        }).catch(() => {
-            reject();
+                helper.log(response);
+
+                let beatmapset_id = response[0].beatmapset_id;
+
+                helper.log('downloading from', `https://osu.gatari.pw/d/${beatmapset_id}`);
+
+                axios.get(`https://osu.gatari.pw/d/${beatmapset_id}`, {responseType: 'stream'}).then(response => {
+                    if(Number(response.data.headers['content-length']) < 500){
+                        reject();
+                        return false;
+                    }
+
+                    let stream = response.data.pipe(fs.createWriteStream(path.resolve(download_path, 'map.zip')));
+
+                    stream.on('finish', () => {
+                        let extraction_path = path.resolve(download_path, 'map');
+                        let extraction = fs.createReadStream(path.resolve(download_path, 'map.zip')).pipe(unzip.Extract({ path: extraction_path }));
+
+                        extraction.on('finish', () => {
+                            if(beatmap.AudioFilename && fs.existsSync(path.resolve(extraction_path, beatmap.AudioFilename)))
+                                output.audio_path = path.resolve(extraction_path, beatmap.AudioFilename);
+
+                            if(beatmap.bgFilename && fs.existsSync(path.resolve(extraction_path, beatmap.bgFilename)))
+                                output.background_path = path.resolve(extraction_path, beatmap.bgFilename);
+
+                            if(beatmap.bgFilename && output.background_path){
+                                helper.log('resizing image');
+
+                                Jimp.read(output.background_path).then(img => {
+                                    img
+                                    .cover(...size)
+                                    .color([
+                                        { apply: 'shade', params: [80] }
+                                    ])
+                                    .writeAsync(path.resolve(extraction_path, 'bg.png')).then(() => {
+                                        output.background_path = path.resolve(extraction_path, 'bg.png');
+
+                                        resolve(output);
+                                    }).catch(reject);
+                                }).catch(reject);
+                            }else{
+                                if(Object.keys(output).length == 0){
+                                    reject();
+                                    return false;
+                                }
+
+                                resolve(output);
+                            }
+                        });
+
+                        extraction.on('error', () => {
+                            reject();
+                        });
+                    });
+
+                    stream.on('error', () => {
+                        reject();
+                    });
+                }).catch(() => {
+                    reject();
+                });
+            }).catch(reject);
         });
+
+        if(config.debug)
+            helper.log('downloading audio');
     });
 }
 
@@ -659,11 +730,9 @@ module.exports = {
                     '-i', `${file_path}/%d.rgba`
                 ];
 
-                let audio_path = path.resolve(file_path, 'audio.mp3');
+                let mediaPromise = downloadMedia(options, beatmap, beatmap_path, size, file_path);
 
-                let audioPromise = downloadAudio(options, beatmap, audio_path);
-
-                audioPromise.catch(() => {});
+                mediaPromise.catch(() => {});
 
                 if(options.type == 'mp4')
                     bitrate = Math.min(bitrate, (0.7 * MAX_SIZE) * 8 / (actual_length / 1000) / 1024);
@@ -710,8 +779,11 @@ module.exports = {
                                 ffmpeg_args.push(`${file_path}/video.gif`);
 
                                 execFile(ffmpeg.path, ffmpeg_args, err => {
-                                    if(err)
+                                    if(err){
                                         helper.error(err);
+                                        cb("Couldn't encode video");
+                                        return false;
+                                    }
 
                                     if(config.debug)
                                         console.timeEnd('encode video');
@@ -719,18 +791,24 @@ module.exports = {
                                     cb(null, `${file_path}/video.${options.type}`, file_path);
                                 });
                             }else{
-                                Promise.resolve(audioPromise).then(audio_path => {
-                                    ffmpeg_args.push('-ss', start_time / 1000, '-i', audio_path, '-filter:a', `"atempo=${time_scale},volume=0.7"`);
+                                Promise.resolve(mediaPromise).then(media => {
+                                    ffmpeg_args.unshift('-loop', '1', '-r', fps, '-i', `"${media.background_path}"`);
+                                    ffmpeg_args.push('-ss', start_time / 1000, '-i', `"${media.audio_path}"`, '-filter:a', `"atempo=${time_scale},volume=0.7"`);
                                 }).catch(() => {
+                                    ffmpeg_args.unshift('-f', 'lavfi', '-r', fps, '-i', `color=c=black:s=${size.join("x")}`);
                                     helper.log("rendering without audio");
                                 }).finally(() => {
                                     ffmpeg_args.push(
-                                        '-pix_fmt', 'yuv420p', '-c:v', 'libx264', '-b:v', `${bitrate}k`, '-shortest', '-preset', 'veryfast', `${file_path}/video.mp4`
+                                        '-filter_complex', `"overlay=(W-w)/2:shortest=1"`,
+                                        '-pix_fmt', 'yuv420p', '-r', fps, '-c:v', 'libx264', '-b:v', `${bitrate}k`, '-shortest', '-preset', 'veryfast', `${file_path}/video.mp4`
                                     );
 
                                     execFile(ffmpeg.path, ffmpeg_args, { shell: true }, err => {
-                                        if(err)
+                                        if(err){
                                             helper.error(err);
+                                            cb("Couldn't encode video");
+                                            return false;
+                                        }
 
                                         if(config.debug)
                                             console.timeEnd('encode video');
