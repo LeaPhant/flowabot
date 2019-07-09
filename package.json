@@ -7,7 +7,8 @@
     "start": "git pull && npm i && node index",
     "test": "echo \"Error: no test specified\" && exit 1",
     "commands": "node generate-commands-md",
-    "config": "node generate-config"
+    "config": "node generate-config",
+    "emojis": "node upload-emojis"
   },
   "author": "LeaPhant",
   "license": "MIT",
