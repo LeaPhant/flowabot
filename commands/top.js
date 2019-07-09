@@ -38,7 +38,7 @@ module.exports = {
                 return false;
 
             let rb = argv[0].toLowerCase().startsWith('rb') || argv[0].toLowerCase().startsWith('recentbest');
-            let ob = argv[0].toLowerCase().startsWith('ob') || argv[0].toLowerCase().startsWith('oldestbest');
+            let ob = argv[0].toLowerCase().startsWith('ob') || argv[0].toLowerCase().startsWith('oldbest');
 
             let index = 1;
             let match = argv[0].match(/\d+/);
