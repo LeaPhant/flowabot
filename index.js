@@ -2,6 +2,7 @@ const Discord = require('discord.js');
 const fs = require('fs-extra');
 const path = require('path');
 const objectPath = require("object-path");
+const chalk = require('chalk');
 
 const osu = require('./osu.js');
 const helper = require('./helper.js');
@@ -150,8 +151,18 @@ fs.readdir(commands_path, (err, items) => {
                 });
             }
 
-            if(available)
+            if(available){
                 commands.push(command);
+			}else{
+				if(!Array.isArray(command.command))
+					command.command = [command.command];
+
+				console.log('');
+				console.log(chalk.yellow(`${config.prefix}${command.command[0]} was not enabled:`));
+				unavailability_reason.forEach(reason => {
+					console.log(chalk.yellow(reason));
+				});
+			}
         }
     });
 
@@ -279,8 +290,12 @@ function onMessage(msg){
     });
 }
 
-
-
 client.on('message', onMessage);
 
-client.login(config.credentials.bot_token);
+client.login(config.credentials.bot_token).catch(err => {
+	console.error('');
+	console.error(chalk.redBright("Couldn't log into Discord. Wrong bot token?"));
+	console.error('');
+	console.error(err);
+	process.exit();
+});

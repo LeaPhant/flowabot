@@ -6,13 +6,15 @@
   "scripts": {
     "start": "node index",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "commands": "node generate-commands-md"
+    "commands": "node generate-commands-md",
+    "config": "node generate-config"
   },
   "author": "LeaPhant",
   "license": "MIT",
   "dependencies": {
     "axios": "^0.18.0",
     "canvas": "^2.5.0",
+    "chalk": "^2.4.2",
     "cheerio": "^1.0.0-rc.2",
     "discord.js": "^11.5.1",
     "diskusage": "^1.1.2",
