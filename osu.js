@@ -1394,25 +1394,25 @@ module.exports = {
     },
 
 	parse_beatmap_url_sync: function(beatmap_url, id_only){
-			if(beatmap_url.startsWith('<') && beatmap_url.endsWith('>'))
-	            beatmap_url = beatmap_url.substring(1, beatmap_url.length - 1);
+		if(beatmap_url.startsWith('<') && beatmap_url.endsWith('>'))
+            beatmap_url = beatmap_url.substring(1, beatmap_url.length - 1);
 
-	        let beatmap_id;
-	        let _id_only = id_only;
-	        if(id_only === undefined) _id_only = false;
+        let beatmap_id;
+        let _id_only = id_only;
+        if(id_only === undefined) _id_only = false;
 
-	        if(beatmap_url.includes("#osu/"))
-	            beatmap_id = parseInt(beatmap_url.split("#osu/").pop());
-	        else if(beatmap_url.includes("/b/"))
-	            beatmap_id = parseInt(beatmap_url.split("/b/").pop());
-	        else if(beatmap_url.includes("/osu/"))
-	            beatmap_id = parseInt(beatmap_url.split("/osu/").pop());
-	        else if(beatmap_url.includes("/beatmaps/"))
-	            beatmap_id = parseInt(beatmap_url.split("/beatmaps/").pop());
-	        else if(parseInt(beatmap_url) == beatmap_url && _id_only)
-	            beatmap_id = parseInt(beatmap_url);
+        if(beatmap_url.includes("#osu/"))
+            beatmap_id = parseInt(beatmap_url.split("#osu/").pop());
+        else if(beatmap_url.includes("/b/"))
+            beatmap_id = parseInt(beatmap_url.split("/b/").pop());
+        else if(beatmap_url.includes("/osu/"))
+            beatmap_id = parseInt(beatmap_url.split("/osu/").pop());
+        else if(beatmap_url.includes("/beatmaps/"))
+            beatmap_id = parseInt(beatmap_url.split("/beatmaps/").pop());
+        else if(parseInt(beatmap_url) == beatmap_url && _id_only)
+            beatmap_id = parseInt(beatmap_url);
 
-			return beatmap_id;
+		return beatmap_id;
     },
 
     get_bpm_graph: function(osu_file_path, mods_string, cb){

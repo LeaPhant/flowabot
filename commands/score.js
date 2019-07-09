@@ -32,7 +32,7 @@ module.exports = {
 
             let command = argv[0].toLowerCase().replace(/[0-9]/g, '');
 
-            if(!module.exports.command != command)
+            if(module.exports.command != command)
                 return false;
 
             let index = 1;
