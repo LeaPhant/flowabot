@@ -16,7 +16,7 @@ module.exports = {
         return new Promise((resolve, reject) => {
             let { argv, msg, user_ign } = obj;
 
-            let osu_name = helper.getUsername([argv[1]], msg, user_ign);
+            let osu_name = helper.getUsername(argv.slice(0, 2), msg, user_ign);
             let top = 50;
 
             if(argv.length > 2){
