@@ -4,9 +4,9 @@
 
 **flowabot** is a modular discord bot with a focus on osu! features. Instead of me explaining this with words, I'll just leave a demonstration video:
 
-*TODO*
+<p align="center"><a target="_blank" href="https://streamable.com/12ybd"><img height="350px" src="https://i.imgur.com/oixZ9tK.png"></img></a></p>
 
-***Jump to [Installation](#Installation).***
+<p align="center"><b><i>Jump to <a href="#Installation">Installation</a>.</b></i></p>
 
 <h2 align="center">Main Features</h2>
 
@@ -38,7 +38,9 @@
 
 - **Using Linux or macOS is recommended**
 - Git (https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
-- Node.js 10 or higher (https://nodejs.org/download/)
+- Node.js 10 (other versions are untested) (https://nodejs.org/download/)
+- node-gyp (https://github.com/nodejs/node-gyp#installation)
+- Be sure to have gcc/g++ installed, e.g. `sudo apt install build-essential` on Ubuntu
 - Discord bot token and client ID (https://discordapp.com/developers/applications/)
 - osu!api key (https://osu.ppy.sh/p/api/)
 - node-canvas dependencies (https://github.com/Automattic/node-canvas#compiling)
