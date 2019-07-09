@@ -30,9 +30,9 @@ module.exports = {
 
             let beatmap_promise;
 
-            let command = argv[0].replace(/[0-9]/g, '');
+            let command = argv[0].toLowerCase().replace(/[0-9]/g, '');
 
-            if(!module.exports.command != command.toLowerCase());
+            if(!module.exports.command != command)
                 return false;
 
             let index = 1;
