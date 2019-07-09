@@ -171,7 +171,7 @@ function downloadMedia(options, beatmap, beatmap_path, size, download_path){
                         let extraction_path = path.resolve(download_path, 'map');
                         let extraction = fs.createReadStream(path.resolve(download_path, 'map.zip')).pipe(unzip.Extract({ path: extraction_path }));
 
-                        extraction.on('finish', () => {
+                        extraction.on('close', () => {
                             if(beatmap.AudioFilename && fs.existsSync(path.resolve(extraction_path, beatmap.AudioFilename)))
                                 output.audio_path = path.resolve(extraction_path, beatmap.AudioFilename);
 
@@ -194,10 +194,12 @@ function downloadMedia(options, beatmap, beatmap_path, size, download_path){
                                     }).catch(err => {
                                         output.background_path = null;
                                         resolve(output);
+                                        helper.error(err);
                                     });
                                 }).catch(err => {
                                     output.background_path = null;
                                     resolve(output);
+                                    helper.error(err);
                                 });
                             }else{
                                 if(Object.keys(output).length == 0){
