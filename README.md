@@ -4,7 +4,7 @@
 
 **flowabot** is a modular discord bot with a focus on osu! features. Instead of me explaining this with words, I'll just leave a demonstration video:
 
-*TODO*
+<p align="center"><a target="_blank" href="https://streamable.com/12ybd"><img height="350px" src="https://i.imgur.com/oixZ9tK.png"></img></a></p>
 
 ***Jump to [Installation](#Installation).***
 
