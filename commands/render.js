@@ -12,7 +12,7 @@ const config = require('../config.json');
 module.exports = {
     command: ['render', 'frame', 'fail'],
     description: "Render picture or gif of a beatmap at a specific time.",
-    usage: '[beatmap url] [+mods] [AR8] [CS6] [strains/aim/speed/fail] [mp4] [audio] [120fps] [mm:ss] [4s]',
+    usage: '[beatmap url] [+mods] [AR8] [CS6] [strains/aim/speed/fail] [mp4] [plain] [120fps] [mm:ss] [4s]',
     example: [
         {
             run: "render strains",
@@ -27,12 +27,12 @@ module.exports = {
             result: "Returns an image of the last beatmap at 1 minute and 5 seconds."
         },
         {
-            run: "render speed 10s audio",
-            result: "Returns a 10 second video with sound of the streamiest part on the last beatmap."
+            run: "render speed 10s",
+            result: "Returns a 10 second video of the streamiest part on the last beatmap."
         },
         {
-            run: "render strains 120fps",
-            result: "Returns a 120fps video of the hardest part on the last beatmap."
+            run: "render strains 120fps plain",
+            result: "Returns a 120fps video of the hardest part on the last beatmap without sound and black background."
         }
     ],
     configRequired: ['debug'],
@@ -43,7 +43,7 @@ module.exports = {
             let beatmap_id, beatmap_url, beatmap_promise, mods = [], time = 0,
             ar, cs, length = 0, percent = 0, custom_url = false,
             size = [400, 300], type, objects,
-            video_type = 'gif', audio = false, download_promise;
+            video_type = 'gif', audio = true, download_promise;
 
             let score_id;
 
@@ -82,6 +82,8 @@ module.exports = {
                 }else if(arg == 'audio'){
                     audio = true;
                     video_type = 'mp4';
+                }else if(arg == 'plain'){
+                    audio = false;
                 }else if(arg.endsWith('fps')){
                     let _fps = parseInt(arg);
                     if(!isNaN(_fps)){
