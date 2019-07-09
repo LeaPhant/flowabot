@@ -27,7 +27,7 @@ module.exports = {
                 },
                 {
                     name: "Commands",
-                    value: "https://github.com/LeaPhant/flowabot/COMMANDS.md"
+                    value: "https://github.com/LeaPhant/flowabot/blob/master/COMMANDS.md"
                 },
                 {
                     name: "Prefix",
