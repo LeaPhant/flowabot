@@ -14,9 +14,9 @@ module.exports = {
     configRequired: ['credentials.osu_api_key'],
     call: obj => {
         return new Promise((resolve, reject) => {
-            let { argv, msg } = obj;
+            let { argv, msg, user_ign } = obj;
 
-            let osu_name = helper.getUsername([argv[1]], msg);
+            let osu_name = helper.getUsername([argv[1]], msg, user_ign);
 
             osu.untrack_user(msg.channel.id, osu_name, (err, message) => {
                 if(err)

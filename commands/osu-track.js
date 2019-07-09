@@ -14,9 +14,9 @@ module.exports = {
     configRequired: ['credentials.osu_api_key'],
     call: obj => {
         return new Promise((resolve, reject) => {
-            let { argv, msg } = obj;
+            let { argv, msg, user_ign } = obj;
 
-            let osu_name = helper.getUsername([argv[1]], msg);
+            let osu_name = helper.getUsername([argv[1]], msg, user_ign);
             let top = 50;
 
             if(argv.length > 2){
