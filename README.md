@@ -6,7 +6,7 @@
 
 <p align="center"><a target="_blank" href="https://streamable.com/12ybd"><img height="350px" src="https://i.imgur.com/oixZ9tK.png"></img></a></p>
 
-***Jump to [Installation](#Installation).***
+<p align="center"><b><i>Jump to <a href="#Installation">Installation</a>.</b></i></p>
 
 <h2 align="center">Main Features</h2>
 
