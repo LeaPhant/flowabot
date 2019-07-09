@@ -10,7 +10,7 @@
 
 <h2 align="center">Main Features</h2>
 
-<h3 align="center">Scorecards with unique information like a difficulty graph or unstable rate</h3>
+<h3 align="center">Fancy scorecards with unique information like a difficulty graph or unstable rate</h3>
 
 <p align="center"><img src="https://i.imgur.com/WoJ4Dve.png"></img></p>
 
@@ -75,6 +75,14 @@
 
 ---
 
+**Make the grade emojis work (S rank, A rank, etc.)**
+
+    npm run emojis
+    
+*This script will automatically upload the grade emojis to a server you'll have to pick. If there are no free emoji slots create a new server just for the bot to use its emojis from.*
+
+---
+
 **To keep the bot running in the background [install pm2](http://pm2.keymetrics.io/docs/usage/quick-start/) and run**
 
     pm2 start npm --name flowabot -- start
@@ -85,3 +93,9 @@
     pm2 startup
     
 *(This is only tested on Linux)*
+
+<h2 align="center">Patrons</h2>
+
+Thanks to anyone supporting me on [Patreon](https://www.patreon.com/LeaPhant), especialy the following peeps who decided to leave $5 or more per month 😳 
+
+**WitchOfFrost**
