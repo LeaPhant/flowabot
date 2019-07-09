@@ -93,3 +93,9 @@
     pm2 startup
     
 *(This is only tested on Linux)*
+
+<h2 align="center">Patrons</h2>
+
+Thanks to anyone supporting me on [Patreon](https://www.patreon.com/LeaPhant), especialy the following peeps who decided to leave $5 or more per month 😳 
+
+**WitchOfFrost**
