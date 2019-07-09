@@ -75,6 +75,14 @@
 
 ---
 
+**Make the grade emojis work (S rank, A rank, etc.)**
+
+    npm run emojis
+    
+*This script will automatically upload the grade emojis to a server you'll have to pick. If there are no free emoji slots create a new server just for the bot to use its emojis from.*
+
+---
+
 **To keep the bot running in the background [install pm2](http://pm2.keymetrics.io/docs/usage/quick-start/) and run**
 
     pm2 start npm --name flowabot -- start
