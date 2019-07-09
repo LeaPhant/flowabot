@@ -260,7 +260,9 @@ function onMessage(msg){
 
                             if(remove_path)
                                 fs.remove(remove_path, err => { if(err) helper.error });
-                        });
+                        }).catch(err => {
+							msg.channel.send(`Couldn't run command: \`${err}\``);
+						});
                     }
                 }).catch(err => {
                     if(typeof err === 'object')
