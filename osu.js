@@ -1527,11 +1527,11 @@ module.exports = {
 
             let grades = "";
 
-            grades += `${getRankEmoji('XH')} ${data.count_rank_ssh} `;
-            grades += `${getRankEmoji('X')} ${data.count_rank_ss} `;
-            grades += `${getRankEmoji('SH')} ${data.count_rank_sh} `;
-            grades += `${getRankEmoji('S')} ${data.count_rank_s} `;
-            grades += `${getRankEmoji('A')} ${data.count_rank_a}`;
+            grades += `${getRankEmoji('XH')} ${Number(data.count_rank_ssh).toLocaleString()} `;
+            grades += `${getRankEmoji('X')} ${Number(data.count_rank_ss).toLocaleString()} `;
+            grades += `${getRankEmoji('SH')} ${Number(data.count_rank_sh).toLocaleString()} `;
+            grades += `${getRankEmoji('S')} ${Number(data.count_rank_s).toLocaleString()} `;
+            grades += `${getRankEmoji('A')} ${Number(data.count_rank_a).toLocaleString()}`;
 
             let play_time = `${Math.round(Number(data.total_seconds_played) / 3600)}h`;
             play_time += ` ${Math.round(Number(data.total_seconds_played) % 3600 / 60)}m`;
