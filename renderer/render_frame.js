@@ -345,7 +345,7 @@ function calculate_csarod(cs_raw, ar_raw, od_raw, mods_enabled){
 	}
 }
 
-function processBeatmap(beatmap, enabled_mods){
+function processBeatmap(beatmap, enabled_mods, cb){
 
     // AR
     beatmap.TimeFadein = difficultyRange(beatmap.ApproachRate, 1800, 1200, 450);
@@ -567,6 +567,8 @@ function processBeatmap(beatmap, enabled_mods){
         if(hitObject.objectName == "circle")
             beatmap.hitObjects[i].endTime = beatmap.hitObjects[i].startTime;
     });
+
+    cb();
 }
 
 let beatmap, speed_multiplier;
@@ -614,8 +616,7 @@ function prepareBeatmap(beatmap_path, mods, options, cb){
         if(!isNaN(options.ar) && !(options.ar === undefined))
             beatmap.ApproachRate = options.ar;
 
-        processBeatmap(beatmap, mods);
-        cb();
+        processBeatmap(beatmap, mods, cb);
     });
 }
 
