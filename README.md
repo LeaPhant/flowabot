@@ -69,7 +69,7 @@
 
 **You should be able to run the bot now.**
 
-    npm run start
+    npm start
     
 *If you provided a Discord client ID during the configuration you will receive an invite link to add the bot to your server.*
 
@@ -77,7 +77,7 @@
 
 **To keep the bot running in the background [install pm2](http://pm2.keymetrics.io/docs/usage/quick-start/) and run**
 
-    pm2 start --name flowabot index.js
+    pm2 start npm --name flowabot -- start
     
 **To start the bot on system boot use**
 
