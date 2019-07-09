@@ -11,7 +11,7 @@ const config = require('../config.json');
 
 module.exports = {
     command: ['render', 'frame', 'fail'],
-    description: "Render picture or gif of a beatmap at a specific time.",
+    description: "Render picture or gif of a beatmap at a specific time. Videos 10 seconds or longer are automatically rendered as mp4 video with audio and beatmap background.",
     usage: '[beatmap url] [+mods] [AR8] [CS6] [strains/aim/speed/fail] [mp4] [plain] [120fps] [mm:ss] [4s]',
     example: [
         {

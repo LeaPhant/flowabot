@@ -236,7 +236,7 @@ Returns respektive's most recent score.
     !recentpass
 Returns your most recent pass.
 ## !render
-Render picture or gif of a beatmap at a specific time.
+Render picture or gif of a beatmap at a specific time. Videos 10 seconds or longer are automatically rendered as mp4 video with audio and beatmap background.
 
 **Variations**: `!render`, `!frame`, `!fail`
 
