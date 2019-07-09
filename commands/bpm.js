@@ -26,7 +26,7 @@ module.exports = {
         return new Promise((resolve, reject) => {
             let { argv, msg, last_beatmap } = obj;
 
-            let beatmap_id, beatmap_promise, beatmap_url, mods = "", custom_url = false;
+            let beatmap_id, beatmap_promise, download_promise, beatmap_url, mods = "", custom_url = false;
 
             argv.slice(1).forEach(arg => {
                 if(arg.startsWith('+'))
@@ -65,10 +65,21 @@ module.exports = {
 
                 Promise.resolve(download_promise).then(() => {
                     osu.get_bpm_graph(download_path, mods, (err, res) => {
-                       if(err)
-                           reject(err);
-                       else
-                           resolve({file: Buffer.from(res, 'base64'), name: 'bpm.png'});
+                        if(err){
+                            reject(err);
+                            return false;
+                        }
+
+                        if(beatmap_id){
+                            helper.updateLastBeatmap({
+                                beatmap_id,
+                                mods,
+                                fail_percent: 1,
+                                acc: 1
+                            }, msg.channel.id, last_beatmap);
+                        }
+
+                        resolve({file: Buffer.from(res, 'base64'), name: 'bpm.png'});
                     });
                 });
             });

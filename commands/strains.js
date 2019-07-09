@@ -79,10 +79,21 @@ module.exports = {
 
                 Promise.resolve(download_promise).then(() => {
                     osu.get_strains_graph(download_path, mods, cs, ar, type, (err, buf) => {
-                       if(err)
-                           reject(err);
-                       else
-                           resolve({file: buf, name: 'strains.png'});
+                       if(err){
+                            reject(err);
+                            return false;
+                        }
+
+                        if(beatmap_id){
+                            helper.updateLastBeatmap({
+                                beatmap_id,
+                                mods,
+                                fail_percent: 1,
+                                acc: 1
+                            }, msg.channel.id, last_beatmap);
+                        }
+
+                        resolve({file: buf, name: 'strains.png'});
                     });
                 });
             });

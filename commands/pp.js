@@ -171,6 +171,15 @@ module.exports = {
 
                             let output = `\`\`\`\n${pp}pp (${aim_pp} aim pp, ${speed_pp} speed pp, ${acc_pp} acc pp)\`\`\``;
 
+                            if(beatmap_id){
+                                helper.updateLastBeatmap({
+                                    beatmap_id,
+                                    mods,
+                                    fail_percent: 1,
+                                    acc: 1
+                                }, msg.channel.id, last_beatmap);
+                            }
+
                             resolve(output);
                         }
                     });
