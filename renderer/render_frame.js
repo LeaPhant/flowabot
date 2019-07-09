@@ -808,7 +808,9 @@ module.exports = {
                                     else
                                         ffmpeg_args.unshift('-f', 'lavfi', '-r', fps, '-i', `color=c=black:s=${size.join("x")}`);
 
-                                    ffmpeg_args.push('-ss', start_time / 1000, '-i', `"${media.audio_path}"`, '-filter:a', `"atempo=${time_scale},volume=0.7"`);
+                                    ffmpeg_args.push(
+                                        '-ss', start_time / 1000, '-i', `"${media.audio_path}"`, '-filter:a', `"afade=t=out:st=${actual_length / 1000 * time_scale - 0.5}:d=0.5,atempo=${time_scale},volume=0.7"`
+                                    );
                                 }).catch(() => {
                                     ffmpeg_args.unshift('-f', 'lavfi', '-r', fps, '-i', `color=c=black:s=${size.join("x")}`);
                                     helper.log("rendering without audio");
@@ -822,6 +824,7 @@ module.exports = {
                                         if(err){
                                             helper.error(err);
                                             cb("Couldn't encode video");
+                                            fs.remove(file_path);
                                             return false;
                                         }
 
