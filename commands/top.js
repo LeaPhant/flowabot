@@ -32,6 +32,11 @@ module.exports = {
 
             let top_user = helper.getUsername(argv, msg, user_ign);
 
+            let command = argv[0].replace(/[0-9]/g, '');
+
+            if(!module.exports.command.includes(command.toLowerCase()));
+                return false;
+
             let rb = argv[0].toLowerCase().startsWith('rb') || argv[0].toLowerCase().startsWith('recentbest');
             let ob = argv[0].toLowerCase().startsWith('ob') || argv[0].toLowerCase().startsWith('oldestbest');
 

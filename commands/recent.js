@@ -27,6 +27,11 @@ module.exports = {
 
             let recent_user = helper.getUsername(argv, msg, user_ign);
 
+            let command = argv[0].replace(/[0-9]/g, '');
+
+            if(!module.exports.command.includes(command.toLowerCase()));
+                return false;
+
             let pass = argv[0].toLowerCase().startsWith('rp') || argv[0].toLowerCase().startsWith('recentpass');
 
             let index = 1;
