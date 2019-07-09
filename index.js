@@ -254,6 +254,14 @@ function onMessage(msg){
 									msg.channel.send(`Couldn't run command: \`${err}\``);
 								}).finally(() => {
 									message.delete();
+
+									if(typeof replace_promise === 'object' && 'remove_path' in replace_promise){
+										({remove_path} = replace_promise);
+			                            delete replace_promise.remove_path;
+			                        }
+
+									if(remove_path)
+										fs.remove(remove_path, err => { if(err) helper.error });
 								});
 							}
 
