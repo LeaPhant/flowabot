@@ -40,6 +40,7 @@
 - Git (https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
 - Node.js 10 or higher (https://nodejs.org/download/)
 - node-gyp (https://github.com/nodejs/node-gyp#installation)
+- Be sure to have gcc/g++ installed, e.g. `sudo apt install build-essential` on Ubuntu
 - Discord bot token and client ID (https://discordapp.com/developers/applications/)
 - osu!api key (https://osu.ppy.sh/p/api/)
 - node-canvas dependencies (https://github.com/Automattic/node-canvas#compiling)
