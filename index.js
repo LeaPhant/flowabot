@@ -249,7 +249,6 @@ function onMessage(msg){
                                 message.edit(edit_promise).catch(helper.error);
 
 							if(replace_promise){
-
 								msg.channel.send(replace_promise)
 								.catch(err => {
 									msg.channel.send(`Couldn't run command: \`${err}\``);
