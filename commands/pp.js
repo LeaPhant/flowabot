@@ -28,7 +28,7 @@ module.exports = {
     configRequired: ['pp_path', 'debug', 'osu_cache_path'],
     call: async obj => {
         return new Promise((resolve, reject) => {
-            let { argv } = obj;
+            let { argv, msg, last_beatmap } = obj;
 
             let beatmap_url = argv[1];
             let mods = [];
