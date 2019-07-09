@@ -30,7 +30,7 @@ module.exports = {
         return new Promise((resolve, reject) => {
             let { argv, msg, last_beatmap } = obj;
 
-            let beatmap_id, beatmap_url, beatmap_promise, mods = "", ar = 2, cs, custom_url = false, type;
+            let beatmap_id, beatmap_url, beatmap_promise, download_promise, mods = "", ar = 2, cs, custom_url = false, type;
 
             argv.map(arg => arg.toLowerCase());
 
