@@ -6,6 +6,7 @@
 
 *TODO*
 
+***Jump to [Installation](#Installation).***
 
 <h2 align="center">Main Features</h2>
 
@@ -30,3 +31,57 @@
 <p align="center"><img src="https://i.imgur.com/RaqLCL5.png"></img></p>
 
 <h4 align="center">You can find more features in the <a href="COMMANDS.md">commands list</a>.</h4>
+
+<h2 id="Installation" align="center">Installation</h2>
+
+### Prerequisites
+
+- **Using Linux or macOS is recommended**
+- Git (https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
+- Node.js 10 or higher (https://nodejs.org/download/)
+- Discord bot token and client ID (https://discordapp.com/developers/applications/)
+- osu!api key (https://osu.ppy.sh/p/api/)
+- node-canvas dependencies (https://github.com/Automattic/node-canvas#compiling)
+
+### Setup
+
+**Clone the repo and enter the bot directory**
+
+    git clone https://github.com/LeaPhant/flowabot.git
+    cd flowabot
+
+---
+**Install all modules**
+
+    npm i
+
+*During this process you will be asked to agree to the Highcharts license terms. Type `y` and press enter, for all the other options you can just keep pressing enter to disable these features.*
+
+---
+
+**Now you'll be able to use the configuration wizard.**
+
+    npm run config
+    
+*Follow the on-screen instructions, just press enter without typing anything for features you don't need.*
+
+---
+
+**You should be able to run the bot now.**
+
+    npm run start
+    
+*If you provided a Discord client ID during the configuration you will receive an invite link to add the bot to your server.*
+
+---
+
+**To keep the bot running in the background [install pm2](http://pm2.keymetrics.io/docs/usage/quick-start/) and run**
+
+    pm2 start --name flowabot index.js
+    
+**To start the bot on system boot use**
+
+    pm2 save
+    pm2 startup
+    
+*(This is only tested on Linux)*
