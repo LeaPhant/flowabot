@@ -2,6 +2,8 @@
 const osuBeatmapParser = require('osu-parser');
 const fs = require('fs-extra');
 const path = require('path');
+const os = require('os');
+
 const lzma = require('lzma');
 const axios = require('axios');
 const Jimp = require('jimp');
@@ -585,7 +587,7 @@ function prepareBeatmap(beatmap_path, mods, options, cb){
         let replay;
 
         if(options.score_id){
-            let replay_path = `/tmp/replays/${options.score_id}`;
+            let replay_path = path.resolve(os.tmpdir(), 'replays', `${options.score_id}`);
 
             if(fs.existsSync(replay_path))
                 replay = {lastCursor: 0, replay_data: parseReplay(fs.readFileSync(replay_path))};
@@ -719,7 +721,7 @@ module.exports = {
                 max_time = time + actual_length;
             }
 
-            file_path = `/tmp/frames/${rnd}`;
+            file_path = path.resolve(os.tmpdir(), 'frames', `${rnd}`);
             fs.ensureDirSync(file_path);
 
             let frames_size = actual_length / time_frame * size[0] * size[1] * 4;

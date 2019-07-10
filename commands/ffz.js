@@ -1,5 +1,8 @@
 const axios = require('axios');
 const fs = require('fs-extra');
+const path = require('path');
+const os = require('os');
+
 const helper = require('../helper.js');
 const Discord = require('discord.js');
 
@@ -50,7 +53,7 @@ module.exports = {
                     if(emoteUrl.startsWith("//"))
                         emoteUrl = "https:" + emoteUrl;
 
-                    let file = `/tmp/emote_${emote.name}_${helper.getRandomArbitrary(1000, 9999)}.png`;
+                    let file = path.resolve(os.tmpdir(), `emote_${emote.name}_${helper.getRandomArbitrary(1000, 9999)}.png`);
 
                     axios.get(emoteUrl, {responseType: 'stream'}).then(response => {
                         let stream = response.data.pipe(fs.createWriteStream(file));

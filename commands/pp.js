@@ -1,6 +1,7 @@
 const { execFileSync, execFile } = require('child_process');
 const fs = require('fs-extra');
 const path = require('path');
+const os = require('os');
 const URL = require('url');
 
 const helper = require('../helper.js');
@@ -65,7 +66,7 @@ module.exports = {
 
                 if(!beatmap_id){
                     let download_url = URL.parse(beatmap_url);
-                    download_path = `/tmp/${Math.floor(Math.random() * 1000000) + 1}.osu`;
+                    download_path = path.resolve(os.tmpdir(), `${Math.floor(Math.random() * 1000000) + 1}.osu`);
 
                     download_promise = helper.downloadFile(download_path, download_url);
                     download_promise.catch(reject);
@@ -94,7 +95,7 @@ module.exports = {
 
                         beatmap_new += _line + "\n";
                         });
-                        beatmap_path = `/tmp/${Math.floor(Math.random() * 1000000) + 1}.osu`;
+                        beatmap_path = path.resolve(os.tmpdir(), `${Math.floor(Math.random() * 1000000) + 1}.osu`);
                         fs.writeFileSync(beatmap_path, beatmap_new);
 
                         if(config.debug)
