@@ -6,7 +6,8 @@ module.exports = {
     argsRequired: 1,
     description: [
         "Get help for a command.",
-        "List of all commands: https://github.com/LeaPhant/flowabot/blob/master/COMMANDS.md"
+        "",
+        "**List of all commands:** https://github.com/LeaPhant/flowabot/blob/master/COMMANDS.md"
     ],
     usage: '<command>',
     example: [
