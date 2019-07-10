@@ -126,7 +126,9 @@ module.exports = {
                     beatmap_id = last_beatmap[msg.channel.id].beatmap_id;
                     download_promise = helper.downloadBeatmap(beatmap_id);
 
-                    mods = last_beatmap[msg.channel.id].mods;
+                    if(mods.length == 0)
+                        mods = last_beatmap[msg.channel.id].mods;
+
                     if(last_beatmap[msg.channel.id].score_id)
                         ({ score_id } = last_beatmap[msg.channel.id]);
                 }
