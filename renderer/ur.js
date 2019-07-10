@@ -5,6 +5,7 @@ const axios = require('axios');
 
 const fs = require('fs-extra');
 const path = require('path');
+const os = require('os');
 
 const helper = require('../helper.js');
 
@@ -426,8 +427,8 @@ function calculateUr(options, cb){
         }
 
         let replay_raw = Buffer.from(response.data.content, "base64");
-		fs.ensureDirSync('/tmp/replays');
-		fs.writeFileSync(`/tmp/replays/${options.score_id}`, replay_raw);
+		fs.ensureDirSync(path.resolve(os.tmpdir(), 'replays'));
+		fs.writeFileSync(path.resolve(os.tmpdir(), 'replays', `${options.score_id}`), replay_raw);
         let replay = {lastCursor: 0, replay_data: parseReplay(replay_raw)};
 
 

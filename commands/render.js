@@ -2,6 +2,7 @@ const { execFileSync } = require('child_process');
 const URL = require('url');
 const fs = require('fs-extra');
 const path = require('path');
+const os = require('os');
 const { fork } = require('child_process');
 
 const osu = require('../osu.js');
@@ -146,7 +147,7 @@ module.exports = {
 
                 if(!beatmap_id || custom_url){
                     let download_url = URL.parse(beatmap_url);
-                    download_path = `/tmp/${Math.floor(Math.random() * 1000000) + 1}.osu`;
+                    download_path = path.resolve(os.tmpdir(), `${Math.floor(Math.random() * 1000000) + 1}.osu`);
 
                     download_promise = helper.downloadFile(download_path, download_url);
                     download_promise.catch(reject);
