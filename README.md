@@ -36,7 +36,7 @@
 
 ### Prerequisites
 
-- **Using Linux or macOS is recommended**
+- **Using Linux or macOS is recommended** (If you really wanna run it on Windows use PowerShell, **not cmd.exe**)
 - Git (https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
 - Node.js 10 (other versions are untested) (https://nodejs.org/download/)
 - node-gyp (https://github.com/nodejs/node-gyp#installation)
