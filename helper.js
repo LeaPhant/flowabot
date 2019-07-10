@@ -142,8 +142,10 @@ module.exports = {
                 let stream = response.data.pipe(fs.createWriteStream(file_path));
 
                 stream.on('finish', () => {
-                    if(!module.exports.validateBeatmap(file_path))
+                    if(!module.exports.validateBeatmap(file_path)){
+                        fs.remove(file_path);
                         reject("Couldn't download file");
+                    }
 
                     resolve();
                 });
@@ -163,11 +165,9 @@ module.exports = {
 
             fs.ensureDirSync(path.dirname(beatmap_path));
 
-            if(!fs.existsSync(beatmap_path)){
+            if(!fs.existsSync(beatmap_path)
+            || (fs.existsSync(beatmap_path) && !module.exports.validateBeatmap(beatmap_path))){
                 module.exports.downloadFile(beatmap_path, `https://osu.ppy.sh/osu/${beatmap_id}`).then(() => {
-                    if(!module.exports.validateBeatmap(beatmap_path))
-                        reject();
-
                     resolve();
                 }).catch(reject);
             }else{
