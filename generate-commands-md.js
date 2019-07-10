@@ -32,8 +32,12 @@ fs.readdir(commands_path, (err, items) => {
     commands.forEach(command => {
         output += `\n## ${config.prefix}${command.command[0]}`;
 
-        if(command.description)
-            output += `\n${command.description}`;
+        if(command.description){
+            if(!Array.isArray(command.description))
+                command.description = [command.description];
+
+            output += `\n${command.description.join("\n")}`;
+        }
 
         if(command.command.length > 1)
             output += `\n\n**Variations**: \`${config.prefix}${command.command.join('`, `' + config.prefix)}\``;
@@ -52,8 +56,9 @@ fs.readdir(commands_path, (err, items) => {
             output += `\n### Example${command.example.length > 1 ? 's' : ''}:`;
 
             command.example.forEach(example => {
-                output += `\n\n    ${config.prefix}${example.run}`;
-                output += `\n${example.result}`;
+                output += `\n\n\`\`\`\n${config.prefix}${example.run}\n\`\`\``;
+                if(example.result)
+                    output += `\n${example.result}`;
             });
         }
 

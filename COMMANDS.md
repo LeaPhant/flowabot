@@ -37,13 +37,19 @@ Calculate new total pp after achieving a certain top play.
 **Usage**: `!addpp <amounts separated by +> [username] [beatmap_id]`
 ### Examples:
 
-    !addpp 300
+```
+!addpp 300
+```
 Returns your total pp with an additional 300pp score.
 
-    !addpp 300+350
+```
+!addpp 300+350
+```
 Returns your total pp with an additional 300 and 350pp score.
 
-    !addpp 1100 Vaxei 1860433
+```
+!addpp 1100 Vaxei 1860433
+```
 Returns Vaxei's total pp if their score on /b/1860433 awarded 1100pp.
 ## !ar
 Calculate Approach Rate values and miliseconds with mods applied.
@@ -51,7 +57,9 @@ Calculate Approach Rate values and miliseconds with mods applied.
 **Usage**: `!ar <ar> [+mods]`
 ### Example:
 
-    !ar 8 +DT
+```
+!ar 8 +DT
+```
 Returns AR of AR8 with DT applied.
 ## !bmi
 Calculate your BMI.
@@ -59,21 +67,27 @@ Calculate your BMI.
 **Usage**: `!bmi <height in m or cm> <weight in kg>`
 ### Examples:
 
-    !bmi 185cm 70kg
-undefined
+```
+!bmi 185cm 70kg
+```
 
-    !bmi 1.56m 56kg
-undefined
+```
+!bmi 1.56m 56kg
+```
 ## !bpm
 Show a visual BPM graph over time for a beatmap.
 
 **Usage**: `!bpm [beatmap url] [+mods]`
 ### Examples:
 
-    !bpm
+```
+!bpm
+```
 Returns BPM graph for the last beatmap.
 
-    !bpm https://osu.ppy.sh/b/75 +DT
+```
+!bpm https://osu.ppy.sh/b/75 +DT
+```
 Returns BPM graph with DT for specific beatmap.
 ## !compare
 Search for best score on the last beatmap.
@@ -83,13 +97,19 @@ Search for best score on the last beatmap.
 **Usage**: `!compare [username or * for all users] [+mods]`
 ### Examples:
 
-    !compare
+```
+!compare
+```
 Returns your own best score on the last beatmap.
 
-    !compare Vaxei +mods
+```
+!compare Vaxei +mods
+```
 Returns Vaxei's best score with the same mods on the last beatmap.
 
-    !compare * +HD
+```
+!compare * +HD
+```
 Returns the #1 HD score on the last beatmap.
 ## !emojipedia
 Look up what an emoji looks like on all platforms (warning: spammy).
@@ -97,7 +117,9 @@ Look up what an emoji looks like on all platforms (warning: spammy).
 **Usage**: `!emojipedia <emoji>`
 ### Example:
 
-    !emojipedia 🤔
+```
+!emojipedia 🤔
+```
 Returns thinking emoji on all platforms.
 ## !emote
 Print one or multiple emotes the bot can use in chat.
@@ -107,7 +129,9 @@ Print one or multiple emotes the bot can use in chat.
 **Usage**: `!emote <emote 1> [emote 2] [emote n]`
 ### Example:
 
-    !e SourPls
+```
+!e SourPls
+```
 Returns SourPls emote.
 ## !eval
 Runs JavaScript code and returns the result of the last evaluation. Underscore.js for array/object helpers and `bonusPP(n)` for bonus pp calculation are available.
@@ -115,26 +139,40 @@ Runs JavaScript code and returns the result of the last evaluation. Underscore.j
 **Usage**: `!eval [javascript code]`
 ### Examples:
 
-    !eval 5+5
+```
+!eval 5+5
+```
 Evaluates 5+5 and returns the result.
 
-    !eval _max.([1, 2, 3])
+```
+!eval _max.([1, 2, 3])
+```
 Uses Underscore.js to return the maximum value of an array.
 ## !fantasychange
-Generates a fantasy name and changes your nickname to it.,Available types: `human`, `elf`, `dwarf`, `hobbit`, `barbarian`, `orc`, `evil`, `asian`, `arabic`, `surname`, `sci-fi`, `lovecraft`, `reptilian`, `aztec`, `ratman`, `demon`, `dragon`, `wizard`, `mixed`, `english`, `place`, `title`, `military`, `hero/villain`, `rockband`,Available lengths: `short`, `medium`, `long`,Data from <https://www.fantasynamegen.com/>.
+Generates a fantasy name and changes your nickname to it.
+Available types: `human`, `elf`, `dwarf`, `hobbit`, `barbarian`, `orc`, `evil`, `asian`, `arabic`, `surname`, `sci-fi`, `lovecraft`, `reptilian`, `aztec`, `ratman`, `demon`, `dragon`, `wizard`, `mixed`, `english`, `place`, `title`, `military`, `hero/villain`, `rockband`
+Available lengths: `short`, `medium`, `long`
+Data from <https://www.fantasynamegen.com/>.
 
 **Usage**: `!fantasychange <type> [length]`
 ### Example:
 
-    !fantasychange elf medium
+```
+!fantasychange elf medium
+```
 Generates a medium-length elf name and sets it as your nickname.
 ## !fantasyname
-Generates a fantasy name.,Available types: `human`, `elf`, `dwarf`, `hobbit`, `barbarian`, `orc`, `evil`, `asian`, `arabic`, `surname`, `sci-fi`, `lovecraft`, `reptilian`, `aztec`, `ratman`, `demon`, `dragon`, `wizard`, `mixed`, `english`, `place`, `title`, `military`, `hero/villain`, `rockband`,Available lengths: `short`, `medium`, `long`,Data from <https://www.fantasynamegen.com/>.
+Generates a fantasy name.
+Available types: `human`, `elf`, `dwarf`, `hobbit`, `barbarian`, `orc`, `evil`, `asian`, `arabic`, `surname`, `sci-fi`, `lovecraft`, `reptilian`, `aztec`, `ratman`, `demon`, `dragon`, `wizard`, `mixed`, `english`, `place`, `title`, `military`, `hero/villain`, `rockband`
+Available lengths: `short`, `medium`, `long`
+Data from <https://www.fantasynamegen.com/>.
 
 **Usage**: `!fantasyname <type> [length]`
 ### Example:
 
-    !fantasyname elf medium
+```
+!fantasyname elf medium
+```
 Returns a medium-length elf name.
 ## !ffz
 Show an FFZ emote by name. Emotes from <https://frankerfacez.com/>.
@@ -142,7 +180,9 @@ Show an FFZ emote by name. Emotes from <https://frankerfacez.com/>.
 **Usage**: `!ffz <emote name>`
 ### Example:
 
-    !ffz WoweeW
+```
+!ffz WoweeW
+```
 Returns WoweeW FFZ emote
 ## !flowa
 Show a random flower picture. Images from <https://pexels.com/>.
@@ -150,7 +190,9 @@ Show a random flower picture. Images from <https://pexels.com/>.
 **Usage**: `!flowa [optional tags separated by space]`
 ### Example:
 
-    !flowa sakura tree
+```
+!flowa sakura tree
+```
 Returns a random picture of a sakura tree.
 ## !flowabot
 Show information about this bot.
@@ -158,11 +200,14 @@ Show information about this bot.
 **Usage**: `!flowabot`
 ## !help
 Get help for a command.
+List of all commands: https://github.com/LeaPhant/flowabot/blob/master/COMMANDS.md
 
 **Usage**: `!help <command>`
 ### Example:
 
-    !help pp
+```
+!help pp
+```
 Returns help on how to use the `!pp` command.
 ## !ign-set
 Sets your osu! username so you can use osu! commands without specifying a username.
@@ -170,7 +215,9 @@ Sets your osu! username so you can use osu! commands without specifying a userna
 **Usage**: `!ign-set <osu! username>`
 ### Example:
 
-    !ign-set nathan on osu
+```
+!ign-set nathan on osu
+```
 Sets your osu! username to nathan on osu.
 ## !lastfm
 Show Last.fm stats for a user.
@@ -178,7 +225,9 @@ Show Last.fm stats for a user.
 **Usage**: `!lastfm <last.fm username> [period (7day, 1month, 3month, 6month, 12month, overall)]`
 ### Example:
 
-    !lastfm rj overall
+```
+!lastfm rj overall
+```
 Returns total last.fm stats for rj.
 ## !np
 Shows what song you are currently listening to. If it can't be retrieved from Rich Presence it will ask for a Last.fm username.
@@ -190,7 +239,9 @@ Start tracking the specified user's osu! top plays in the current channel.
 **Usage**: `!osu-track <username> [top play limit (1-100, default 50)]`
 ### Example:
 
-    !osu-track nathan_on_osu 50
+```
+!osu-track nathan_on_osu 50
+```
 Start tracking nathan on osu's top 50 top plays.
 ## !osu-untrack
 Stop tracking the specified user's osu! top plays in the current channel.
@@ -198,7 +249,9 @@ Stop tracking the specified user's osu! top plays in the current channel.
 **Usage**: `!osu-untrack <username> [top play limit (1-100, default 50)]`
 ### Example:
 
-    !osu-untrack nathan_on_osu
+```
+!osu-untrack nathan_on_osu
+```
 Stop tracking nathan on osu's top plays.
 ## !osu
 Show osu! stats.
@@ -206,7 +259,9 @@ Show osu! stats.
 **Usage**: `!osu [username]`
 ### Example:
 
-    !osu nathan_on_osu
+```
+!osu nathan_on_osu
+```
 Returns nathan on osu's osu! stats.
 ## !ping
 
@@ -217,7 +272,9 @@ Uses osu-tools to calculate pp for a beatmap.
 **Usage**: `!pp <map link> [+HDDT] [99.23%] [2x100] [1x50] [3m] [342x] [OD9.5] [AR10.3] [CS6]`
 ### Example:
 
-    !pp https://osu.ppy.sh/b/75 +HD 4x100 343x CS2
+```
+!pp https://osu.ppy.sh/b/75 +HD 4x100 343x CS2
+```
 Calculates pp on this beatmap with HD applied, 4 100s, 343 Combo and CS set to 2.
 ## !recent
 Show recent score or pass.
@@ -227,13 +284,19 @@ Show recent score or pass.
 **Usage**: `!recent [username]`
 ### Examples:
 
-    !recent nathan_on_osu
+```
+!recent nathan_on_osu
+```
 Returns nathan on osu's most recent score.
 
-    !recent3 respektive
+```
+!recent3 respektive
+```
 Returns respektive's most recent score.
 
-    !recentpass
+```
+!recentpass
+```
 Returns your most recent pass.
 ## !render
 Render picture or gif of a beatmap at a specific time. Videos 10 seconds or longer are automatically rendered as mp4 video with audio and beatmap background.
@@ -243,19 +306,29 @@ Render picture or gif of a beatmap at a specific time. Videos 10 seconds or long
 **Usage**: `!render [beatmap url] [+mods] [AR8] [CS6] [strains/aim/speed/fail] [mp4] [plain] [120fps] [mm:ss] [4s]`
 ### Examples:
 
-    !render strains
+```
+!render strains
+```
 Returns a gif of the hardest part on the last beatmap.
 
-    !fail
+```
+!fail
+```
 Returns a gif of the part where the player failed on the last beatmap.
 
-    !render 1:05
+```
+!render 1:05
+```
 Returns an image of the last beatmap at 1 minute and 5 seconds.
 
-    !render speed 10s
+```
+!render speed 10s
+```
 Returns a 10 second video of the streamiest part on the last beatmap.
 
-    !render strains 120fps plain
+```
+!render strains 120fps plain
+```
 Returns a 120fps video of the hardest part on the last beatmap without sound and black background.
 ## !score
 Search for a score on a beatmap.
@@ -263,13 +336,19 @@ Search for a score on a beatmap.
 **Usage**: `!score <beatmap url> [username or * for any user] [+mods]`
 ### Examples:
 
-    !score https://osu.ppy.sh/b/75 * +HD
+```
+!score https://osu.ppy.sh/b/75 * +HD
+```
 Returns #1 score with HD on this beatmap.
 
-    !score https://osu.ppy.sh/b/75
+```
+!score https://osu.ppy.sh/b/75
+```
 Returns your best score on this beatmap.
 
-    !score5 https://osu.ppy.sh/b/75 *
+```
+!score5 https://osu.ppy.sh/b/75 *
+```
 Returns the #5 score on this beatmap.
 ## !strains
 Show a visual strain graph of the star raiting over time on a beatmap.
@@ -277,13 +356,19 @@ Show a visual strain graph of the star raiting over time on a beatmap.
 **Usage**: `!strains [beatmap url] [+mods] [AR8] [CS6] [aim/speed]`
 ### Examples:
 
-    !strains
+```
+!strains
+```
 Returns strain graph for the last beatmap.
 
-    !strains +HR CS5
+```
+!strains +HR CS5
+```
 Returns strain graph with HR applied and CS set to 5 for the last beatmap.
 
-    !strains https://osu.ppy.sh/b/75 aim
+```
+!strains https://osu.ppy.sh/b/75 aim
+```
 Returns aim strain graph for this beatmap.
 ## !top
 Show a specific top play.
@@ -293,16 +378,24 @@ Show a specific top play.
 **Usage**: `!top [username]`
 ### Examples:
 
-    !top
+```
+!top
+```
 Returns your #1 top play.
 
-    !top5 vaxei
+```
+!top5 vaxei
+```
 Returns Vaxei's #5 top play.
 
-    !rb
+```
+!rb
+```
 Returns your most recent top play.
 
-    !ob
+```
+!ob
+```
 Returns your oldest top play (from your top 100).
 ## !uptime
 See how for long a Twitch channel has been live or for how long it hasn't been streaming.
@@ -312,10 +405,14 @@ See how for long a Twitch channel has been live or for how long it hasn't been s
 **Usage**: `!uptime <twitch username>`
 ### Examples:
 
-    !uptime distortion2
+```
+!uptime distortion2
+```
 Returns distortion2's uptime or downtime.
 
-    !downtime ninja
+```
+!downtime ninja
+```
 Returns ninja's uptime or downtime.
 ## !viewers
 See how many people are watching a Twitch channel.
@@ -323,7 +420,9 @@ See how many people are watching a Twitch channel.
 **Usage**: `!viewers <twitch username>`
 ### Example:
 
-    !viewers distortion2
+```
+!viewers distortion2
+```
 Returns how many viewers distortion2 currently has (if they're live).
 ## !with
 Show pp values of a beatmap with several accuracies or a specified accuracy.
@@ -331,11 +430,17 @@ Show pp values of a beatmap with several accuracies or a specified accuracy.
 **Usage**: `!with [+mods] [98.34%]`
 ### Examples:
 
-    !with
+```
+!with
+```
 Returns pp values for the last beatmap with the same mods.
 
-    !with +
+```
+!with +
+```
 Returns pp values for the last beatmap without mods.
 
-    !with +HD 97.5%
+```
+!with +HD 97.5%
+```
 Returns pp value for the last beatmap with 97.5% accuracy and HD applied.

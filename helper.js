@@ -72,10 +72,13 @@ module.exports = {
                     value: commands_value + "\n"
                 });
 
+                if(!Array.isArray(command.description))
+                    command.description = [command.description];
+
                 if(command.description){
                     embed.fields.push({
                         name: "Description",
-                        value: command.description + "\n"
+                        value: command.description.join("\n") + "\n"
                     })
                 }
 
