@@ -564,13 +564,16 @@ function getScore(recent_raw, cb){
 
 				if(fs.existsSync(beatmap_path)){
 					strains_bar = module.exports.get_strains_bar(beatmap_path, recent.mods.join(''), recent.fail_percent);
+
 					if(strains_bar)
 						recent.strains_bar = true;
 				}
 
 	            if(replay && fs.existsSync(beatmap_path)){
 	                let ur_promise = new Promise((resolve, reject) => {
-						helper.log('getting ur');
+						if(config.debug)
+							helper.log('getting ur');
+
 	                    ur_calc.get_ur(
 	                        {
 	                            apikey: settings.api_key,
@@ -1602,76 +1605,77 @@ module.exports = {
     },
 
 	get_strains_bar: function(osu_file_path, mods_string, progress){
-		let { strains, max_strain } = module.exports.get_strains(osu_file_path, mods_string);
+		let map_strains = module.exports.get_strains(osu_file_path, mods_string);
 
-		if(strains){
-			let bar = createCanvas(399, 40);
-			let ctx = bar.getContext('2d');
-
-			ctx.fillStyle = 'transparent';
-			ctx.fillRect(0, 0, 399, 40);
-
-			let points = [];
-			let strain_chunks = [];
-
-			let max_chunks = 100;
-            let chunk_size = Math.ceil(strains.length / max_chunks);
-
-            for(let i = 0; i < strains.length; i += chunk_size){
-                let _strains = strains.slice(i, i + chunk_size);
-                strain_chunks.push(Math.max(..._strains));
-            }
-
-			strain_chunks.forEach((strain, index) => {
-				let _strain = strain / max_strain;
-				let x = index / strain_chunks.length * 399;
-				let y = Math.min(30, 5 + 35 - _strain * 35);
-				points.push({x, y});
-			});
-
-			ctx.fillStyle = '#F06292';
-			ctx.moveTo(0, 40);
-			ctx.lineTo(0, 30);
-
-			for(let i = 1; i < points.length - 2; i++){
-		        var xc = (points[i].x + points[i + 1].x) / 2;
-		        var yc = (points[i].y + points[i + 1].y) / 2;
-		        ctx.quadraticCurveTo(points[i].x, points[i].y, xc, yc);
-		    }
-
-			ctx.lineTo(399,30);
-			ctx.lineTo(399,40);
-			ctx.closePath();
-			ctx.fill();
-
-			ctx.clearRect(progress * 399, 0, 399 - progress * 399, 40);
-
-			ctx.fillStyle = 'transparent';
-			ctx.fillRect(progress * 399, 0, 399 - progress * 399, 40);
-
-			ctx.fillStyle = 'rgba(244, 143, 177, 0.5)';
-			ctx.moveTo(0, 40);
-			ctx.lineTo(0, 30);
-
-			for(let i = 1; i < points.length - 2; i++){
-		        var xc = (points[i].x + points[i + 1].x) / 2;
-		        var yc = (points[i].y + points[i + 1].y) / 2;
-		        ctx.quadraticCurveTo(points[i].x, points[i].y, xc, yc);
-		    }
-
-			ctx.lineTo(399,30);
-			ctx.lineTo(399,40);
-			ctx.closePath();
-			ctx.fill();
-
-			return bar.toBuffer();
-		}else{
+		if(!map_strains)
 			return false;
-		}
+
+		let { strains, max_strain } = map_strains;
+		let bar = createCanvas(399, 40);
+		let ctx = bar.getContext('2d');
+
+		ctx.fillStyle = 'transparent';
+		ctx.fillRect(0, 0, 399, 40);
+
+		let points = [];
+		let strain_chunks = [];
+
+		let max_chunks = 100;
+        let chunk_size = Math.ceil(strains.length / max_chunks);
+
+        for(let i = 0; i < strains.length; i += chunk_size){
+            let _strains = strains.slice(i, i + chunk_size);
+            strain_chunks.push(Math.max(..._strains));
+        }
+
+		strain_chunks.forEach((strain, index) => {
+			let _strain = strain / max_strain;
+			let x = index / strain_chunks.length * 399;
+			let y = Math.min(30, 5 + 35 - _strain * 35);
+			points.push({x, y});
+		});
+
+		ctx.fillStyle = '#F06292';
+		ctx.moveTo(0, 40);
+		ctx.lineTo(0, 30);
+
+		for(let i = 1; i < points.length - 2; i++){
+	        var xc = (points[i].x + points[i + 1].x) / 2;
+	        var yc = (points[i].y + points[i + 1].y) / 2;
+	        ctx.quadraticCurveTo(points[i].x, points[i].y, xc, yc);
+	    }
+
+		ctx.lineTo(399,30);
+		ctx.lineTo(399,40);
+		ctx.closePath();
+		ctx.fill();
+
+		ctx.clearRect(progress * 399, 0, 399 - progress * 399, 40);
+
+		ctx.fillStyle = 'transparent';
+		ctx.fillRect(progress * 399, 0, 399 - progress * 399, 40);
+
+		ctx.fillStyle = 'rgba(244, 143, 177, 0.5)';
+		ctx.moveTo(0, 40);
+		ctx.lineTo(0, 30);
+
+		for(let i = 1; i < points.length - 2; i++){
+	        var xc = (points[i].x + points[i + 1].x) / 2;
+	        var yc = (points[i].y + points[i + 1].y) / 2;
+	        ctx.quadraticCurveTo(points[i].x, points[i].y, xc, yc);
+	    }
+
+		ctx.lineTo(399,30);
+		ctx.lineTo(399,40);
+		ctx.closePath();
+		ctx.fill();
+
+		return bar.toBuffer();
 	},
 
     get_strains: function(osu_file_path, mods_string, type){
         try{
+			console.log(osu_file_path);
             let parser = new ojsama.parser().feed(fs.readFileSync(osu_file_path, 'utf8'));
             let map = parser.map;
 
