@@ -2,7 +2,6 @@
 const osuBeatmapParser = require('osu-parser');
 const fs = require('fs-extra');
 const path = require('path');
-const os = require('os');
 const lzma = require('lzma');
 const axios = require('axios');
 const Jimp = require('jimp');
@@ -586,7 +585,7 @@ function prepareBeatmap(beatmap_path, mods, options, cb){
         let replay;
 
         if(options.score_id){
-            let replay_path = path.resolve(os.tmpdir(), 'replays', options.score_id);
+            let replay_path = `/tmp/replays/${options.score_id}`;
 
             if(fs.existsSync(replay_path))
                 replay = {lastCursor: 0, replay_data: parseReplay(fs.readFileSync(replay_path))};
@@ -720,7 +719,7 @@ module.exports = {
                 max_time = time + actual_length;
             }
 
-            file_path = path.resolve(os.tmpdir(), 'frames', rnd);
+            file_path = `/tmp/frames/${rnd}`;
             fs.ensureDirSync(file_path);
 
             let frames_size = actual_length / time_frame * size[0] * size[1] * 4;
@@ -790,7 +789,7 @@ module.exports = {
                             if(options.type == 'gif'){
                                 ffmpeg_args.push(`${file_path}/video.gif`);
 
-                                execFile(`"${ffmpeg.path}"`, ffmpeg_args, err => {
+                                execFile(ffmpeg.path, ffmpeg_args, err => {
                                     if(err){
                                         helper.error(err);
                                         cb("Couldn't encode video");
@@ -821,7 +820,7 @@ module.exports = {
                                         '-pix_fmt', 'yuv420p', '-r', fps, '-c:v', 'libx264', '-b:v', `${bitrate}k`, '-c:a', 'aac', '-shortest', '-preset', 'veryfast', `${file_path}/video.mp4`
                                     );
 
-                                    execFile(`"${ffmpeg.path}"`, ffmpeg_args, { shell: true }, err => {
+                                    execFile(ffmpeg.path, ffmpeg_args, { shell: true }, err => {
                                         if(err){
                                             helper.error(err);
                                             cb("Couldn't encode video");

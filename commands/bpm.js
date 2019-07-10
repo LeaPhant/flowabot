@@ -1,6 +1,5 @@
 const path = require('path');
 const fs = require('fs-extra');
-const os = require('os');
 const { execFileSync } = require('child_process');
 const URL = require('url');
 
@@ -57,7 +56,7 @@ module.exports = {
 
                 if(!beatmap_id){
                     let download_url = URL.parse(beatmap_url);
-                    download_path = path.resolve(os.tmpdir(), `${Math.floor(Math.random() * 1000000) + 1}.osu`);
+                    download_path = `/tmp/${Math.floor(Math.random() * 1000000) + 1}.osu`;
 
                     download_promise = helper.downloadFile(download_path, download_url);
 
