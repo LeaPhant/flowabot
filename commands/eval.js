@@ -77,7 +77,7 @@ module.exports = {
                 resolve('```' + output_msg + '```');
 
             }catch(err){
-                reject('```' + err.toString().split("\n")[0] + '```');
+                reject(err.toString().split("\n")[0]);
                 helper.error(err);
             }
         });
