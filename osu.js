@@ -187,9 +187,9 @@ function getMods(enabled_mods){
 
 function sanitizeMods(mods){
     let return_array = mods;
-    if(mods.includes("NC"))
+    if(mods.includes("NC") && mods.includes("DT"))
         return_array.splice(mods.indexOf("DT"), 1);
-    if(mods.includes("PF"))
+    if(mods.includes("PF") && mods.includes("SD"))
         return_array.splice(mods.indexOf("SD"), 1);
     return return_array;
 }
