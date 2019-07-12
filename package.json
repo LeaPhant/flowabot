@@ -1,8 +1,7 @@
 {
     "name": "flowabot",
-    "description": "Modular Discord bot with fun features including twitch commands and advanced osu! commands",
+    "description": "Modular Discord bot with fun features including twitch commands and advanced osu! commands.",
     "version": "1.0.0",
-    "description": "",
     "main": "index.js",
     "scripts": {
         "start": "git pull; npm i && [ ! -f ./config.json ] && npm run config; node index",
@@ -13,8 +12,8 @@
     },
     "author": "LeaPhant",
     "repository": {
-        "type" : "git",
-        "url" : "https://github.com/LeaPhant/flowabot.git"
+        "type": "git",
+        "url": "https://github.com/LeaPhant/flowabot.git"
     },
     "license": "MIT",
     "dependencies": {
