@@ -199,12 +199,12 @@
             }catch(e){
                 valid_key = false;
             }
-        }
 
-        if(valid_key)
-            console.log(chalk.greenBright("Valid Twitch Client ID!"));
-        else
-            console.log(chalk.redBright("Invalid Twitch Client ID!"));
+            if(valid_key)
+                console.log(chalk.greenBright("Valid Twitch Client ID!"));
+            else
+                console.log(chalk.redBright("Invalid Twitch Client ID!"));
+        }
     }while(!valid_key && value != 'none');
 
     config.credentials.twitch_client_id = value == 'none' ? "" : value;
@@ -231,12 +231,12 @@
             }catch(e){
                 valid_key = false;
             }
-        }
 
-        if(valid_key)
-            console.log(chalk.greenBright("Valid Pexels API Key!"));
-        else
-            console.log(chalk.redBright("Invalid Pexels API Key!"));
+            if(valid_key)
+                console.log(chalk.greenBright("Valid Pexels API Key!"));
+            else
+                console.log(chalk.redBright("Invalid Pexels API Key!"));
+        }
     }while(!valid_key && value != 'none');
 
     config.credentials.pexels_key = value == 'none' ? "" : value;
@@ -263,12 +263,12 @@
             }catch(e){
                 valid_key = false;
             }
-        }
 
-        if(valid_key)
-            console.log(chalk.greenBright("Valid Last.fm API Key!"));
-        else
-            console.log(chalk.redBright("Invalid Last.fm API Key!"));
+            if(valid_key)
+                console.log(chalk.greenBright("Valid Last.fm API Key!"));
+            else
+                console.log(chalk.redBright("Invalid Last.fm API Key!"));
+        }
     }while(!valid_key && value != 'none');
 
     config.credentials.last_fm_key = value == 'none' ? "" : value;
