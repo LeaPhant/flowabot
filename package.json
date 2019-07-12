@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "git pull; npm i && node index",
+    "start": "git pull; npm i && [ ! -f ./config.json ] && npm run config; node index",
     "test": "echo \"Error: no test specified\" && exit 1",
     "commands": "node generate-commands-md",
     "config": "node generate-config",
