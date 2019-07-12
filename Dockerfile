@@ -12,11 +12,9 @@ RUN wget -q https://download.visualstudio.microsoft.com/download/pr/3224f4c4-833
 ENV PATH="/root/dotnet:${PATH}"
 ENV DOTNET_ROOT=/root/dotnet
 
-WORKDIR /opt
-
-RUN git clone --recurse-submodules https://github.com/ppy/osu-tools.git
-
 WORKDIR /opt/osu-tools
+
+RUN git clone --recurse-submodules https://github.com/ppy/osu-tools.git .
 
 RUN bash build.sh
 
