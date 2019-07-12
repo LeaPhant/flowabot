@@ -2,6 +2,7 @@ const namegen = require('../fantasynamegen.js');
 
 module.exports = {
     command: 'fantasyname',
+    argsRequired: 1,
     description: [
         "Generates a fantasy name.",
         `Available types: \`${namegen.fantasyTypes.join("\`, \`")}\``,
