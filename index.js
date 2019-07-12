@@ -1,3 +1,6 @@
+if(require('semver').lt(process.version, '10.0.0'))
+	throw "flowabot only runs on Node.js 10 or higher";
+
 const Discord = require('discord.js');
 const fs = require('fs-extra');
 const path = require('path');
