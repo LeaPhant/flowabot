@@ -13,7 +13,7 @@
   "author": "LeaPhant",
   "license": "MIT",
   "dependencies": {
-    "axios": "^0.18.0",
+    "axios": "^0.19.0",
     "canvas": "^2.5.0",
     "chalk": "^2.4.2",
     "cheerio": "^1.0.0-rc.2",
@@ -21,7 +21,7 @@
     "diskusage": "^1.1.2",
     "ffmpeg-static": "^2.4.0",
     "fs-extra": "^8.1.0",
-    "highcharts-export-server": "^2.0.16",
+    "highcharts-export-server": "^2.0.24",
     "jimp": "^0.6.0",
     "lzma": "^2.3.2",
     "mathjs": "^6.0.2",
