@@ -3,6 +3,7 @@ const helper = require('../helper.js');
 
 module.exports = {
     command: 'fantasychange',
+    argsRequired: 1,
     description: [
         "Generates a fantasy name and changes your nickname to it.",
         `Available types: \`${namegen.fantasyTypes.join("\`, \`")}\``,
