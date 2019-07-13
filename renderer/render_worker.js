@@ -39,6 +39,27 @@ process.on('message', obj => {
 
         let current = replay.replay_data[replay.lastCursor - 1];
         let next = replay.replay_data[replay.lastCursor];
+
+        let current_start = current.offset;
+        let next_start = next.offset;
+
+        let pos_current = [current.x, current.y];
+        let pos_next = [next.x, next.y];
+
+        timestamp -= current_start;
+        next_start -= current_start;
+
+        let progress = timestamp / next_start;
+
+        let distance = vectorDistance(pos_current, pos_next);
+
+        let n = Math.max(1, progress * distance);
+
+        if(distance > 0){
+            current.x = pos_current[0] + (n / distance) * (pos_next[0] - pos_current[0]);
+            current.y = pos_current[1] + (n / distance) * (pos_next[1] - pos_current[1]);
+        }
+
         return {current: current, next: next};
     }
 
