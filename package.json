@@ -4,7 +4,7 @@
     "version": "1.0.0",
     "main": "index.js",
     "scripts": {
-        "start": "git pull; echo yes | npm i && [ ! -f ./config.json ] && npm run config; node index",
+        "start": "git pull; ACCEPT_HIGHCHARTS_LICENSE=1 npm i && [ ! -f ./config.json ] && npm run config; node index",
         "test": "echo \"Error: no test specified\" && exit 1",
         "commands": "node generate-commands-md",
         "config": "node generate-config",
