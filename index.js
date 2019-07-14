@@ -47,6 +47,9 @@ function checkCommand(msg, command){
     if(!msg.content.startsWith(config.prefix))
         return false;
 
+	if(msg.author.bot)
+		return false;
+
     let argv = msg.content.split(' ');
 
     let command_match = false;
