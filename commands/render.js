@@ -50,6 +50,11 @@ module.exports = {
 
             if(argv[0].toLowerCase() == 'fail'){
                 if(msg.channel.id in last_beatmap){
+                    if(last_beatmap[msg.channel.id].fail_percent == 1){
+                        reject("Last play is not a failed score");
+                        return false;
+                    }
+
                     percent = last_beatmap[msg.channel.id].fail_percent;
                     length = 4;
                 }
@@ -103,6 +108,11 @@ module.exports = {
                     objects = arg.substr(1, arg.length - 1).split(',').length;
                 }else if(arg == 'fail'){
                     if(msg.channel.id in last_beatmap){
+                        if(last_beatmap[msg.channel.id].fail_percent == 1){
+                            reject("Last play is not a failed score");
+                            return false;
+                        }
+
                         percent = last_beatmap[msg.channel.id].fail_percent;
                         length = 4;
                     }
