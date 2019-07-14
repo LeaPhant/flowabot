@@ -128,7 +128,8 @@ module.exports = {
     validateBeatmap: beatmap_path => {
         let file = fs.readFileSync(beatmap_path, 'utf8');
         let lines = file.split("\n");
-        if(lines.length > 0 && !lines[0].startsWith('osu file format'))
+
+        if(lines.length > 0 && !lines[0].includes('osu file format'))
             return false;
 
         return true;

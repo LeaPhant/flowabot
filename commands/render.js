@@ -186,7 +186,17 @@ module.exports = {
                             resolve({file: buf, name: 'frame.png'});
                         });
                     }
+                }).catch(err => {
+                    if(config.debug)
+                        helper.error(err);
+
+                    reject(err);
                 });
+            }).catch(err => {
+                if(config.debug)
+                    helper.error(err);
+
+                reject(err);
             });
         });
     }
