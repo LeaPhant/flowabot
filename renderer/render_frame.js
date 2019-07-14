@@ -543,7 +543,7 @@ function processBeatmap(beatmap, enabled_mods, cb){
                 for(var x = 0; x <= 1; x += 0.001){
                     var slider_dot = coordsOnBezier(part, x);
                     if(last_slider_dot){
-                        if(vectorDistanceSquared(slider_dot, last_slider_dot) >= 0.01){
+                        if(vectorDistanceSquared(slider_dot, last_slider_dot) >= 1){
                             slider_dots.push(slider_dot);
                             last_slider_dot = slider_dot;
                         }
