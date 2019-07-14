@@ -518,41 +518,137 @@ function processBeatmap(beatmap, enabled_mods, cb){
             var slider_part = [];
             var timingPoint;
 
+            let slider_dots = [];
+
             for(var x = 0; x < beatmap.timingPoints.length; x++){
                 timingPoint = beatmap.timingPoints[x];
                 if(timingPoint.offset <= hitObject.startTime) break;
             }
 
-            hitObject.points.forEach(function(point, index){
-                slider_part.push(point);
-                if(index < hitObject.points.length - 1){
-                    if(point[0] == hitObject.points[index + 1][0] && point[1] == hitObject.points[index + 1][1]){
-                        slider_parts.push(slider_part);
-                        slider_part = [];
+            if(hitObject.curveType == 'pass-through' && hitObject.points.length == 3){
+                // Pretty much copied from osu-lazer https://github.com/ppy/osu-framework/blob/master/osu.Framework/MathUtils/PathApproximator.cs#L114
+
+                let a = hitObject.points[0];
+                let b = hitObject.points[1];
+                let c = hitObject.points[2];
+
+                let aSq = vectorDistanceSquared(b, c);
+                let bSq = vectorDistanceSquared(a, c);
+                let cSq = vectorDistanceSquared(a, b);
+
+                if(aSq != 0 && bSq != 0 && bSq != 0){
+                    let s = aSq * (bSq + cSq - aSq);
+                    let t = bSq * (aSq + cSq - bSq);
+                    let u = cSq * (aSq + bSq - cSq);
+
+                    let sum = s + t + u;
+
+                    if(sum != 0){
+                        let center = [
+                            s * a[0] + t * b[0] + u * c[0],
+                            s * a[1] + t * b[1] + u * c[1]
+                        ];
+
+                        center = [
+                            center[0] / sum,
+                            center[1] / sum
+                        ];
+
+                        let dA = [
+                            a[0] - center[0],
+                            a[1] - center[1]
+                        ];
+
+                        let dC = [
+                            c[0] - center[0],
+                            c[1] - center[1]
+                        ];
+
+                        let r = vectorDistance(a, center);
+
+                        let thetaStart = Math.atan2(dA[1], dA[0]);
+                        let thetaEnd = Math.atan2(dC[1], dC[0]);
+
+                        while(thetaEnd < thetaStart)
+                            thetaEnd += 2 * Math.PI;
+
+                        let dir = 1;
+                        let thetaRange = thetaEnd - thetaStart;
+
+                        let orthoAtoC = [
+                            c[0] - a[0],
+                            c[1] - a[1]
+                        ];
+
+                        orthoAtoC = [
+                            orthoAtoC[1],
+                            -orthoAtoC[0]
+                        ];
+
+                        let bMinusA = [
+                            b[0] - a[0],
+                            b[1] - a[1]
+                        ];
+
+                        if(orthoAtoC[0] * bMinusA[0] + orthoAtoC[1] * bMinusA[1] < 0){
+                            dir = -dir;
+                            thetaRange = 2 * Math.PI - thetaRange;
+                        }
+
+                        let amountPoints = 1000;
+
+                        for(let i = 0; i < amountPoints; ++i){
+                            let fract = i / (amountPoints - 1);
+                            let theta = thetaStart + dir * fract * thetaRange;
+
+                            let o = [
+                                Math.cos(theta),
+                                Math.sin(theta)
+                            ];
+
+                            o = [
+                                o[0] * r,
+                                o[1] * r
+                            ];
+
+                            slider_dots.push([
+                                center[0] + o[0],
+                                center[1] + o[1]
+                            ]);
+                        }
                     }
-                }else if(hitObject.points.length - 1 == index){
-                    slider_part.push(point);
-                    slider_parts.push(slider_part);
                 }
-            });
+            }else{
+                hitObject.points.forEach(function(point, index){
+                    slider_part.push(point);
+                    if(index < hitObject.points.length - 1){
+                        if(point[0] == hitObject.points[index + 1][0] && point[1] == hitObject.points[index + 1][1]){
+                            slider_parts.push(slider_part);
+                            slider_part = [];
+                        }
+                    }else if(hitObject.points.length - 1 == index){
+                        slider_part.push(point);
+                        slider_parts.push(slider_part);
+                    }
+                });
 
-            var slider_dots = [];
-            var last_slider_dot;
+                var last_slider_dot;
 
-            slider_parts.forEach(function(part, index){
-                for(var x = 0; x <= 1; x += 0.001){
-                    var slider_dot = coordsOnBezier(part, x);
-                    if(last_slider_dot){
-                        if(vectorDistanceSquared(slider_dot, last_slider_dot) >= 1){
+                slider_parts.forEach(function(part, index){
+                    for(var x = 0; x <= 1; x += 0.001){
+                        var slider_dot = coordsOnBezier(part, x);
+                        if(last_slider_dot){
+                            if(vectorDistanceSquared(slider_dot, last_slider_dot) >= 1){
+                                slider_dots.push(slider_dot);
+                                last_slider_dot = slider_dot;
+                            }
+                        }else{
                             slider_dots.push(slider_dot);
                             last_slider_dot = slider_dot;
                         }
-                    }else{
-                        slider_dots.push(slider_dot);
-                        last_slider_dot = slider_dot;
                     }
-                }
-            });
+                });
+            }
 
             var slider_ticks = [];
 
