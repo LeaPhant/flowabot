@@ -1,4 +1,4 @@
-const { createCanvas } = require('canvas');
+const { createCanvas, Image } = require('canvas');
 const path = require('path');
 const fs = require('fs-extra');
 
@@ -11,14 +11,14 @@ process.on('message', obj => {
     function resize(){
         active_playfield_width = canvas.width * 0.7;
         active_playfield_height = active_playfield_width * (3/4);
-        var position = playfieldPosition(0, 0);
-        var size = playfieldPosition(PLAYFIELD_WIDTH, PLAYFIELD_HEIGHT);
+        let position = playfieldPosition(0, 0);
+        let size = playfieldPosition(PLAYFIELD_WIDTH, PLAYFIELD_HEIGHT);
         scale_multiplier = (size[0] - position[0]) / PLAYFIELD_WIDTH;
     }
 
     function playfieldPosition(x, y){
-        var ratio_x = x / PLAYFIELD_WIDTH;
-        var ratio_y = y / PLAYFIELD_HEIGHT;
+        let ratio_x = x / PLAYFIELD_WIDTH;
+        let ratio_y = y / PLAYFIELD_HEIGHT;
 
         return [
             active_playfield_width * ratio_x + canvas.width * 0.15,
@@ -116,10 +116,7 @@ process.on('message', obj => {
 
                     let progress = Math.min(1, progress_0 / progress_1 * 2);
 
-                    let v = [
-                        end_position[0] - start_position[0],
-                        end_position[1] - start_position[1]
-                    ];
+                    let v = vectorSubtract(end_position, start_position);
 
                     v[0] *= progress;
                     v[1] *= progress;
@@ -127,10 +124,10 @@ process.on('message', obj => {
 
                     ctx.beginPath();
                     ctx.moveTo(...start_position);
-                    ctx.lineTo(start_position[0] + v[0], start_position[1] + v[1]);
+                    ctx.lineTo(vectorAdd(start_position, v[0]));
                     ctx.stroke();
 
-                    //then shift x by cos(angle)*radius and y by sin(angle)*radius
+                    //then shift x by cos(angle)*radius and y by sin(angle)*radius (LATER)
                 }
             }
         });
@@ -141,8 +138,10 @@ process.on('message', obj => {
             if(time < hitObject.startTime || hitObject.objectName != "circle" && time < hitObject.endTime){
                 let opacity = (time - (hitObject.startTime - beatmap.TimeFadein)) / (beatmap.TimeFadein - beatmap.TimePreempt);
                 let approachCircle = 1 - (time - (hitObject.startTime - beatmap.TimePreempt)) / beatmap.TimePreempt;
+
                 if(approachCircle < 0) approachCircle = 0;
                 if(opacity > 1) opacity = 1;
+
                 ctx.globalAlpha = opacity;
                 ctx.shadowBlur = 4 * scale_multiplier;
                 ctx.fillStyle = "rgba(40,40,40,0.2)";
@@ -151,14 +150,6 @@ process.on('message', obj => {
                 let followpoint_progress = 0;
 
                 if(hitObject.objectName == "slider"){
-
-                    let render_dots = [];
-
-                    for(let x = 0; x < hitObject.SliderDots.length; x++){
-                        render_dots.push(hitObject.SliderDots[x]);
-                    }
-
-
                     ctx.lineWidth = 6 * scale_multiplier;
                     ctx.strokeStyle = "white";
 
@@ -170,20 +161,22 @@ process.on('message', obj => {
 
                     ctx.lineWidth = scale_multiplier * beatmap.Radius * 2;
 
-                    render_dots.forEach(function(dot, index){
-                        var position = playfieldPosition(dot[0], dot[1]);
-                        if(index == 0){
-                            ctx.moveTo(position[0], position[1]);
+                    for(let x = 0; x < hitObject.SliderDots.length; x++){
+                        let dot = hitObject.SliderDots[x];
+                        let position = playfieldPosition(...dot);
+
+                        if(x == 0){
+                            ctx.moveTo(...position);
                         }else{
-                            ctx.lineTo(position[0], position[1]);
+                            ctx.lineTo(...position);
                         }
-                    });
+                    }
 
                     ctx.stroke();
 
                     if(time >= hitObject.startTime && time <= hitObject.endTime){
-                        var currentTurn = Math.floor((time - hitObject.startTime) / (hitObject.duration / hitObject.repeatCount));
-                        var currentOffset = (time - hitObject.startTime) / (hitObject.duration / hitObject.repeatCount) - currentTurn;
+                        let currentTurn = Math.floor((time - hitObject.startTime) / (hitObject.duration / hitObject.repeatCount));
+                        let currentOffset = (time - hitObject.startTime) / (hitObject.duration / hitObject.repeatCount) - currentTurn;
 
                         let dot_index = 0;
 
@@ -206,17 +199,17 @@ process.on('message', obj => {
                     ctx.beginPath();
                     ctx.strokeStyle = "rgba(255,255,255,0.85)";
 
-                    var position = playfieldPosition(hitObject.position[0], hitObject.position[1]);
+                    let position = playfieldPosition(...hitObject.position);
 
                     if(options.fill){
                         ctx.beginPath();
                         ctx.fillStyle = hitObject.Color;
-                        ctx.arc(position[0], position[1], scale_multiplier * beatmap.Radius, 0, 2 * Math.PI, false);
+                        ctx.arc(...position, scale_multiplier * beatmap.Radius, 0, 2 * Math.PI, false);
                         ctx.fill();
                     }
 
                     ctx.beginPath();
-                    ctx.arc(position[0], position[1], scale_multiplier * beatmap.Radius - ctx.lineWidth / 2, 0, 2 * Math.PI, false);
+                    ctx.arc(...position, scale_multiplier * beatmap.Radius - ctx.lineWidth / 2, 0, 2 * Math.PI, false);
                     ctx.stroke();
 
                     ctx.fillStyle = 'white';
@@ -235,8 +228,8 @@ process.on('message', obj => {
                         ctx.strokeStyle = 'white';
                         ctx.lineWidth = 2 * scale_multiplier;
                         ctx.beginPath();
-                        var position = playfieldPosition(hitObject.position[0], hitObject.position[1]);
-                        ctx.arc(position[0], position[1], scale_multiplier * (beatmap.Radius + approachCircle * (beatmap.Radius * 2)), 0, 2 * Math.PI, false);
+                        let position = playfieldPosition(...hitObject.position);
+                        ctx.arc(...position, scale_multiplier * (beatmap.Radius + approachCircle * (beatmap.Radius * 2)), 0, 2 * Math.PI, false);
                         ctx.stroke();
                     }
 
@@ -264,14 +257,14 @@ process.on('message', obj => {
                         ctx.beginPath();
 
                         position = playfieldPosition(...pos_current);
-                        ctx.arc(position[0], position[1], scale_multiplier * beatmap.Radius, 0, 2 * Math.PI, false);
+                        ctx.arc(...position, scale_multiplier * beatmap.Radius, 0, 2 * Math.PI, false);
                         ctx.fill();
 
                         ctx.fillStyle = "rgba(255,255,255,0.8)";
                         ctx.beginPath();
 
                         position = playfieldPosition(...pos_current);
-                        ctx.arc(position[0], position[1], scale_multiplier * (beatmap.Radius * 3), 0, 2 * Math.PI, false);
+                        ctx.arc(...position, scale_multiplier * (beatmap.Radius * 3), 0, 2 * Math.PI, false);
                         ctx.stroke();
                     }
 
@@ -279,16 +272,18 @@ process.on('message', obj => {
                     ctx.strokeStyle = "white";
                     ctx.globalAlpha = opacity;
 
+                    let position;
+
                     ctx.lineWidth = 10 * scale_multiplier;
                     ctx.beginPath();
-                    var position = playfieldPosition(PLAYFIELD_WIDTH / 2, PLAYFIELD_HEIGHT / 2);
-                    ctx.arc(position[0], position[1], scale_multiplier * 240, 0, 2 * Math.PI, false);
+                    position = playfieldPosition(PLAYFIELD_WIDTH / 2, PLAYFIELD_HEIGHT / 2);
+                    ctx.arc(...position, scale_multiplier * 240, 0, 2 * Math.PI, false);
                     ctx.stroke();
 
                     ctx.lineWidth = 10 * scale_multiplier;
                     ctx.beginPath();
-                    var position = playfieldPosition(PLAYFIELD_WIDTH / 2, PLAYFIELD_HEIGHT / 2);
-                    ctx.arc(position[0], position[1], scale_multiplier * 30, 0, 2 * Math.PI, false);
+                    position = playfieldPosition(PLAYFIELD_WIDTH / 2, PLAYFIELD_HEIGHT / 2);
+                    ctx.arc(...position, scale_multiplier * 30, 0, 2 * Math.PI, false);
                     ctx.stroke();
                 }
             }else if(hitObject.startTime - time > -200){
@@ -306,17 +301,17 @@ process.on('message', obj => {
                     ctx.beginPath();
                     ctx.strokeStyle = "rgba(255,255,255,0.85)";
 
-                    var position = playfieldPosition(hitObject.position[0], hitObject.position[1]);
+                    let position = playfieldPosition(...hitObject.position);
 
                     if(options.fill){
                         ctx.beginPath();
                         ctx.fillStyle = hitObject.Color;
-                        ctx.arc(position[0], position[1], sizeFactor * scale_multiplier * beatmap.Radius, 0, 2 * Math.PI, false);
+                        ctx.arc(...position, sizeFactor * scale_multiplier * beatmap.Radius, 0, 2 * Math.PI, false);
                         ctx.fill();
                     }
 
                     ctx.beginPath();
-                    ctx.arc(position[0], position[1], sizeFactor * scale_multiplier * beatmap.Radius - ctx.lineWidth / 2, 0, 2 * Math.PI, false);
+                    ctx.arc(...position, sizeFactor * scale_multiplier * beatmap.Radius - ctx.lineWidth / 2, 0, 2 * Math.PI, false);
                     ctx.stroke();
 
                     ctx.fillStyle = 'white';
@@ -329,7 +324,7 @@ process.on('message', obj => {
                     fontSize *= scale_multiplier * sizeFactor;
 
                     ctx.font = `${fontSize}px sans-serif`;
-                    ctx.fillText(hitObject.ComboNumber, position[0], position[1]);
+                    ctx.fillText(hitObject.ComboNumber, ...position);
                 }
             }
         });
@@ -350,7 +345,7 @@ process.on('message', obj => {
                     ctx.fillStyle = 'white';
 
                 ctx.beginPath();
-                ctx.arc(position[0], position[1], scale_multiplier * 13, 0, 2 * Math.PI, false);
+                ctx.arc(...position, scale_multiplier * 13, 0, 2 * Math.PI, false);
                 ctx.fill();
             }
         }
@@ -360,15 +355,16 @@ process.on('message', obj => {
             ctx.lineWidth = 1;
             ctx.globalAlpha = 1;
 
-            var position = playfieldPosition(0, 0);
-            var size = playfieldPosition(PLAYFIELD_WIDTH, PLAYFIELD_HEIGHT);
-            ctx.strokeRect(position[0], position[1], size[0] - position[0], size[1] - position[1]);
+            let position = playfieldPosition(0, 0);
+            let size = playfieldPosition(PLAYFIELD_WIDTH, PLAYFIELD_HEIGHT);
+            ctx.strokeRect(...position, size[0] - position[0], size[1] - position[1]);
         }
     }
 
     let time = start_time;
 
     prepareCanvas(size);
+    //preprocessSliders();
 
     if(end_time){
         while(time < end_time){
