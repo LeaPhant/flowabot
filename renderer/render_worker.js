@@ -146,13 +146,15 @@ process.on('message', obj => {
                 ctx.globalAlpha = opacity;
                 ctx.shadowBlur = 4 * scale_multiplier;
                 ctx.fillStyle = "rgba(40,40,40,0.2)";
-                let followpoint_dot;
+
+                let followpoint_index;
+                let followpoint_progress = 0;
 
                 if(hitObject.objectName == "slider"){
 
                     let render_dots = [];
 
-                    for(let x = 0; x < hitObject.SliderDots.length; x += 20){
+                    for(let x = 0; x < hitObject.SliderDots.length; x++){
                         render_dots.push(hitObject.SliderDots[x]);
                     }
 
@@ -183,10 +185,15 @@ process.on('message', obj => {
                         var currentTurn = Math.floor((time - hitObject.startTime) / (hitObject.duration / hitObject.repeatCount));
                         var currentOffset = (time - hitObject.startTime) / (hitObject.duration / hitObject.repeatCount) - currentTurn;
 
+                        let dot_index = 0;
+
                         if(currentTurn % 2 == 0)
-                            followpoint_dot = hitObject.SliderDots[Math.floor(currentOffset * hitObject.SliderDots.length)];
+                            dot_index = currentOffset * hitObject.SliderDots.length;
                         else
-                            followpoint_dot = hitObject.SliderDots[Math.floor((1 - currentOffset) * hitObject.SliderDots.length)];
+                            dot_index = (1 - currentOffset) * hitObject.SliderDots.length;
+
+                        followpoint_index = Math.floor(dot_index);
+                        followpoint_progress = dot_index - followpoint_index;
                     }
                 }
 
@@ -233,15 +240,37 @@ process.on('message', obj => {
                         ctx.stroke();
                     }
 
-                    if(followpoint_dot){
+                    if(followpoint_index){
+                        let pos_current = hitObject.SliderDots[followpoint_index];
+
+                        if(hitObject.SliderDots.length - 1 > followpoint_index){
+                            let pos_next = hitObject.SliderDots[followpoint_index + 1];
+
+                            let distance = vectorDistance(pos_current, pos_next);
+
+                            let n = Math.max(1, followpoint_progress * distance);
+
+                            if(distance > 0){
+                                pos_current = [
+                                    pos_current[0] + (n / distance) * (pos_next[0] - pos_current[0]),
+                                    pos_current[1] + (n / distance) * (pos_next[1] - pos_current[1])
+                                ]
+                            }
+                        }
+
+                        let position;
+
                         ctx.fillStyle = "rgba(255,255,255,0.3)";
                         ctx.beginPath();
-                        var position = playfieldPosition(followpoint_dot[0], followpoint_dot[1]);
+
+                        position = playfieldPosition(...pos_current);
                         ctx.arc(position[0], position[1], scale_multiplier * beatmap.Radius, 0, 2 * Math.PI, false);
                         ctx.fill();
+
                         ctx.fillStyle = "rgba(255,255,255,0.8)";
                         ctx.beginPath();
-                        var position = playfieldPosition(followpoint_dot[0], followpoint_dot[1]);
+
+                        position = playfieldPosition(...pos_current);
                         ctx.arc(position[0], position[1], scale_multiplier * (beatmap.Radius * 3), 0, 2 * Math.PI, false);
                         ctx.stroke();
                     }
