@@ -371,7 +371,7 @@ function processBeatmap(cb){
                             catmullFindPoint(v1, v2, v3, v4, (c + 1) / CATMULL_DETAIL)
                         ];
 
-                        if(!last_slider_dot || last_slider_dot && vectorDistanceSquared(_slider_dots[0], last_slider_dot) >= 1)
+                        if(!last_slider_dot || last_slider_dot && vectorDistanceSquared(_slider_dots[0], last_slider_dot) >= 5)
                             slider_dots.push(..._slider_dots);
 
                         last_slider_dot = _slider_dots[0];
