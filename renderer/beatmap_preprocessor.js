@@ -271,6 +271,7 @@ function processBeatmap(cb){
     if(beatmap.StackLeniency === undefined || beatmap.StackLeniency === NaN || beatmap.StackLeniency === null)
             beatmap.StackLeniency = 0.7;
 
+    // Calculate slider curves
     beatmap.hitObjects.forEach(function(hitObject, i){
         if(hitObject.objectName == "slider"){
             var slider_parts = [];
@@ -357,7 +358,6 @@ function processBeatmap(cb){
                 }
             }else if(hitObject.curveType == 'catmull'){
                 // Pretty much copied from osu-lazer https://github.com/ppy/osu-framework/blob/master/osu.Framework/MathUtils/PathApproximator.cs#L89
-                let last_slider_dot;
 
                 for(let x = 0; x < hitObject.points.length - 1; x++){
                     let v1 = x > 0 ? hitObject.points[x - 1] : hitObject.points[x];
@@ -366,15 +366,10 @@ function processBeatmap(cb){
                     let v4 = x < hitObject.points.length - 2 ? hitObject.points[x + 2] : vectorSubtract(vectorAdd(v3, v3), v2);
 
                     for(let c = 0; c < CATMULL_DETAIL; c++){
-                        let _slider_dots = [
+                        slider_dots.push(
                             catmullFindPoint(v1, v2, v3, v4, c / CATMULL_DETAIL),
                             catmullFindPoint(v1, v2, v3, v4, (c + 1) / CATMULL_DETAIL)
-                        ];
-
-                        if(!last_slider_dot || last_slider_dot && vectorDistanceSquared(_slider_dots[0], last_slider_dot) >= 5)
-                            slider_dots.push(..._slider_dots);
-
-                        last_slider_dot = _slider_dots[0];
+                        );
                     }
                 }
             }else{
@@ -391,21 +386,9 @@ function processBeatmap(cb){
                     }
                 });
 
-                var last_slider_dot;
-
                 slider_parts.forEach(function(part, index){
-                    for(var x = 0; x <= 1; x += 1 / BEZIER_DETAIL){
-                        var slider_dot = coordsOnBezier(part, x);
-                        if(last_slider_dot){
-                            if(vectorDistanceSquared(slider_dot, last_slider_dot) >= 2){
-                                slider_dots.push(slider_dot);
-                                last_slider_dot = slider_dot;
-                            }
-                        }else{
-                            slider_dots.push(slider_dot);
-                            last_slider_dot = slider_dot;
-                        }
-                    }
+                    for(let x = 0; x <= 1; x += 1 / BEZIER_DETAIL)
+                        slider_dots.push(coordsOnBezier(part, x));
                 });
             }
 
@@ -423,132 +406,198 @@ function processBeatmap(cb){
         }
     });
 
-    for(var i = 0; i <= beatmap.hitObjects.length - 1; i++){
-        if(beatmap.hitObjects[i].objectName == "circle")
+    // Interpolate slider dots (TODO)
+    /*
+    for(let i = 0; i < beatmap.hitObjects.length; i++){
+        let hitObject = beatmap.hitObjects[i];
+        let slider_dots = [];
+
+        if(hitObject.objectName != 'slider')
+            continue;
+
+        if(hitObject.SliderDots.length < 2)
+            continue;
+
+        let pos_current = hitObject.SliderDots[0];
+        let next_index = 1;
+        let pos_next = hitObject.SliderDots[next_index];
+        let current_distance = 1;
+
+        for(let x = 0; x < hitObject.SliderDots.length; x++){
+            while(vectorDistanceSquared(pos_current, pos_next) < 1 * 1 && next_index < hitObject.SliderDots.length - 1){
+                next_index++;
+                pos_next = hitObject.SliderDots[next_index];
+            }
+
+            let distance = vectorDistance(pos_current, pos_next);
+
+            if(distance >= 1){
+                let n = current_distance;
+
+                current_distance++;
+
+                console.log(current_distance);
+
+                slider_dots.push([
+                    pos_current[0] + (n / distance) * (pos_next[0] - pos_current[0]),
+                    pos_current[1] + (n / distance) * (pos_next[1] - pos_current[1])
+                ]);
+
+                if(current_distance >= distance){
+                    current_distance = 1;
+                    pos_current = pos_next;
+                }
+            }
+        }
+
+        for(let x = 1; x < slider_dots.length; x++){
+            console.log(vectorDistance(slider_dots[x], slider_dots[x - 1]));
+        }
+
+        hitObject.SliderDots = slider_dots;
+    }
+    */
+
+    //
+    for(let i = 0; i < beatmap.hitObjects.length; i++){
+        let hitObject = beatmap.hitObjects[i];
+
+        if(hitObject.objectName == "circle")
             beatmap.hitObjects[i].endPosition = beatmap.hitObjects[i].position;
 
         // HR inversion
         if(enabled_mods.includes("HR")){
-            beatmap.hitObjects[i].position[1] = PLAYFIELD_HEIGHT - beatmap.hitObjects[i].position[1];
-            if(beatmap.hitObjects[i].objectName == "slider"){
-                beatmap.hitObjects[i].endPosition[1] = PLAYFIELD_HEIGHT - beatmap.hitObjects[i].endPosition[1];
+            beatmap.hitObjects[i].position[1] = PLAYFIELD_HEIGHT - hitObject.position[1];
+            if(hitObject.objectName == "slider"){
+                beatmap.hitObjects[i].endPosition[1] = PLAYFIELD_HEIGHT - hitObject.endPosition[1];
 
-                for(let x = 0; x < beatmap.hitObjects[i].SliderDots.length; x++)
-                    beatmap.hitObjects[i].SliderDots[x][1] = PLAYFIELD_HEIGHT - beatmap.hitObjects[i].SliderDots[x][1];
+                for(let x = 0; x < hitObject.SliderDots.length; x++)
+                    beatmap.hitObjects[i].SliderDots[x][1] = PLAYFIELD_HEIGHT - hitObject.SliderDots[x][1];
 
-                for(let x = 0; x < beatmap.hitObjects[i].SliderTicks.length; x++)
-                    beatmap.hitObjects[i].SliderTicks[x][1] = PLAYFIELD_HEIGHT - beatmap.hitObjects[i].SliderTicks[x][1];
+                for(let x = 0; x < hitObject.SliderTicks.length; x++)
+                    beatmap.hitObjects[i].SliderTicks[x][1] = PLAYFIELD_HEIGHT - hitObject.SliderTicks[x][1];
             }
         }
 
-        // Stacking
         beatmap.hitObjects[i].StackHeight = 0;
     }
+
+    // Apply Stacking (this was copied from somewhere but the project is gone)
 
     var end = -1;
     var start = 0;
     let nObj = beatmap.hitObjects.length;
-    while (end < 0)
-      end += nObj;
-    let stackThreshold = beatmap.TimeFadein * beatmap.StackLeniency;
-    // helper.log("stack leniency:", stackLeniency);
 
-    // reset stacking first
-    for (let i = end; i >= start; --i)
+    while(end < 0)
+        end += nObj;
+
+    let stackThreshold = beatmap.TimeFadein * beatmap.StackLeniency;
+
+    // Reset stacking first
+    for(let i = end; i >= start; --i)
       beatmap.hitObjects[i].stackHeight = 0;
 
-    // just extend the end index in case it's not the base
+    // Just extend the end index in case it's not the base
     let extEnd = end;
-    for (let i = end; i >= start; --i) {
-      let stackBase = i;
-      for (let n = stackBase + 1; n < nObj; ++n) {
-        // bottom of the stack
-        let stackBaseObj = beatmap.hitObjects[stackBase];
-        if (stackBaseObj.objectName == "spinner")
-          break;
 
-        // current object
-        let objN = beatmap.hitObjects[n];
-        if (objN.objectName == "spinner")
-          continue;
+    for(let i = end; i >= start; --i){
+        let stackBase = i;
 
-        // check if out of range
-        if (objN.startTime - stackBaseObj.endTime > stackThreshold)
-          break;
+        for(let n = stackBase + 1; n < nObj; ++n){
+            // Bottom of the stack
+            let stackBaseObj = beatmap.hitObjects[stackBase];
+            if(stackBaseObj.objectName == "spinner")
+                break;
 
-        if (vectorDistance(stackBaseObj.position, objN.position) < STACK_LENIENCE ||
-            (stackBaseObj.objectName == "slider" &&
-             vectorDistance(stackBaseObj.endPosition, objN.position) <
-                 STACK_LENIENCE)) {
-          stackBase = n;
-          beatmap.hitObjects[n].stackHeight = 0;
+            // Current object
+            let objN = beatmap.hitObjects[n];
+            if(objN.objectName == "spinner")
+                continue;
+
+            // Check if out of range
+            if(objN.startTime - stackBaseObj.endTime > stackThreshold)
+                break;
+
+            if(vectorDistance(stackBaseObj.position, objN.position) < STACK_LENIENCE
+            || (stackBaseObj.objectName == "slider"
+            && vectorDistance(stackBaseObj.endPosition, objN.position) < STACK_LENIENCE)){
+                stackBase = n;
+                beatmap.hitObjects[n].stackHeight = 0;
+            }
         }
-      }
-      if (stackBase > extEnd) {
-        extEnd = stackBase;
-        if (extEnd == nObj - 1)
-          break;
-      }
+
+        if(stackBase > extEnd){
+            extEnd = stackBase;
+
+            if(extEnd == nObj - 1)
+                break;
+        }
     }
 
-    // actually build the stacks now :D
+    // Actually build the stacks now
     let extStart = start;
-    for (let i = extEnd; i > start; --i) {
-      let n = i;
-      if (beatmap.hitObjects[i].stackHeight != 0 ||
-          beatmap.hitObjects[i].objectName == "spinner")
-        continue;
+    for(let i = extEnd; i > start; --i){
+        let n = i;
+        if(beatmap.hitObjects[i].stackHeight != 0
+        || beatmap.hitObjects[i].objectName == "spinner")
+            continue;
 
-      let j = i;
-      if (beatmap.hitObjects[i].objectName == "circle") {
-        while (--n >= 0) {
-          let objN = beatmap.hitObjects[n];
-          if (objN.objectName == "spinner")
-            continue;
-          if (beatmap.hitObjects[j].startTime - objN.endTime > stackThreshold)
-            break;
-          if (n < extStart) {
-            beatmap.hitObjects[n].stackHeight = 0;
-            extStart = n;
-          }
-          if (objN.objectName == "slider" &&
-              vectorDistance(objN.endPosition, beatmap.hitObjects[j].position) <
-                  STACK_LENIENCE) {
-            let offset = beatmap.hitObjects[j].stackHeight - objN.stackHeight + 1;
-            for (let j = n + 1; j <= i; ++j) {
-              let objJ = beatmap.hitObjects[j];
-              if (vectorDistance(objN.endPosition, objJ.position) < STACK_LENIENCE)
-                objJ.stackHeight -= offset;
+        let j = i;
+
+        if(beatmap.hitObjects[i].objectName == "circle"){
+            while(--n >= 0){
+                let objN = beatmap.hitObjects[n];
+
+                if(objN.objectName == "spinner")
+                    continue;
+
+                if(beatmap.hitObjects[j].startTime - objN.endTime > stackThreshold)
+                    break;
+
+                if(n < extStart){
+                    beatmap.hitObjects[n].stackHeight = 0;
+                    extStart = n;
+                }
+
+                if(objN.objectName == "slider"
+                && vectorDistance(objN.endPosition, beatmap.hitObjects[j].position) < STACK_LENIENCE){
+                    let offset = beatmap.hitObjects[j].stackHeight - objN.stackHeight + 1;
+
+                    for(let j = n + 1; j <= i; ++j){
+                        let objJ = beatmap.hitObjects[j];
+
+                        if(vectorDistance(objN.endPosition, objJ.position) < STACK_LENIENCE)
+                            objJ.stackHeight -= offset;
+                    }
+                    break;
+                }
+                if(vectorDistance(objN.position, beatmap.hitObjects[j].position) < STACK_LENIENCE){
+                    beatmap.hitObjects[n].stackHeight = beatmap.hitObjects[j].stackHeight + 1;
+                    j = n;
+                }
             }
-            break;
-          }
-          if (vectorDistance(objN.position, beatmap.hitObjects[j].position) <
-              STACK_LENIENCE) {
-            beatmap.hitObjects[n].stackHeight = beatmap.hitObjects[j].stackHeight + 1;
-            // helper.log("new stack height =", objN.stackHeight);
-            j = n;
-          }
-        }
-      } else if (beatmap.hitObjects[i].objectName == "slider") {
-        while (--n >= start) {
-          let objN = beatmap.hitObjects[n];
-          if (objN.objectName == "spinner")
-            continue;
-          if (beatmap.hitObjects[j].startTime - objN.endTime > stackThreshold)
-            break;
-          if (vectorDistance(objN.endPosition, beatmap.hitObjects[j].position) <
-              STACK_LENIENCE) {
-                beatmap.hitObjects[n].stackHeight = beatmap.hitObjects[j].stackHeight + 1;
+        }else if(beatmap.hitObjects[i].objectName == "slider"){
+            while(--n >= start){
+                let objN = beatmap.hitObjects[n];
+
+                if(objN.objectName == "spinner")
+                    continue;
+
+                if(beatmap.hitObjects[j].startTime - objN.endTime > stackThreshold)
+                    break;
+
+                if(vectorDistance(objN.endPosition, beatmap.hitObjects[j].position) < STACK_LENIENCE)
+                    beatmap.hitObjects[n].stackHeight = beatmap.hitObjects[j].stackHeight + 1;
+
+                j = n;
             }
-            // helper.log("new stack height =", objN.stackHeight);
-            j = n;
         }
-      }
     }
 
-    var currentCombo = 1;
-    var currentComboNumber = 0;
+    let currentCombo = 1;
+    let currentComboNumber = 0;
 
+    // Set combo colors and stacking offset
     beatmap.hitObjects.forEach(function(hitObject, i){
         if(hitObject.newCombo){
             currentCombo++;
@@ -564,7 +613,6 @@ function processBeatmap(cb){
 
         if(hitObject.objectName == "slider"){
             hitObject.endPosition = [hitObject.endPosition[0] + hitObject.StackOffset, hitObject.endPosition[1] + hitObject.StackOffset];
-
             for(let x = 0; x < hitObject.SliderDots.length; x++)
                 beatmap.hitObjects[i].SliderDots[x] = [
                     hitObject.SliderDots[x][0] + hitObject.StackOffset,
@@ -579,6 +627,7 @@ function processBeatmap(cb){
         }
     });
 
+    // Set end time for circles too for easier handling
     beatmap.hitObjects.forEach(function(hitObject, i){
         if(hitObject.objectName == "circle")
             beatmap.hitObjects[i].endTime = beatmap.hitObjects[i].startTime;
