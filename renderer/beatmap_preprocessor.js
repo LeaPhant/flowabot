@@ -10,6 +10,8 @@ let options, beatmap_path, enabled_mods, beatmap, speed_multiplier = 1;
 const PLAYFIELD_WIDTH = 512;
 const PLAYFIELD_HEIGHT = 384;
 
+const CATMULL_DETAIL = 100;
+
 const STACK_DISTANCE = 3;
 const OBJECT_RADIUS = 64;
 
@@ -91,6 +93,16 @@ function parseReplay(buf){
     return output_frames;
 }
 
+function catmullFindPoint(vec1, vec2, vec3, vec4, t){
+    let t2 = t * t;
+    let t3 = t * t2;
+
+    return [
+        0.5 * (2 * vec2[0] + (-vec1[0] + vec3[0]) * t + (2 * vec1[0] - 5 * vec2[0] + 4 * vec3[0] - vec4[0]) * t2 + (-vec1[0] + 3 * vec2[0] - 3 * vec3[0] + vec4[0]) * t3),
+        0.5 * (2 * vec2[1] + (-vec1[1] + vec3[1]) * t + (2 * vec1[1] - 5 * vec2[1] + 4 * vec3[1] - vec4[1]) * t2 + (-vec1[1] + 3 * vec2[1] - 3 * vec3[1] + vec4[1]) * t3)
+    ];
+}
+
 function coordsOnBezier(pointArray, t){
 	var bx = 0, by = 0, n = pointArray.length - 1;
 
@@ -130,6 +142,34 @@ function binomialCoef(n, k){
 function vectorDistance(hitObject1, hitObject2){
     return Math.sqrt((hitObject2[0] - hitObject1[0]) * (hitObject2[0] - hitObject1[0])
         + (hitObject2[1] - hitObject1[1]) * (hitObject2[1] - hitObject1[1]));
+}
+
+function vectorSubtract(a, b){
+    return [
+        a[0] - b[0],
+        a[1] - b[1]
+    ];
+}
+
+function vectorAdd(a, b){
+    return [
+        a[0] + b[0],
+        a[1] + b[1]
+    ];
+}
+
+function vectorMultiply(a, m){
+    return [
+        a[0] * m,
+        a[1] * m
+    ];
+}
+
+function vectorDivide(a, d){
+    return [
+        a[0] / d,
+        a[1] / d
+    ];
 }
 
 function vectorDistanceSquared(hitObject1, hitObject2){
@@ -228,6 +268,150 @@ function processBeatmap(cb){
 
     if(beatmap.StackLeniency === undefined || beatmap.StackLeniency === NaN || beatmap.StackLeniency === null)
             beatmap.StackLeniency = 0.7;
+
+    beatmap.hitObjects.forEach(function(hitObject, i){
+        if(hitObject.objectName == "slider"){
+            var slider_parts = [];
+            var slider_part = [];
+            var timingPoint;
+
+            let slider_dots = [];
+
+            for(var x = 0; x < beatmap.timingPoints.length; x++){
+                timingPoint = beatmap.timingPoints[x];
+                if(timingPoint.offset <= hitObject.startTime) break;
+            }
+
+            if(hitObject.curveType == 'pass-through' && hitObject.points.length == 3){
+                // Pretty much copied from osu-lazer https://github.com/ppy/osu-framework/blob/master/osu.Framework/MathUtils/PathApproximator.cs#L114
+
+                let a = hitObject.points[0];
+                let b = hitObject.points[1];
+                let c = hitObject.points[2];
+
+                let aSq = vectorDistanceSquared(b, c);
+                let bSq = vectorDistanceSquared(a, c);
+                let cSq = vectorDistanceSquared(a, b);
+
+                if(aSq != 0 && bSq != 0 && bSq != 0){
+                    let s = aSq * (bSq + cSq - aSq);
+                    let t = bSq * (aSq + cSq - bSq);
+                    let u = cSq * (aSq + bSq - cSq);
+
+                    let sum = s + t + u;
+
+                    if(sum != 0){
+                        let center = [
+                            s * a[0] + t * b[0] + u * c[0],
+                            s * a[1] + t * b[1] + u * c[1]
+                        ];
+
+                        center = vectorDivide(center, sum);
+
+                        let dA = vectorSubtract(a, center);
+                        let dC = vectorSubtract(c, center);
+
+                        let r = vectorDistance(a, center);
+
+                        let thetaStart = Math.atan2(dA[1], dA[0]);
+                        let thetaEnd = Math.atan2(dC[1], dC[0]);
+
+                        while(thetaEnd < thetaStart)
+                            thetaEnd += 2 * Math.PI;
+
+                        let dir = 1;
+                        let thetaRange = thetaEnd - thetaStart;
+
+                        let orthoAtoC = vectorSubtract(c, a);
+
+                        orthoAtoC = [
+                            orthoAtoC[1],
+                            -orthoAtoC[0]
+                        ];
+
+                        let bMinusA = vectorSubtract(b, a);
+
+                        if(orthoAtoC[0] * bMinusA[0] + orthoAtoC[1] * bMinusA[1] < 0){
+                            dir = -dir;
+                            thetaRange = 2 * Math.PI - thetaRange;
+                        }
+
+                        let amountPoints = 1000;
+
+                        for(let i = 0; i < amountPoints; ++i){
+                            let fract = i / (amountPoints - 1);
+                            let theta = thetaStart + dir * fract * thetaRange;
+
+                            let o = [
+                                Math.cos(theta),
+                                Math.sin(theta)
+                            ];
+
+                            o = vectorMultiply(o, r);
+
+                            slider_dots.push(vectorAdd(center, o));
+                        }
+                    }
+                }
+            }else if(hitObject.curveType == 'catmull'){
+                // Pretty much copied from osu-lazer https://github.com/ppy/osu-framework/blob/master/osu.Framework/MathUtils/PathApproximator.cs#L89
+
+                for(let x = 0; x < hitObject.points.length - 1; x++){
+                    let v1 = x > 0 ? hitObject.points[x - 1] : hitObject.points[x];
+                    let v2 = hitObject.points[x];
+                    let v3 = x < hitObject.points.length - 1 ? hitObject.points[x + 1] : vectorSubtract(vectorAdd(v2, v2), v1);
+                    let v4 = x < hitObject.points.length - 2 ? hitObject.points[x + 2] : vectorSubtract(vectorAdd(v3, v3), v2);
+
+                    for(let c = 0; c < CATMULL_DETAIL; c++){
+                        slider_dots.push(catmullFindPoint(v1, v2, v3, v4, c / CATMULL_DETAIL));
+                        slider_dots.push(catmullFindPoint(v1, v2, v3, v4, (c + 1) / CATMULL_DETAIL));
+                    }
+                }
+            }else{
+                hitObject.points.forEach(function(point, index){
+                    slider_part.push(point);
+                    if(index < hitObject.points.length - 1){
+                        if(point[0] == hitObject.points[index + 1][0] && point[1] == hitObject.points[index + 1][1]){
+                            slider_parts.push(slider_part);
+                            slider_part = [];
+                        }
+                    }else if(hitObject.points.length - 1 == index){
+                        slider_part.push(point);
+                        slider_parts.push(slider_part);
+                    }
+                });
+
+                var last_slider_dot;
+
+                slider_parts.forEach(function(part, index){
+                    for(var x = 0; x <= 1; x += 0.001){
+                        var slider_dot = coordsOnBezier(part, x);
+                        if(last_slider_dot){
+                            if(vectorDistanceSquared(slider_dot, last_slider_dot) >= 1){
+                                slider_dots.push(slider_dot);
+                                last_slider_dot = slider_dot;
+                            }
+                        }else{
+                            slider_dots.push(slider_dot);
+                            last_slider_dot = slider_dot;
+                        }
+                    }
+                });
+            }
+
+            var slider_ticks = [];
+
+            for(var x = timingPoint.beatLength /  beatmap.SliderTickRate; x < hitObject.duration; x += timingPoint.beatLength / beatmap.SliderTickRate){
+                slider_ticks.push(slider_dots[Math.floor((x / hitObject.duration) * (slider_dots.length - 1))]);
+            }
+
+            slider_ticks.pop();
+
+            beatmap.hitObjects[i].SliderDots = slider_dots;
+            beatmap.hitObjects[i].endPosition = slider_dots.pop();
+            beatmap.hitObjects[i].SliderTicks = slider_ticks;
+        }
+    });
 
     for(var i = 0; i <= beatmap.hitObjects.length - 1; i++){
         if(beatmap.hitObjects[i].objectName == "circle")
@@ -358,6 +542,7 @@ function processBeatmap(cb){
             currentComboNumber = 0;
             if(currentCombo > 4) currentCombo = 1;
         }
+
         currentComboNumber++;
         beatmap.hitObjects[i].Color = "rgba(" + beatmap["Combo" + currentCombo] + ",0.6)";
         beatmap.hitObjects[i].ComboNumber = currentComboNumber;
@@ -369,157 +554,6 @@ function processBeatmap(cb){
             hitObject.points.forEach(function(point, index){
                 hitObject.points[index] = [point[0] + hitObject.StackOffset, point[1] + hitObject.StackOffset];
             });
-        }
-    });
-
-    beatmap.hitObjects.forEach(function(hitObject, i){
-        if(hitObject.objectName == "slider"){
-            var slider_parts = [];
-            var slider_part = [];
-            var timingPoint;
-
-            let slider_dots = [];
-
-            for(var x = 0; x < beatmap.timingPoints.length; x++){
-                timingPoint = beatmap.timingPoints[x];
-                if(timingPoint.offset <= hitObject.startTime) break;
-            }
-
-            if(hitObject.curveType == 'pass-through' && hitObject.points.length == 3){
-                // Pretty much copied from osu-lazer https://github.com/ppy/osu-framework/blob/master/osu.Framework/MathUtils/PathApproximator.cs#L114
-
-                let a = hitObject.points[0];
-                let b = hitObject.points[1];
-                let c = hitObject.points[2];
-
-                let aSq = vectorDistanceSquared(b, c);
-                let bSq = vectorDistanceSquared(a, c);
-                let cSq = vectorDistanceSquared(a, b);
-
-                if(aSq != 0 && bSq != 0 && bSq != 0){
-                    let s = aSq * (bSq + cSq - aSq);
-                    let t = bSq * (aSq + cSq - bSq);
-                    let u = cSq * (aSq + bSq - cSq);
-
-                    let sum = s + t + u;
-
-                    if(sum != 0){
-                        let center = [
-                            s * a[0] + t * b[0] + u * c[0],
-                            s * a[1] + t * b[1] + u * c[1]
-                        ];
-
-                        center = [
-                            center[0] / sum,
-                            center[1] / sum
-                        ];
-
-                        let dA = [
-                            a[0] - center[0],
-                            a[1] - center[1]
-                        ];
-
-                        let dC = [
-                            c[0] - center[0],
-                            c[1] - center[1]
-                        ];
-
-                        let r = vectorDistance(a, center);
-
-                        let thetaStart = Math.atan2(dA[1], dA[0]);
-                        let thetaEnd = Math.atan2(dC[1], dC[0]);
-
-                        while(thetaEnd < thetaStart)
-                            thetaEnd += 2 * Math.PI;
-
-                        let dir = 1;
-                        let thetaRange = thetaEnd - thetaStart;
-
-                        let orthoAtoC = [
-                            c[0] - a[0],
-                            c[1] - a[1]
-                        ];
-
-                        orthoAtoC = [
-                            orthoAtoC[1],
-                            -orthoAtoC[0]
-                        ];
-
-                        let bMinusA = [
-                            b[0] - a[0],
-                            b[1] - a[1]
-                        ];
-
-                        if(orthoAtoC[0] * bMinusA[0] + orthoAtoC[1] * bMinusA[1] < 0){
-                            dir = -dir;
-                            thetaRange = 2 * Math.PI - thetaRange;
-                        }
-
-                        let amountPoints = 1000;
-
-                        for(let i = 0; i < amountPoints; ++i){
-                            let fract = i / (amountPoints - 1);
-                            let theta = thetaStart + dir * fract * thetaRange;
-
-                            let o = [
-                                Math.cos(theta),
-                                Math.sin(theta)
-                            ];
-
-                            o = [
-                                o[0] * r,
-                                o[1] * r
-                            ];
-
-                            slider_dots.push([
-                                center[0] + o[0],
-                                center[1] + o[1]
-                            ]);
-                        }
-                    }
-                }
-            }else{
-                hitObject.points.forEach(function(point, index){
-                    slider_part.push(point);
-                    if(index < hitObject.points.length - 1){
-                        if(point[0] == hitObject.points[index + 1][0] && point[1] == hitObject.points[index + 1][1]){
-                            slider_parts.push(slider_part);
-                            slider_part = [];
-                        }
-                    }else if(hitObject.points.length - 1 == index){
-                        slider_part.push(point);
-                        slider_parts.push(slider_part);
-                    }
-                });
-
-                var last_slider_dot;
-
-                slider_parts.forEach(function(part, index){
-                    for(var x = 0; x <= 1; x += 0.001){
-                        var slider_dot = coordsOnBezier(part, x);
-                        if(last_slider_dot){
-                            if(vectorDistanceSquared(slider_dot, last_slider_dot) >= 1){
-                                slider_dots.push(slider_dot);
-                                last_slider_dot = slider_dot;
-                            }
-                        }else{
-                            slider_dots.push(slider_dot);
-                            last_slider_dot = slider_dot;
-                        }
-                    }
-                });
-            }
-
-            var slider_ticks = [];
-
-            for(var x = timingPoint.beatLength /  beatmap.SliderTickRate; x < hitObject.duration; x += timingPoint.beatLength / beatmap.SliderTickRate){
-                slider_ticks.push(slider_dots[Math.floor((x / hitObject.duration) * (slider_dots.length - 1))]);
-            }
-
-            slider_ticks.pop();
-
-            beatmap.hitObjects[i].SliderDots = slider_dots;
-            beatmap.hitObjects[i].SliderTicks = slider_ticks;
         }
     });
 
