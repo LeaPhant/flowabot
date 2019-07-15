@@ -134,14 +134,16 @@ module.exports = {
                     reject(helper.commandHelp('render'));
                     return false;
                 }else if(!beatmap_id && !custom_url){
-                    beatmap_id = last_beatmap[msg.channel.id].beatmap_id;
+                    let _last_beatmap = last_beatmap[msg.channel.id];
+
+                    beatmap_id = _last_beatmap.beatmap_id;
                     download_promise = helper.downloadBeatmap(beatmap_id);
+
+                    if(last_beatmap[msg.channel.id].score_id && mods.length == 0)
+                        ({ score_id } = last_beatmap[msg.channel.id]);
 
                     if(mods.length == 0)
                         mods = last_beatmap[msg.channel.id].mods;
-
-                    if(last_beatmap[msg.channel.id].score_id)
-                        ({ score_id } = last_beatmap[msg.channel.id]);
                 }
 
                 let download_path = path.resolve(config.osu_cache_path, `${beatmap_id}.osu`);
