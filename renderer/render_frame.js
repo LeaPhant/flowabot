@@ -353,13 +353,15 @@ module.exports = {
                                     ffmpeg_args.push(
                                         '-ss', start_time / 1000, '-i', `"${media.audio_path}"`, '-filter:a', `"afade=t=out:st=${actual_length / 1000 * time_scale - 0.5}:d=0.5,atempo=${time_scale},volume=0.7"`
                                     );
+
+                                    bitrate -= 128;
                                 }).catch(() => {
                                     ffmpeg_args.unshift('-f', 'lavfi', '-r', fps, '-i', `color=c=black:s=${size.join("x")}`);
                                     helper.log("rendering without audio");
                                 }).finally(() => {
                                     ffmpeg_args.push(
                                         '-filter_complex', `"overlay=(W-w)/2:shortest=1"`,
-                                        '-pix_fmt', 'yuv420p', '-r', fps, '-c:v', 'libx264', '-b:v', `${bitrate}k`, '-c:a', 'aac', '-shortest', '-preset', 'veryfast', `${file_path}/video.mp4`
+                                        '-pix_fmt', 'yuv420p', '-r', fps, '-c:v', 'libx264', '-b:v', `${bitrate}k`, '-c:a', 'aac', '-b:a', '128k', '-shortest', '-preset', 'veryfast', `${file_path}/video.mp4`
                                     );
 
                                     execFile(ffmpeg.path, ffmpeg_args, { shell: true }, err => {
