@@ -465,6 +465,9 @@ function processBeatmap(cb){
         if(hitObject.objectName == "circle")
             beatmap.hitObjects[i].endPosition = beatmap.hitObjects[i].position;
 
+        if(hitObject.objectName == 'slider' && !beatmap.endPosition)
+            hitObject.endPosition = hitObject.points[hitObject.points.length - 1];
+
         // HR inversion
         if(enabled_mods.includes("HR")){
             beatmap.hitObjects[i].position[1] = PLAYFIELD_HEIGHT - hitObject.position[1];
