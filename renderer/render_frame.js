@@ -146,13 +146,20 @@ let beatmap, speed_multiplier;
 
 module.exports = {
     get_frame: function(beatmap_path, time, enabled_mods, size, options, cb){
-        let worker = fork(path.resolve(__dirname, 'beatmap_preprocessor.js'));
+        let worker = fork(path.resolve(__dirname, 'beatmap_preprocessor.js'), ['--max-old-space-size=512']);
 
         worker.send({
             beatmap_path,
             options,
             enabled_mods
         });
+
+		worker.on('close', code => {
+			if(code > 0){
+				cb("Error processing beatmap");
+				return false;
+			}
+		});
 
         worker.on('message', _beatmap => {
             beatmap = _beatmap;
@@ -165,6 +172,13 @@ module.exports = {
             }
 
             let worker = fork(path.resolve(__dirname, 'render_worker.js'));
+
+			worker.on('close', code => {
+				if(code > 0){
+					cb("Error rendering beatmap");
+					return false;
+				}
+			});
 
             worker.on('message', buffer => {
                 cb(null, Buffer.from(buffer, 'base64'));
@@ -190,6 +204,13 @@ module.exports = {
             options,
             enabled_mods
         });
+
+		worker.on('close', code => {
+			if(code > 0){
+				cb("Error processing beatmap");
+				return false;
+			}
+		});
 
         worker.on('message', _beatmap => {
             beatmap = _beatmap;
@@ -319,7 +340,12 @@ module.exports = {
                         size
                     });
 
-                    worker.on('close', () => {
+                    worker.on('close', code => {
+						if(code > 0){
+							cb("Error rendering beatmap");
+							return false;
+						}
+
                         done++;
 
                         if(done == threads){
@@ -334,7 +360,7 @@ module.exports = {
                                 execFile(ffmpeg.path, ffmpeg_args, err => {
                                     if(err){
                                         helper.error(err);
-                                        cb("Couldn't encode video");
+                                        cb("Error encoding video");
                                         return false;
                                     }
 
@@ -367,7 +393,7 @@ module.exports = {
                                     execFile(ffmpeg.path, ffmpeg_args, { shell: true }, err => {
                                         if(err){
                                             helper.error(err);
-                                            cb("Couldn't encode video");
+                                            cb("Error encoding video");
                                             fs.remove(file_path);
                                             return false;
                                         }
