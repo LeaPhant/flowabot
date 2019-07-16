@@ -235,6 +235,9 @@ module.exports = {
                 if(beatmap.hitObjects.length > objectIndex + options.objects)
                     length = beatmap.hitObjects[objectIndex + options.objects].startTime - time + 400;
 
+				if(length >= 10 * 1000)
+					options.type = 'mp4';
+
             }else{
                 let firstNonSpinner = beatmap.hitObjects.filter(x => x.objectName != 'spinner');
                 time = Math.max(time, firstNonSpinner[0].startTime);
