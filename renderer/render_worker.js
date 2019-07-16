@@ -142,9 +142,12 @@ process.on('message', obj => {
 
         hitObjectsOnScreen.forEach(function(hitObject, index){
             // Check if hit object could be visible at current timestamp
-            if(time < hitObject.startTime || hitObject.objectName != "circle" && time < hitObject.endTime){
+            if(time < hitObject.startTime || hitObject.objectName != "circle" && time < hitObject.endTime + 200){
                 // Apply approach rate
                 let opacity = (time - (hitObject.startTime - beatmap.TimeFadein)) / (beatmap.TimeFadein - beatmap.TimePreempt);
+
+                if(hitObject.objectName != 'circle')
+                    opacity = 1 - (time - hitObject.endTime) / 200;
 
                 // Calculate relative approach circle size (number from 0 to 1)
                 let approachCircle = 1 - (time - (hitObject.startTime - beatmap.TimePreempt)) / beatmap.TimePreempt;
@@ -162,20 +165,30 @@ process.on('message', obj => {
                 // Draw slider
                 if(hitObject.objectName == "slider"){
                     ctx.lineWidth = 6 * scale_multiplier;
-                    ctx.strokeStyle = "white";
+                    ctx.strokeStyle = "rgba(255,255,255,0.7)";
+
+                    let snakingStart = hitObject.startTime - beatmap.TimeFadein;
+                    let snakingFinish = hitObject.startTime - beatmap.TimePreempt;
+
+                    let snakingProgress = Math.min(1, (time - snakingStart) / (snakingFinish - snakingStart));
+
+                    let render_dots = [];
+
+                    for(let x = 0; x < Math.floor(hitObject.SliderDots.length * snakingProgress); x++)
+                        render_dots.push(hitObject.SliderDots[x]);
 
                     // Use stroke with rounded ends to "fake" a slider path
                     ctx.beginPath();
                     ctx.lineCap = "round";
-                    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+                    ctx.strokeStyle = 'rgba(255,255,255,0.7)';
                     ctx.shadowColor = 'transparent';
                     ctx.lineJoin = "round"
 
-                    ctx.lineWidth = scale_multiplier * beatmap.Radius * 2;
+                    ctx.lineWidth = scale_multiplier * beatmap.Radius * 2
 
                     // Draw a path through all slider dots generated earlier
-                    for(let x = 0; x < hitObject.SliderDots.length; x++){
-                        let dot = hitObject.SliderDots[x];
+                    for(let x = 0; x < render_dots.length; x++){
+                        let dot = render_dots[x];
                         let position = playfieldPosition(...dot);
 
                         if(x == 0){
@@ -184,6 +197,11 @@ process.on('message', obj => {
                             ctx.lineTo(...position);
                         }
                     }
+
+                    ctx.stroke();
+
+                    ctx.lineWidth = scale_multiplier * (beatmap.Radius * 2 - 12);
+                    ctx.strokeStyle = 'rgba(0,0,0,0.6)';
 
                     ctx.stroke();
 
