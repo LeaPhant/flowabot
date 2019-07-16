@@ -407,7 +407,6 @@ function processBeatmap(cb){
     });
 
     // Interpolate slider dots (TODO)
-    /*
     for(let i = 0; i < beatmap.hitObjects.length; i++){
         let hitObject = beatmap.hitObjects[i];
         let slider_dots = [];
@@ -421,9 +420,8 @@ function processBeatmap(cb){
         let pos_current = hitObject.SliderDots[0];
         let next_index = 1;
         let pos_next = hitObject.SliderDots[next_index];
-        let current_distance = 1;
 
-        for(let x = 0; x < hitObject.SliderDots.length; x++){
+        while(next_index < hitObject.SliderDots.length - 1){
             while(vectorDistanceSquared(pos_current, pos_next) < 1 * 1 && next_index < hitObject.SliderDots.length - 1){
                 next_index++;
                 pos_next = hitObject.SliderDots[next_index];
@@ -432,33 +430,20 @@ function processBeatmap(cb){
             let distance = vectorDistance(pos_current, pos_next);
 
             if(distance >= 1){
-                let n = current_distance;
+                let pos_interpolated = [
+                    pos_current[0] + (1 / distance) * (pos_next[0] - pos_current[0]),
+                    pos_current[1] + (1 / distance) * (pos_next[1] - pos_current[1])
+                ];
 
-                current_distance++;
+                slider_dots.push(pos_interpolated);
 
-                console.log(current_distance);
-
-                slider_dots.push([
-                    pos_current[0] + (n / distance) * (pos_next[0] - pos_current[0]),
-                    pos_current[1] + (n / distance) * (pos_next[1] - pos_current[1])
-                ]);
-
-                if(current_distance >= distance){
-                    current_distance = 1;
-                    pos_current = pos_next;
-                }
+                pos_current = pos_interpolated;
             }
-        }
-
-        for(let x = 1; x < slider_dots.length; x++){
-            console.log(vectorDistance(slider_dots[x], slider_dots[x - 1]));
         }
 
         hitObject.SliderDots = slider_dots;
     }
-    */
 
-    //
     for(let i = 0; i < beatmap.hitObjects.length; i++){
         let hitObject = beatmap.hitObjects[i];
 
