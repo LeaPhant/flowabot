@@ -274,16 +274,10 @@ function processBeatmap(cb){
     // Calculate slider curves
     beatmap.hitObjects.forEach(function(hitObject, i){
         if(hitObject.objectName == "slider"){
-            var slider_parts = [];
-            var slider_part = [];
-            var timingPoint;
+            let slider_parts = [];
+            let slider_part = [];
 
             let slider_dots = [];
-
-            for(var x = 0; x < beatmap.timingPoints.length; x++){
-                timingPoint = beatmap.timingPoints[x];
-                if(timingPoint.offset <= hitObject.startTime) break;
-            }
 
             if(hitObject.curveType == 'pass-through' && hitObject.points.length == 3){
                 // Pretty much copied from osu-lazer https://github.com/ppy/osu-framework/blob/master/osu.Framework/MathUtils/PathApproximator.cs#L114
@@ -392,21 +386,12 @@ function processBeatmap(cb){
                 });
             }
 
-            var slider_ticks = [];
-
-            for(var x = timingPoint.beatLength /  beatmap.SliderTickRate; x < hitObject.duration; x += timingPoint.beatLength / beatmap.SliderTickRate){
-                slider_ticks.push(slider_dots[Math.floor((x / hitObject.duration) * (slider_dots.length - 1))]);
-            }
-
-            slider_ticks.pop();
-
             beatmap.hitObjects[i].SliderDots = slider_dots;
             beatmap.hitObjects[i].endPosition = slider_dots.pop();
-            beatmap.hitObjects[i].SliderTicks = slider_ticks;
         }
     });
 
-    // Interpolate slider dots (TODO)
+    // Interpolate slider dots
     for(let i = 0; i < beatmap.hitObjects.length; i++){
         let hitObject = beatmap.hitObjects[i];
         let slider_dots = [];
@@ -452,6 +437,24 @@ function processBeatmap(cb){
 
         if(hitObject.objectName == 'slider' && !hitObject.endPosition)
             hitObject.endPosition = hitObject.points[hitObject.points.length - 1];
+
+        if(hitObject.objectName == 'slider'){
+            let slider_ticks = [];
+
+            let timingPoint;
+
+            for(let x = 0; x < beatmap.timingPoints.length; x++){
+                timingPoint = beatmap.timingPoints[x];
+                if(timingPoint.offset <= hitObject.startTime) break;
+            }
+
+            for(let x = timingPoint.beatLength /  beatmap.SliderTickRate; x < hitObject.duration; x += timingPoint.beatLength / beatmap.SliderTickRate){
+                slider_ticks.push(hitObject.SliderDots[Math.floor((x / hitObject.duration) * (hitObject.SliderDots.length - 1))]);
+            }
+
+            slider_ticks.pop();
+            beatmap.hitObjects[i].SliderTicks = slider_ticks;
+        }
 
         // HR inversion
         if(enabled_mods.includes("HR")){
