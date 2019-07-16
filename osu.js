@@ -1545,7 +1545,7 @@ module.exports = {
                     url: `https://a.ppy.sh/${data.user_id}?${+new Date()}`
                 },
                 author: {
-                    name: `${data.username} – ${+Number(data.pp_raw).toFixed(2)} (#${Number(data.pp_rank).toLocaleString()}) (${data.country}#${Number(data.pp_country_rank).toLocaleString()})`,
+                    name: `${data.username} – ${+Number(data.pp_raw).toFixed(2)}pp (#${Number(data.pp_rank).toLocaleString()}) (${data.country}#${Number(data.pp_country_rank).toLocaleString()})`,
                     icon_url: `https://a.ppy.sh/${data.user_id}?${+new Date()}`,
                     url: `https://osu.ppy.sh/u/${data.user_id}`
                 },
