@@ -23,7 +23,7 @@
         "cheerio": "^1.0.0-rc.2",
         "discord.js": "^11.5.1",
         "diskusage": "^1.1.2",
-        "ffmpeg-static": "^2.4.0",
+        "ffmpeg-static": "^2.5.0",
         "fs-extra": "^8.1.0",
         "highcharts-export-server": "^2.0.24",
         "jimp": "^0.6.0",
