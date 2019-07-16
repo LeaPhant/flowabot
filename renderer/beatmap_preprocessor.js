@@ -465,7 +465,7 @@ function processBeatmap(cb){
         if(hitObject.objectName == "circle")
             beatmap.hitObjects[i].endPosition = beatmap.hitObjects[i].position;
 
-        if(hitObject.objectName == 'slider' && !beatmap.endPosition)
+        if(hitObject.objectName == 'slider' && !hitObject.endPosition)
             hitObject.endPosition = hitObject.points[hitObject.points.length - 1];
 
         // HR inversion
