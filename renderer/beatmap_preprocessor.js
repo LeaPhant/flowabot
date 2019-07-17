@@ -613,6 +613,7 @@ function processBeatmap(cb){
             hitObject.endPosition = [hitObject.endPosition[0] + hitObject.StackOffset, hitObject.endPosition[1] + hitObject.StackOffset];
             for(let x = 0; x < hitObject.SliderDots.length; x++){
                 if(!Array.isArray(hitObject.SliderDots[x]) || hitObject.SliderDots[x].length != 2)
+                    continue;
 
                 beatmap.hitObjects[i].SliderDots[x] = [
                     hitObject.SliderDots[x][0] + hitObject.StackOffset,
@@ -637,6 +638,55 @@ function processBeatmap(cb){
         if(hitObject.objectName == "circle")
             beatmap.hitObjects[i].endTime = beatmap.hitObjects[i].startTime;
     });
+
+    // Generate auto replay
+    if(!beatmap.Replay){
+        let replay = {
+            lastCursor: 0,
+            replay_data: []
+        };
+
+        for(let x = 0; x < beatmap.hitObjects.length; x++){
+            let hitObject = beatmap.hitObjects[x];
+
+            if(hitObject.objectName != "spinner"){
+                if(x > 0){
+                    replay.replay_data.push({
+                        offset: Math.max(beatmap.hitObjects[x - 1].endTime, hitObject.startTime - 50),
+                        x: hitObject.position[0],
+                        y: hitObject.position[1]
+                    });
+                }
+
+                replay.replay_data.push({
+                    offset: hitObject.startTime,
+                    x: hitObject.position[0],
+                    y: hitObject.position[1]
+                });
+            }
+
+            if(hitObject.objectName == "slider"){
+                let length = hitObject.duration / hitObject.repeatCount;
+
+                for(let i = 0; i < hitObject.repeatCount; i++){
+                    let slider_dots = hitObject.SliderDots.slice();
+
+                    if(i % 2 != 0)
+                        slider_dots.reverse();
+
+                    slider_dots.forEach((dot, index) => {
+                        replay.replay_data.push({
+                            offset: hitObject.startTime + i * length + index / slider_dots.length * length,
+                            x: dot[0],
+                            y: dot[1]
+                        });
+                    });
+                }
+            }
+        }
+
+        beatmap.Replay = replay;
+    }
 
     cb();
 }
@@ -675,7 +725,7 @@ function prepareBeatmap(cb){
             beatmap.Replay = replay;
             helper.log('score has replay');
         }else{
-            helper.log('score has no replay');
+            helper.log('score has no replay, will generate auto replay');
         }
 
         if(!isNaN(options.cs) && !(options.cs === undefined))
