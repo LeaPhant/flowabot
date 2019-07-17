@@ -223,6 +223,38 @@ process.on('message', obj => {
                            used in interpolation later to always have smooth follow points */
                         followpoint_progress = dot_index - followpoint_index;
                     }
+
+                    /* Slider Ticks (WIP)
+                    ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+                    ctx.lineWidth = 5 * scale_multiplier;
+
+                    let slider_ticks = hitObject.SliderTicks;
+
+                    // Reverse slider ticks depending on current slider direction
+                    if(currentTurn % 2 != 0)
+                        slider_ticks.reverse();
+
+                    let max = Math.floor(slider_ticks.length * snakingProgress);
+                    let start_index = Math.max(1, Math.floor(currentOffset * slider_ticks.length));
+
+                    for(let x = 1; x < max - 1; x++){
+                        // Fade in slider ticks
+                        if(currentTurn > 0)
+                            ctx.globalAlpha = Math.min(1, Math.max(0, Math.min(1, (time - x * 40 - currentTurnStart) / 50)));
+                        else if(time < hitObject.startTime)
+                            ctx.globalAlpha = Math.min(1, Math.max(0, Math.min(1, (time - (max - x) * 40 - currentTurnStart) / 50)));
+                        //if(x / max > currentOffset){
+                            let tick = slider_ticks[x];
+                            let position = playfieldPosition(...tick);
+
+                            ctx.beginPath();
+                            ctx.arc(...position, scale_multiplier * beatmap.Radius / 5, 0, 2 * Math.PI, false);
+                            ctx.stroke();
+                        //}
+                    }
+
+                    ctx.globalAlpha = opacity;
+                    */
                 }
 
                 // Draw circles or slider heads
