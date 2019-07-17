@@ -1,9 +1,15 @@
 const { createCanvas, Image } = require('canvas');
 const path = require('path');
 const fs = require('fs-extra');
+const helper = require('../helper.js');
 
 const PLAYFIELD_WIDTH = 512;
 const PLAYFIELD_HEIGHT = 384;
+
+process.on('uncaughtException', err => {
+    helper.error(err);
+    process.exit(1);
+});
 
 process.on('message', obj => {
     let { beatmap, start_time, end_time, time_frame, file_path, options, threads, current_frame, size, ctx } = obj;
@@ -170,7 +176,7 @@ process.on('message', obj => {
                     let snakingStart = hitObject.startTime - beatmap.TimeFadein;
                     let snakingFinish = hitObject.startTime - beatmap.TimePreempt;
 
-                    let snakingProgress = Math.min(1, (time - snakingStart) / (snakingFinish - snakingStart));
+                    let snakingProgress = Math.max(0, Math.min(1, (time - snakingStart) / (snakingFinish - snakingStart)));
 
                     let render_dots = [];
 
@@ -205,10 +211,13 @@ process.on('message', obj => {
 
                     ctx.stroke();
 
+                    let currentTurn, currentOffset, currentTurnStart;
+
                     // Get slider dot corresponding to the current follow point position
                     if(time >= hitObject.startTime && time <= hitObject.endTime){
-                        let currentTurn = Math.floor((time - hitObject.startTime) / (hitObject.duration / hitObject.repeatCount));
-                        let currentOffset = (time - hitObject.startTime) / (hitObject.duration / hitObject.repeatCount) - currentTurn;
+                        currentTurn = Math.floor((time - hitObject.startTime) / (hitObject.duration / hitObject.repeatCount));
+                        currentTurnStart = hitObject.startTime + hitObject.duration / hitObject.repeatCount * currentTurn;
+                        currentOffset = (time - hitObject.startTime) / (hitObject.duration / hitObject.repeatCount) - currentTurn;
 
                         let dot_index = 0;
 
@@ -222,6 +231,14 @@ process.on('message', obj => {
                         /* Progress number from 0 to 1 to check how much relative distance to the next slider dot is left,
                            used in interpolation later to always have smooth follow points */
                         followpoint_progress = dot_index - followpoint_index;
+                    }else{
+                        if(time < hitObject.startTime){
+                            currentOffset = 0;
+                            currentTurnStart = hitObject.startTime - beatmap.TimePreempt;
+                        }else{
+                            currentOffset = 1;
+                            currentTurnStart = hitObject.endTime;
+                        }
                     }
                 }
 
