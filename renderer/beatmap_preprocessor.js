@@ -652,7 +652,7 @@ function processBeatmap(cb){
             if(hitObject.objectName != "spinner"){
                 if(x > 0){
                     replay.replay_data.push({
-                        offset: Math.max(beatmap.hitObjects[x - 1].endTime, hitObject.startTime - 50),
+                        offset: Math.max(beatmap.hitObjects[x - 1].endTime, hitObject.startTime - 20),
                         x: hitObject.position[0],
                         y: hitObject.position[1]
                     });
