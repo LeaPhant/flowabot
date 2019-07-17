@@ -460,9 +460,6 @@ function processBeatmap(cb){
                 slider_ticks.push(hitObject.SliderDots[Math.floor((x / hitObject.duration) * (hitObject.SliderDots.length - 1))]);
             }
 
-            if(slider_ticks.length == 3)
-                slider_ticks.push(hitObject.endPosition);
-
             beatmap.hitObjects[i].SliderTicks = slider_ticks;
         }
 
@@ -614,17 +611,24 @@ function processBeatmap(cb){
 
         if(hitObject.objectName == "slider"){
             hitObject.endPosition = [hitObject.endPosition[0] + hitObject.StackOffset, hitObject.endPosition[1] + hitObject.StackOffset];
-            for(let x = 0; x < hitObject.SliderDots.length; x++)
+            for(let x = 0; x < hitObject.SliderDots.length; x++){
+                if(!Array.isArray(hitObject.SliderDots[x]) || hitObject.SliderDots[x].length != 2)
+
                 beatmap.hitObjects[i].SliderDots[x] = [
                     hitObject.SliderDots[x][0] + hitObject.StackOffset,
                     hitObject.SliderDots[x][1] + hitObject.StackOffset
                 ];
+            }
 
-            for(let x = 0; x < hitObject.SliderTicks.length; x++)
+            for(let x = 0; x < hitObject.SliderTicks.length; x++){
+                if(!Array.isArray(hitObject.SliderTicks[x]) || hitObject.SliderTicks[x].length != 2)
+                    continue;
+
                 beatmap.hitObjects[i].SliderTicks[x] = [
                     hitObject.SliderTicks[x][0] + hitObject.StackOffset,
                     hitObject.SliderTicks[x][1] + hitObject.StackOffset
                 ];
+            }
         }
     });
 
