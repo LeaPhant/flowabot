@@ -447,8 +447,7 @@ function processBeatmap(cb){
             hitObject.endPosition = hitObject.points[hitObject.points.length - 1];
 
         if(hitObject.objectName == 'slider'){
-            let slider_ticks = [hitObject.position];
-
+            let slider_ticks = [];
             let timingPoint;
 
             for(let x = 0; x < beatmap.timingPoints.length; x++){
@@ -457,7 +456,11 @@ function processBeatmap(cb){
             }
 
             for(let x = timingPoint.beatLength /  beatmap.SliderTickRate; x < hitObject.duration; x += timingPoint.beatLength / beatmap.SliderTickRate){
-                slider_ticks.push(hitObject.SliderDots[Math.floor((x / hitObject.duration) * (hitObject.SliderDots.length - 1))]);
+                slider_ticks.push({
+                    offset: x / hitObject.repeatCount,
+                    reverseOffset: (hitObject.duration / hitObject.repeatCount) - x,
+                    position: hitObject.SliderDots[Math.floor(x / hitObject.duration * (hitObject.SliderDots.length - 1))]
+                });
             }
 
             beatmap.hitObjects[i].SliderTicks = slider_ticks;
@@ -473,7 +476,7 @@ function processBeatmap(cb){
                     beatmap.hitObjects[i].SliderDots[x][1] = PLAYFIELD_HEIGHT - hitObject.SliderDots[x][1];
 
                 for(let x = 0; x < hitObject.SliderTicks.length; x++)
-                    beatmap.hitObjects[i].SliderTicks[x][1] = PLAYFIELD_HEIGHT - hitObject.SliderTicks[x][1];
+                    beatmap.hitObjects[i].SliderTicks[x].position[1] = PLAYFIELD_HEIGHT - hitObject.SliderTicks[x].position[1];
             }
         }
 

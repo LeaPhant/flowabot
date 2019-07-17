@@ -240,6 +240,44 @@ process.on('message', obj => {
                             currentTurnStart = hitObject.endTime;
                         }
                     }
+
+
+                    /* Slider Ticks (WIP)
+                    ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+                    ctx.lineWidth = 5 * scale_multiplier;
+
+                    let slider_ticks = hitObject.SliderTicks.slice();
+
+                    // Reverse slider ticks depending on current slider direction
+                    if(currentTurn % 2 != 0)
+                        slider_ticks.reverse();
+
+                    let max = Math.floor(slider_ticks.length * snakingProgress);
+
+                    let offset = time - currentTurnStart;
+
+                    ctx.globalAlpha = 1;
+
+                    for(let x = 0; x < max; x++){
+                        if(currentTurn > 0)
+                            ctx.globalAlpha = Math.min(1, Math.max(0, Math.min(1, (time - x * 40 - currentTurnStart) / 50)));
+                        else if(time < hitObject.startTime)
+                            ctx.globalAlpha = Math.min(1, Math.max(0, Math.min(1, (time - (max - x) * 40 - currentTurnStart) / 50)));
+
+                        let tick = slider_ticks[x];
+
+                        let tick_offset = currentTurn % 2 == 0 ? tick.offset : tick.reverseOffset;
+
+                        if(tick_offset < offset)
+                            continue;
+
+                        let position = playfieldPosition(...tick.position);
+                        ctx.beginPath();
+                        ctx.arc(...position, scale_multiplier * beatmap.Radius / 5, 0, 2 * Math.PI, false);
+                        ctx.stroke();
+                    }
+
+                    ctx.globalAlpha = opacity;*/
                 }
 
                 // Draw circles or slider heads
