@@ -274,7 +274,10 @@ process.on('message', obj => {
                     }
 
                     // Draw follow point if there's currently one visible
-                    if(followpoint_index && Array.isArray(hitObject.SliderDots[followpoint_index])){
+                    if(followpoint_index
+                    && Array.isArray(hitObject.SliderDots[followpoint_index])
+                    && hitObject.SliderDots[followpoint_index].length == 2
+                    ){
                         let pos_current = hitObject.SliderDots[followpoint_index];
 
                         if(hitObject.SliderDots.length - 1 > followpoint_index){
