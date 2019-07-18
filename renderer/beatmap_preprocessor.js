@@ -683,8 +683,6 @@ function processBeatmap(cb){
                 let rps = 7;
                 let radius = 60;
 
-                console.log(rps);
-
                 let rotations = hitObject.duration / 1000 * rps;
 
                 for(let x = 0; x < rotations; x++){
@@ -692,13 +690,12 @@ function processBeatmap(cb){
 
                     for(let a = 0; a < rotationLength * MAX_RADIAN; a += MAX_RADIAN / (rotationLength * 100)){
                         let offset = hitObject.startTime + x * (1000 / rps) + a / MAX_RADIAN * (1000 / rps);
+
                         let point = {
                             offset,
                             x: PLAYFIELD_WIDTH / 2 + radius * Math.cos(a),
                             y: PLAYFIELD_HEIGHT / 2 + radius * Math.sin(a)
                         };
-
-                        console.log(point);
 
                         replay.replay_data.push(point);
                     }
