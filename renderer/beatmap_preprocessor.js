@@ -445,10 +445,12 @@ function processBeatmap(cb){
         if(hitObject.objectName == "circle")
             beatmap.hitObjects[i].endPosition = beatmap.hitObjects[i].position;
 
-        if(hitObject.objectName == 'slider' && !hitObject.endPosition)
-            hitObject.endPosition = hitObject.points[hitObject.points.length - 1];
-
         if(hitObject.objectName == 'slider'){
+            beatmap.hitObjects[i].endPosition = hitObject.SliderDots[hitObject.SliderDots.length - 1];
+
+            if(beatmap.hitObjects[i].endPosition === undefined)
+                beatmap.hitObjects[i].endPosition = hitObject.points[hitObject.points.length - 1];
+
             let slider_ticks = [];
             let timingPoint;
 

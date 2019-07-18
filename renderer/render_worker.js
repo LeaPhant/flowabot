@@ -6,12 +6,18 @@ const helper = require('../helper.js');
 const PLAYFIELD_WIDTH = 512;
 const PLAYFIELD_HEIGHT = 384;
 
+const resources = path.resolve(__dirname, "res");
+
+let images = {
+    "arrow": path.resolve(resources, "arrow.svg")
+};
+
 process.on('uncaughtException', err => {
     helper.error(err);
     process.exit(1);
 });
 
-process.on('message', obj => {
+process.on('message', async obj => {
     let { beatmap, start_time, end_time, time_frame, file_path, options, threads, current_frame, size, ctx } = obj;
 
     function resize(){
@@ -223,7 +229,7 @@ process.on('message', obj => {
 
                     ctx.stroke();
 
-                    let currentTurn, currentOffset, currentTurnStart;
+                    let currentTurn = 0, currentOffset, currentTurnStart;
 
                     // Get slider dot corresponding to the current follow point position
                     if(time >= hitObject.startTime && time <= hitObject.endTime){
@@ -292,6 +298,76 @@ process.on('message', obj => {
                         ctx.globalAlpha = opacity;
                     }
                     */
+
+                    // Render repeat arrow
+                    for(let x = 1; x < hitObject.repeatCount; x++){
+                        let repeatOffset = hitObject.startTime + x * (hitObject.duration / hitObject.repeatCount);
+                        let fadeInStart = x == 1 ? snakingFinish : repeatOffset - 50;
+                        let repeatPosition = (x - 1) % 2 == 0 ? hitObject.endPosition : hitObject.position;
+
+                        let timeSince = Math.max(0, Math.min(1, (time - repeatOffset) / 200));
+
+                        ctx.globalAlpha = (1 - timeSince) * Math.min(1, Math.max(0, (time - fadeInStart) / 50));
+                        let sizeFactor = 1 + timeSince * 0.3;
+
+                        let comparePosition =
+                            (x - 1) % 2 == 0 ? hitObject.SliderDots[hitObject.SliderDots.length - 2] : hitObject.SliderDots[1];
+
+                        let repeatDirection = Math.atan2(comparePosition[1] - repeatPosition[1], comparePosition[0] - repeatPosition[0]);
+
+                        let position = playfieldPosition(...repeatPosition);
+
+                        let size = beatmap.Radius * 2 * scale_multiplier;
+
+                        ctx.save();
+
+                        ctx.translate(...position);
+                        ctx.rotate(repeatDirection);
+
+                        position = [0, 0];
+
+                        ctx.lineWidth = 6 * scale_multiplier;
+                        ctx.beginPath();
+                        ctx.strokeStyle = "rgba(255,255,255,0.85)";
+
+                        if(!options.noshadow)
+                            ctx.shadowColor = "rgba(0,0,0,0.7)";
+
+                        // Fill circle with combo color instead of leaving see-through circles
+                        if(options.fill){
+                            ctx.beginPath();
+                            ctx.fillStyle = hitObject.Color;
+                            ctx.arc(...position, sizeFactor * scale_multiplier * beatmap.Radius, 0, 2 * Math.PI, false);
+                            ctx.fill();
+                        }
+
+                        // Draw circle border
+                        ctx.beginPath();
+                        ctx.arc(...position, sizeFactor * scale_multiplier * beatmap.Radius - ctx.lineWidth / 2, 0, 2 * Math.PI, false);
+                        ctx.stroke();
+
+                        ctx.fillStyle = 'white';
+                        ctx.textBaseline = "middle";
+                        ctx.textAlign = "center";
+
+                        let fontSize = 18;
+                        fontSize += 16 * (1 - (beatmap.CircleSize / 10));
+
+                        fontSize *= scale_multiplier * sizeFactor;
+
+                        // Draw combo number on circle
+                        ctx.font = `${fontSize}px sans-serif`;
+
+                        ctx.fillText("➤", ...position);
+
+                        /* this doesn't render correctly for some reason???
+                           using text for now I guess (TODO: FIX) */
+                        //ctx.drawImage(images.arrow, ...position, size, size);
+
+                        ctx.restore();
+                    }
+
+                    ctx.globalAlpha = opacity;
                 }
 
                 // Draw circles or slider heads
@@ -299,7 +375,7 @@ process.on('message', obj => {
                     ctx.lineWidth = 6 * scale_multiplier;
                     ctx.beginPath();
                     ctx.strokeStyle = "rgba(255,255,255,0.85)";
-                    
+
                     if(time < hitObject.startTime){
                         if(!options.noshadow)
                             ctx.shadowColor = "rgba(0,0,0,0.7)";
@@ -509,6 +585,20 @@ process.on('message', obj => {
 
     prepareCanvas(size);
     //preprocessSliders();
+
+    for(i in images){
+        let image_path = images[i];
+
+        images[i] = await new Promise((resolve, reject) => {
+            let img = new Image();
+            img.onload = () => {
+                resolve(img);
+            };
+
+            img.onerror = reject;
+            img.src = image_path;
+        });
+    }
 
     if(end_time){
         while(time < end_time){
