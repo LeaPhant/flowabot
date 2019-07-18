@@ -452,11 +452,13 @@ function processBeatmap(cb){
                 beatmap.hitObjects[i].endPosition = hitObject.points[hitObject.points.length - 1];
 
             let slider_ticks = [];
-            let timingPoint;
+            let timingPoint = beatmap.timingPoints[0];
 
-            for(let x = 0; x < beatmap.timingPoints.length; x++){
-                timingPoint = beatmap.timingPoints[x];
-                if(timingPoint.offset <= hitObject.startTime) break;
+            for(let x = beatmap.timingPoints.length - 1; x >= 0; x--){
+                if(beatmap.timingPoints[x].offset <= hitObject.startTime){
+                    timingPoint = beatmap.timingPoints[x];
+                    break;
+                }
             }
 
             for(let x = timingPoint.beatLength /  beatmap.SliderTickRate; x < hitObject.duration; x += timingPoint.beatLength / beatmap.SliderTickRate){
