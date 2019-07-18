@@ -296,50 +296,51 @@ process.on('message', obj => {
 
                 // Draw circles or slider heads
                 if(hitObject.objectName != "spinner"){
-
-                    if(!options.noshadow)
-                        ctx.shadowColor = "rgba(0,0,0,0.7)";
-
                     ctx.lineWidth = 6 * scale_multiplier;
                     ctx.beginPath();
                     ctx.strokeStyle = "rgba(255,255,255,0.85)";
+                    
+                    if(time < hitObject.startTime){
+                        if(!options.noshadow)
+                            ctx.shadowColor = "rgba(0,0,0,0.7)";
 
-                    let position = playfieldPosition(...hitObject.position);
-
-                    // Fill circle with combo color instead of leaving see-through circles
-                    if(options.fill){
-                        ctx.beginPath();
-                        ctx.fillStyle = hitObject.Color;
-                        ctx.arc(...position, scale_multiplier * beatmap.Radius, 0, 2 * Math.PI, false);
-                        ctx.fill();
-                    }
-
-                    // Draw circle border
-                    ctx.beginPath();
-                    ctx.arc(...position, scale_multiplier * beatmap.Radius - ctx.lineWidth / 2, 0, 2 * Math.PI, false);
-                    ctx.stroke();
-
-                    ctx.fillStyle = 'white';
-                    ctx.textBaseline = "middle";
-                    ctx.textAlign = "center";
-
-                    let fontSize = 16;
-                    fontSize += 16 * (1 - (beatmap.CircleSize / 10));
-
-                    fontSize *= scale_multiplier;
-
-                    // Draw combo number on circle
-                    ctx.font = `${fontSize}px sans-serif`;
-                    ctx.fillText(hitObject.ComboNumber, position[0], position[1]);
-
-                    // Draw approach circle
-                    if(approachCircle > 0){
-                        ctx.strokeStyle = 'white';
-                        ctx.lineWidth = 2 * scale_multiplier;
-                        ctx.beginPath();
                         let position = playfieldPosition(...hitObject.position);
-                        ctx.arc(...position, scale_multiplier * (beatmap.Radius + approachCircle * (beatmap.Radius * 2)), 0, 2 * Math.PI, false);
+
+                        // Fill circle with combo color instead of leaving see-through circles
+                        if(options.fill){
+                            ctx.beginPath();
+                            ctx.fillStyle = hitObject.Color;
+                            ctx.arc(...position, scale_multiplier * beatmap.Radius, 0, 2 * Math.PI, false);
+                            ctx.fill();
+                        }
+
+                        // Draw circle border
+                        ctx.beginPath();
+                        ctx.arc(...position, scale_multiplier * beatmap.Radius - ctx.lineWidth / 2, 0, 2 * Math.PI, false);
                         ctx.stroke();
+
+                        ctx.fillStyle = 'white';
+                        ctx.textBaseline = "middle";
+                        ctx.textAlign = "center";
+
+                        let fontSize = 16;
+                        fontSize += 16 * (1 - (beatmap.CircleSize / 10));
+
+                        fontSize *= scale_multiplier;
+
+                        // Draw combo number on circle
+                        ctx.font = `${fontSize}px sans-serif`;
+                        ctx.fillText(hitObject.ComboNumber, position[0], position[1]);
+
+                        // Draw approach circle
+                        if(approachCircle > 0){
+                            ctx.strokeStyle = 'white';
+                            ctx.lineWidth = 2 * scale_multiplier;
+                            ctx.beginPath();
+                            let position = playfieldPosition(...hitObject.position);
+                            ctx.arc(...position, scale_multiplier * (beatmap.Radius + approachCircle * (beatmap.Radius * 2)), 0, 2 * Math.PI, false);
+                            ctx.stroke();
+                        }
                     }
 
                     // Draw follow point if there's currently one visible
@@ -395,6 +396,24 @@ process.on('message', obj => {
 
                     let position = playfieldPosition(PLAYFIELD_WIDTH / 2, PLAYFIELD_HEIGHT / 2);
 
+                    // Rotate spinner (WIP)
+                    /*
+                    if(beatmap.Replay && time >= hitObject.startTime){
+                        let replay_point = getCursorAt(time, beatmap.Replay);
+
+                        if(replay_point){
+                            let { current } = replay_point;
+
+                            let radians = Math.atan2(current.y - PLAYFIELD_WIDTH / 2, current.x - PLAYFIELD_HEIGHT / 2);
+
+                            position = [
+                                position[0] + 2.5 * Math.cos(radians),
+                                position[1] + 2.5 * Math.sin(radians)
+                            ];
+                        }
+                    }
+                    */
+
                     // Outer spinner circle
                     ctx.beginPath();
                     ctx.arc(...position, scale_multiplier * 240, 0, 2 * Math.PI, false);
@@ -405,11 +424,13 @@ process.on('message', obj => {
                     ctx.arc(...position, scale_multiplier * 30, 0, 2 * Math.PI, false);
                     ctx.stroke();
                 }
-            }else if(hitObject.startTime - time > -200){
+            }
+
+            if(time >= hitObject.startTime && hitObject.startTime - time > -200){
                 // Draw fading out circles
                 if(hitObject.objectName != "spinner"){
                     // Increase circle size the further it's faded out
-                    let timeSince = Math.abs(hitObject.endTime - time) / 200;
+                    let timeSince = Math.abs(hitObject.startTime - time) / 200;
                     let opacity = 1 - timeSince;
                     let sizeFactor = 1 + timeSince * 0.3;
 
