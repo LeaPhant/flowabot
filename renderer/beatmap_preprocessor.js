@@ -610,10 +610,10 @@ function processBeatmap(cb){
     // Set combo colors and stacking offset
     beatmap.hitObjects.forEach(function(hitObject, i){
         if(beatmap["Combo1"] === undefined){
-            beatmap["Combo1"] = "0,202,0";
-            beatmap["Combo2"] = "18,124,255";
-            beatmap["Combo3"] = "242,24,57";
-            beatmap["Combo4"] = "255,192,0";
+            beatmap["Combo1"] = "255,192,0";
+            beatmap["Combo2"] = "0,202,0";
+            beatmap["Combo3"] = "18,124,255";
+            beatmap["Combo4"] = "242,24,57";
         }
 
         let maxComboColor = 1;
@@ -621,10 +621,12 @@ function processBeatmap(cb){
         while(beatmap["Combo" + (maxComboColor + 1)] !== undefined)
             maxComboColor++;
 
-        if(hitObject.newCombo && i > 0){
-            currentCombo++;
+        if(hitObject.newCombo || i == 0){
             currentComboNumber = 0;
-            if(currentCombo > maxComboColor) currentCombo = 1;
+            for(let x = hitObject.comboSkip; x >= 0; x--){
+                currentCombo++;
+                if(currentCombo > maxComboColor) currentCombo = 1;
+            }
         }
 
         currentComboNumber++;
