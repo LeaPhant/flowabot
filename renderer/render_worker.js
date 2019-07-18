@@ -47,6 +47,18 @@ process.on('message', obj => {
         let current = replay.replay_data[replay.lastCursor - 1];
         let next = replay.replay_data[replay.lastCursor];
 
+        if(current === undefined || next === undefined)
+            return {
+                current: {
+                    x: 0,
+                    y: 0
+                },
+                next: {
+                    x: 0,
+                    y: 0
+                }
+            }
+
         // Interpolate cursor position between two points for smooth motion
 
         let current_start = current.offset;
@@ -241,43 +253,45 @@ process.on('message', obj => {
                         }
                     }
 
+                    // Render slider ticks (WIP)
+                    /*
+                    if(time <= hitObject.endTime){
+                        ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+                        ctx.lineWidth = 5 * scale_multiplier;
 
-                    /* Slider Ticks (WIP)
-                    ctx.strokeStyle = 'rgba(255,255,255,0.8)';
-                    ctx.lineWidth = 5 * scale_multiplier;
+                        let slider_ticks = hitObject.SliderTicks.slice();
 
-                    let slider_ticks = hitObject.SliderTicks.slice();
+                        // Reverse slider ticks depending on current slider direction
+                        if(currentTurn > 0 && currentTurn % 2 != 0)
+                            slider_ticks.reverse();
 
-                    // Reverse slider ticks depending on current slider direction
-                    if(currentTurn % 2 != 0)
-                        slider_ticks.reverse();
+                        let max = Math.floor(slider_ticks.length * snakingProgress);
 
-                    let max = Math.floor(slider_ticks.length * snakingProgress);
+                        let offset = time - currentTurnStart;
 
-                    let offset = time - currentTurnStart;
+                        for(let x = 0; x < max; x++){
+                            if(currentTurn > 0)
+                                ctx.globalAlpha = Math.min(1, Math.max(0, Math.min(1, (time - x * 40 - currentTurnStart) / 50)));
+                            else if(time < hitObject.startTime)
+                                ctx.globalAlpha = Math.min(1, Math.max(0, Math.min(1, (time - (max - x) * 40 - currentTurnStart) / 50)));
 
-                    ctx.globalAlpha = 1;
+                            let tick = slider_ticks[x];
 
-                    for(let x = 0; x < max; x++){
-                        if(currentTurn > 0)
-                            ctx.globalAlpha = Math.min(1, Math.max(0, Math.min(1, (time - x * 40 - currentTurnStart) / 50)));
-                        else if(time < hitObject.startTime)
-                            ctx.globalAlpha = Math.min(1, Math.max(0, Math.min(1, (time - (max - x) * 40 - currentTurnStart) / 50)));
+                            if(currentTurn > 0 && currentTurn % 2 != 0)
+                                tick.offset = tick.reverseOffset;
 
-                        let tick = slider_ticks[x];
+                            if(followpoint_index && tick.offset < offset)
+                                continue;
 
-                        let tick_offset = currentTurn % 2 == 0 ? tick.offset : tick.reverseOffset;
+                            let position = playfieldPosition(...tick.position);
+                            ctx.beginPath();
+                            ctx.arc(...position, scale_multiplier * beatmap.Radius / 5, 0, 2 * Math.PI, false);
+                            ctx.stroke();
+                        }
 
-                        if(tick_offset < offset)
-                            continue;
-
-                        let position = playfieldPosition(...tick.position);
-                        ctx.beginPath();
-                        ctx.arc(...position, scale_multiplier * beatmap.Radius / 5, 0, 2 * Math.PI, false);
-                        ctx.stroke();
+                        ctx.globalAlpha = opacity;
                     }
-
-                    ctx.globalAlpha = opacity;*/
+                    */
                 }
 
                 // Draw circles or slider heads
