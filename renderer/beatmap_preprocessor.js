@@ -295,7 +295,6 @@ function processBeatmap(cb){
 
             if(hitObject.curveType == 'pass-through' && hitObject.points.length == 3){
                 // Pretty much copied from osu-lazer https://github.com/ppy/osu-framework/blob/master/osu.Framework/MathUtils/PathApproximator.cs#L114
-
                 let a = hitObject.points[0];
                 let b = hitObject.points[1];
                 let c = hitObject.points[2];
@@ -347,7 +346,7 @@ function processBeatmap(cb){
                             thetaRange = 2 * Math.PI - thetaRange;
                         }
 
-                        let amountPoints = 2 * r <= CIRCULAR_ARC_TOLERANCE ? 2 : Math.max(2, Math.ceil(thetaRange / (2 * Math.acos(1 - CIRCULAR_ARC_TOLERANCE / r))));
+                        let amountPoints = Math.max(25, 2 * r <= CIRCULAR_ARC_TOLERANCE ? 2 : Math.max(2, Math.ceil(thetaRange / (2 * Math.acos(1 - CIRCULAR_ARC_TOLERANCE / r)))));
 
                         for(let i = 0; i < amountPoints; ++i){
                             let fract = i / (amountPoints - 1);
@@ -455,10 +454,11 @@ function processBeatmap(cb){
         if(hitObject.objectName == 'slider'){
             hitObject.endPosition = hitObject.SliderDots[hitObject.SliderDots.length - 1];
 
-            let lazyEndOffset = beatmap.Radius * 3;
+            let lazyEndOffset = Math.floor(beatmap.Radius * 3);
 
             if(hitObject.SliderDots.length < lazyEndOffset){
                 hitObject.lazyEndPosition = hitObject.position;
+                hitObject.lazyStay = true;
             }else if(hitObject.repeatCount == 1){
                 hitObject.lazyEndPosition = hitObject.SliderDots[hitObject.SliderDots.length - 1 - lazyEndOffset];
             }
@@ -723,21 +723,33 @@ function processBeatmap(cb){
             }
 
             if(hitObject.objectName == "slider"){
-                let length = hitObject.duration / hitObject.repeatCount;
-
-                for(let i = 0; i < hitObject.repeatCount; i++){
-                    let slider_dots = hitObject.SliderDots.slice();
-
-                    if(i % 2 != 0)
-                        slider_dots.reverse();
-
-                    slider_dots.forEach((dot, index) => {
-                        replay.replay_data.push({
-                            offset: hitObject.startTime + i * length + index / slider_dots.length * length,
-                            x: dot[0],
-                            y: dot[1]
-                        });
+                if(hitObject.lazyStay){
+                    replay.replay_data.push({
+                        offset: hitObject.startTime,
+                        x: hitObject.position[0],
+                        y: hitObject.position[1]
+                    }, {
+                        offset: hitObject.endTime,
+                        x: hitObject.position[0],
+                        y: hitObject.position[1]
                     });
+                }else{
+                    let length = hitObject.duration / hitObject.repeatCount;
+
+                    for(let i = 0; i < hitObject.repeatCount; i++){
+                        let slider_dots = hitObject.SliderDots.slice();
+
+                        if(i % 2 != 0)
+                            slider_dots.reverse();
+
+                        slider_dots.forEach((dot, index) => {
+                            replay.replay_data.push({
+                                offset: hitObject.startTime + i * length + index / slider_dots.length * length,
+                                x: dot[0],
+                                y: dot[1]
+                            });
+                        });
+                    }
                 }
             }
         }
