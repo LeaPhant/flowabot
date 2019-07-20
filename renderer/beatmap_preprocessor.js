@@ -724,37 +724,50 @@ function processBeatmap(cb){
             }
 
             if(hitObject.objectName == "slider"){
-                if(hitObject.duration / hitObject.repeatCount < 100){
+                let endPosition = hitObject.endPosition;
+
+                let nextObject;
+
+                if(beatmap.hitObjects.length > i + 1)
+                    nextObject = beatmap.hitObjects[i + 1];
+
+                if(nextObject){
+                    let pos_current = hitObject.endPosition;
+                    let pos_next = nextObject.position;
+
+                    let distance = vectorDistance(pos_current, pos_next);
+
+                    let n = Math.max(1, Math.min(beatmap.Radius * 3, distance));
+
+                    if(distance > 0){
+                        endPosition = [
+                            pos_current[0] + (n / distance) * (pos_next[0] - pos_current[0]),
+                            pos_current[1] + (n / distance) * (pos_next[1] - pos_current[1])
+                        ];
+                    }
+                }
+
+                if(hitObject.duration < 100 && hitObject.repeatCount == 1){
                     replay.replay_data.push({
                         offset: hitObject.startTime,
                         x: hitObject.position[0],
                         y: hitObject.position[1]
                     });
-
-                    let endPosition = hitObject.endPosition;
-
-                    let nextObject;
-
-                    if(beatmap.hitObjects.length > i + 1)
-                        nextObject = beatmap.hitObjects[i + 1];
-
-                    if(nextObject){
-                        let pos_current = hitObject.endPosition;
-                        let pos_next = nextObject.position;
-
-                        let distance = vectorDistance(pos_current, pos_next);
-
-                        let n = Math.max(1, beatmap.Radius * 3);
-
-                        if(distance > 0){
-                            endPosition = [
-                                pos_current[0] + (n / distance) * (pos_next[0] - pos_current[0]),
-                                pos_current[1] + (n / distance) * (pos_next[1] - pos_current[1])
-                            ];
-                        }
-                    }
-
                     replay.replay_data.push({
+                        offset: hitObject.endTime,
+                        x: endPosition[0],
+                        y: endPosition[1]
+                    });
+                }else if(hitObject.repeatCount > 1 && hitObject.lazyStay){
+                    replay.replay_data.push({
+                        offset: hitObject.startTime,
+                        x: hitObject.position[0],
+                        y: hitObject.position[1]
+                    }, {
+                        offset: hitObject.endTime - Math.min(300, hitObject.duration),
+                        x: hitObject.position[0],
+                        y: hitObject.position[1]
+                    }, {
                         offset: hitObject.endTime,
                         x: endPosition[0],
                         y: endPosition[1]
