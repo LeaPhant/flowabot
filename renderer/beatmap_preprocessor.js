@@ -681,13 +681,11 @@ function processBeatmap(cb){
             replay_data: []
         };
 
-        for(let x = 0; x < beatmap.hitObjects.length; x++){
-            let hitObject = beatmap.hitObjects[x];
-
+        beatmap.hitObjects.forEach((hitObject, i) => {
             if(hitObject.objectName != "spinner"){
-                if(x > 0){
+                if(i > 0){
                     replay.replay_data.push({
-                        offset: Math.max(beatmap.hitObjects[x - 1].endTime, hitObject.startTime - 20),
+                        offset: Math.max(beatmap.hitObjects[i - 1].endTime, hitObject.startTime - 20),
                         x: hitObject.position[0],
                         y: hitObject.position[1]
                     });
@@ -723,15 +721,40 @@ function processBeatmap(cb){
             }
 
             if(hitObject.objectName == "slider"){
-                if(hitObject.lazyStay){
+                if(hitObject.duration / hitObject.repeatCount < 100){
                     replay.replay_data.push({
                         offset: hitObject.startTime,
                         x: hitObject.position[0],
                         y: hitObject.position[1]
-                    }, {
+                    });
+
+                    let endPosition = hitObject.endPosition;
+
+                    let nextObject;
+
+                    if(beatmap.hitObjects.length > i + 1)
+                        nextObject = beatmap.hitObjects[i + 1];
+
+                    if(nextObject){
+                        let pos_current = hitObject.endPosition;
+                        let pos_next = nextObject.position;
+
+                        let distance = vectorDistance(pos_current, pos_next);
+
+                        let n = Math.max(1, beatmap.Radius * 3);
+
+                        if(distance > 0){
+                            endPosition = [
+                                pos_current[0] + (n / distance) * (pos_next[0] - pos_current[0]),
+                                pos_current[1] + (n / distance) * (pos_next[1] - pos_current[1])
+                            ];
+                        }
+                    }
+
+                    replay.replay_data.push({
                         offset: hitObject.endTime,
-                        x: hitObject.position[0],
-                        y: hitObject.position[1]
+                        x: endPosition[0],
+                        y: endPosition[1]
                     });
                 }else{
                     let length = hitObject.duration / hitObject.repeatCount;
@@ -752,7 +775,7 @@ function processBeatmap(cb){
                     }
                 }
             }
-        }
+        });
 
         beatmap.Replay = replay;
     }
