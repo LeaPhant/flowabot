@@ -53,17 +53,25 @@ process.on('message', async obj => {
         let current = replay.replay_data[replay.lastCursor - 1];
         let next = replay.replay_data[replay.lastCursor];
 
-        if(current === undefined || next === undefined)
-            return {
-                current: {
-                    x: 0,
-                    y: 0
-                },
-                next: {
-                    x: 0,
-                    y: 0
+        if(current === undefined || next === undefined){
+            if(replay.replay_data.length > 0){
+                return {
+                    current: replay.replay_data[replay.replay_data.length - 1],
+                    next: replay.replay_data[replay.replay_data.length - 1]
+                }
+            }else{
+                return {
+                    current: {
+                        x: 0,
+                        y: 0
+                    },
+                    next: {
+                        x: 0,
+                        y: 0
+                    }
                 }
             }
+        }
 
         // Interpolate cursor position between two points for smooth motion
 
