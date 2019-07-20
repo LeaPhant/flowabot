@@ -1,4 +1,3 @@
-const osuBeatmapParser = require('osu-parser');
 const math = require('mathjs');
 const lzma = require('lzma');
 const axios = require('axios');
@@ -6,6 +5,7 @@ const axios = require('axios');
 const fs = require('fs-extra');
 const path = require('path');
 const os = require('os');
+const { fork } = require('child_process');
 
 const helper = require('../helper.js');
 
@@ -60,42 +60,6 @@ function getMods(enabled_mods){
     return return_array;
 }
 
-function coordsOnBezier(pointArray, t){
-	let bx = 0, by = 0, n = pointArray.length - 1;
-
-	if(n == 1){
-		bx = (1 - t) * pointArray[0][0] + t * pointArray[1][0];
-		by = (1 - t) * pointArray[0][1] + t * pointArray[1][1];
-	}else if (n == 2){
-		bx = (1 - t) * (1 - t) * pointArray[0][0] + 2 * (1 - t) * t * pointArray[1][0] + t * t * pointArray[2][0];
-		by = (1 - t) * (1 - t) * pointArray[0][1] + 2 * (1 - t) * t * pointArray[1][1] + t * t * pointArray[2][1];
-	}else if (n == 3){
-		bx = (1 - t) * (1 - t) * (1 - t) * pointArray[0][0] + 3 * (1 - t) * (1 - t) * t * pointArray[1][0] + 3 * (1 - t) * t * t * pointArray[2][0] + t * t * t * pointArray[3][0];
-		by = (1 - t) * (1 - t) * (1 - t) * pointArray[0][1] + 3 * (1 - t) * (1 - t) * t * pointArray[1][1] + 3 * (1 - t) * t * t * pointArray[2][1] + t * t * t * pointArray[3][1];
-	}else{
-		for(let i = 0; i <= n; i++){
-			bx += binomialCoef(n, i) * Math.pow(1 - t, n - i) * Math.pow(t, i) * pointArray[i][0];
-			by += binomialCoef(n, i) * Math.pow(1 - t, n - i) * Math.pow(t, i) * pointArray[i][1];
-		}
-    }
-
-	return [bx,by];
-}
-
-function binomialCoef(n, k){
-	let r = 1;
-
-	if(k > n)
-		return 0;
-
-	for(let d = 1; d <= k; d++){
-		r *= n--;
-		r /= d;
-	}
-
-	return r;
-}
-
 function vectorDistance(hitObject1, hitObject2){
     return Math.sqrt((hitObject2[0] - hitObject1[0]) * (hitObject2[0] - hitObject1[0])
         + (hitObject2[1] - hitObject1[1]) * (hitObject2[1] - hitObject1[1]));
@@ -103,14 +67,6 @@ function vectorDistance(hitObject1, hitObject2){
 
 function withinCircle(x, y, centerX,  centerY, radius){
     return Math.pow((x - centerX), 2) + Math.pow((y - centerY), 2) < Math.pow(radius, 2);
-}
-
-function difficultyRange(difficulty, min, mid, max){
-    if(difficulty > 5)
-        return mid + (max - mid) * (difficulty - 5) / 5;
-    if(difficulty < 5)
-        return mid - (mid - min) * (5 - difficulty) / 5;
-    return mid;
 }
 
 function calculate_csarod(cs_raw, ar_raw, od_raw, mods_enabled){
@@ -174,153 +130,6 @@ function calculate_csarod(cs_raw, ar_raw, od_raw, mods_enabled){
 		ar: ar,
 		od: od
 	}
-}
-
-function processBeatmap(beatmap, enabled_mods){
-
-    // AR
-    beatmap.TimeFadein = difficultyRange(beatmap.ApproachRate, 1800, 1200, 450);
-    beatmap.TimePreempt = difficultyRange(beatmap.ApproachRate, 1200, 800, 300);
-
-    // OD
-    beatmap.HitWindow50 = difficultyRange(beatmap.OverallDifficulty, 200, 150, 100);
-    beatmap.HitWindow100 = difficultyRange(beatmap.OverallDifficulty, 140, 100, 60);
-    beatmap.HitWindow300 = difficultyRange(beatmap.OverallDifficulty, 80, 50, 20);
-
-    // CS
-    beatmap.Scale = (1.0 - 0.7 * (beatmap.CircleSize - 5) / 5) / 2;
-    beatmap.Radius = OBJECT_RADIUS * beatmap.Scale;
-    beatmap.FollowpointRadius = beatmap.Radius * 3;
-
-    beatmap.StackLeniency = parseFloat(beatmap.StackLeniency);
-
-    if(beatmap.StackLeniency === undefined || beatmap.StackLeniency === NaN || beatmap.StackLeniency === null)
-            beatmap.StackLeniency = 0.7;
-
-    for(var i = 0; i <= beatmap.hitObjects.length - 1; i++){
-        if(beatmap.hitObjects[i].objectName == "circle")
-            beatmap.hitObjects[i].endPosition = beatmap.hitObjects[i].position;
-        // HR inversion
-        if(enabled_mods.includes("HR")){
-            beatmap.hitObjects[i].position[1] = PLAYFIELD_HEIGHT - beatmap.hitObjects[i].position[1];
-            if(beatmap.hitObjects[i].objectName == "slider"){
-                beatmap.hitObjects[i].endPosition[1] = PLAYFIELD_HEIGHT - beatmap.hitObjects[i].endPosition[1];
-                beatmap.hitObjects[i].points.forEach(function(point, index){
-                    beatmap.hitObjects[i].points[index][1] = PLAYFIELD_HEIGHT - point[1];
-                });
-            }
-        }
-
-        beatmap.hitObjects[i].StackHeight = 0;
-    }
-
-    const STACK_LENIENCE = 3; // in osupx i assume
-    var end = -1;
-    var start = 0;
-    let nObj = beatmap.hitObjects.length;
-    while (end < 0)
-      end += nObj;
-    let stackThreshold = beatmap.TimeFadein * beatmap.StackLeniency;
-
-    // reset stacking first
-    for (let i = end; i >= start; --i)
-      beatmap.hitObjects[i].stackHeight = 0;
-
-    // just extend the end index in case it's not the base
-    let extEnd = end;
-    for (let i = end; i >= start; --i) {
-      let stackBase = i;
-      for (let n = stackBase + 1; n < nObj; ++n) {
-        // bottom of the stack
-        let stackBaseObj = beatmap.hitObjects[stackBase];
-        if (stackBaseObj.objectName == "spinner")
-          break;
-
-        // current object
-        let objN = beatmap.hitObjects[n];
-        if (objN.objectName == "spinner")
-          continue;
-
-        // check if out of range
-        if (objN.startTime - stackBaseObj.endTime > stackThreshold)
-          break;
-
-        if (vectorDistance(stackBaseObj.position, objN.position) < STACK_LENIENCE ||
-            (stackBaseObj.objectName == "slider" &&
-             vectorDistance(stackBaseObj.endPosition, objN.position) <
-                 STACK_LENIENCE)) {
-          stackBase = n;
-          beatmap.hitObjects[n].stackHeight = 0;
-        }
-      }
-      if (stackBase > extEnd) {
-        extEnd = stackBase;
-        if (extEnd == nObj - 1)
-          break;
-      }
-    }
-
-    // actually build the stacks now :D
-    let extStart = start;
-    for (let i = extEnd; i > start; --i) {
-      let n = i;
-      if (beatmap.hitObjects[i].stackHeight != 0 ||
-          beatmap.hitObjects[i].objectName == "spinner")
-        continue;
-
-      let j = i;
-      if (beatmap.hitObjects[i].objectName == "circle") {
-        while (--n >= 0) {
-          let objN = beatmap.hitObjects[n];
-          if (objN.objectName == "spinner")
-            continue;
-          if (beatmap.hitObjects[j].startTime - objN.endTime > stackThreshold)
-            break;
-          if (n < extStart) {
-            beatmap.hitObjects[n].stackHeight = 0;
-            extStart = n;
-          }
-          if (objN.objectName == "slider" &&
-              vectorDistance(objN.endPosition, beatmap.hitObjects[j].position) <
-                  STACK_LENIENCE) {
-            let offset = beatmap.hitObjects[j].stackHeight - objN.stackHeight + 1;
-            for (let j = n + 1; j <= i; ++j) {
-              let objJ = beatmap.hitObjects[j];
-              if (vectorDistance(objN.endPosition, objJ.position) < STACK_LENIENCE)
-                objJ.stackHeight -= offset;
-            }
-            break;
-          }
-          if (vectorDistance(objN.position, beatmap.hitObjects[j].position) <
-              STACK_LENIENCE) {
-            beatmap.hitObjects[n].stackHeight = beatmap.hitObjects[j].stackHeight + 1;
-            j = n;
-          }
-        }
-      } else if (beatmap.hitObjects[i].objectName == "slider") {
-        while (--n >= start) {
-          let objN = beatmap.hitObjects[n];
-          if (objN.objectName == "spinner")
-            continue;
-          if (beatmap.hitObjects[j].startTime - objN.endTime > stackThreshold)
-            break;
-          if (vectorDistance(objN.endPosition, beatmap.hitObjects[j].position) <
-              STACK_LENIENCE) {
-                beatmap.hitObjects[n].stackHeight = beatmap.hitObjects[j].stackHeight + 1;
-            }
-            j = n;
-        }
-      }
-    }
-
-    beatmap.hitObjects.forEach(function(hitObject, i){
-        beatmap.hitObjects[i].StackOffset = hitObject.stackHeight * beatmap.Scale * -6.4;
-        beatmap.hitObjects[i].position = [hitObject.position[0] + hitObject.StackOffset, hitObject.position[1] + hitObject.StackOffset];
-
-        if(hitObject.objectName == "slider"){
-            hitObject.endPosition = [hitObject.endPosition[0] + hitObject.StackOffset, hitObject.endPosition[1] + hitObject.StackOffset];
-        }
-    });
 }
 
 function parseKeysPressed(num){
@@ -435,12 +244,24 @@ function calculateUr(options, cb){
         helper.downloadBeatmap(options.beatmap_id)
 		.catch(helper.error)
 		.then(() => {
-	        osuBeatmapParser.parseFile(path.resolve(config.osu_cache_path, `${options.beatmap_id}.osu`), function (err, beatmap){
-	            let {cs, ar, od} = calculate_csarod(beatmap.CircleSize, beatmap.ApproachRate, beatmap.OverallDifficulty, options.mods);
-	            beatmap.CircleSize = cs;
-	            beatmap.ApproachRate = ar;
-	            beatmap.OverallDifficulty = od;
-	            processBeatmap(beatmap, options.mods);
+			let worker = fork(path.resolve(__dirname, 'beatmap_preprocessor.js'), ['--max-old-space-size=512']);
+
+	        worker.send({
+	            beatmap_path: path.resolve(config.osu_cache_path, `${options.beatmap_id}.osu`),
+	            options,
+	            enabled_mods: options.mods
+	        });
+
+			worker.on('close', code => {
+				if(code > 0){
+					cb("Error processing beatmap");
+					return false;
+				}
+			});
+
+	        worker.on('message', _beatmap => {
+	            beatmap = _beatmap;
+
 	            let hitObjectsOnScreen = [];
 	            let alreadyAppeared = [];
 	            let hitObjectIndex = 0;
@@ -459,10 +280,6 @@ function calculateUr(options, cb){
 	            let latehits = [];
 	            let replayPoints = {};
 	            let miss = 0;
-
-	            for(let i = 0; i < beatmap.hitObjects.length; i++)
-	                if(beatmap.hitObjects[i].objectName == 'circle')
-	                    beatmap.hitObjects[i].endTime = beatmap.hitObjects[i].startTime;
 
 	            let time = 0;
 
@@ -531,8 +348,9 @@ function calculateUr(options, cb){
 
 	                hitObjectsOnScreen.forEach(function(hitObject, index){
 	                    if(time > hitObject.endTime + beatmap.HitWindow50){
-	                        if(!hitObject.hit)
-	                            miss++;
+							if(!hitObject.hit)
+								miss++;
+							
 	                        hitObjectsOnScreen.splice(index, 1);
 	                    }
 	                });
