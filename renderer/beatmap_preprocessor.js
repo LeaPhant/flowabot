@@ -764,7 +764,7 @@ function processBeatmap(cb){
                         x: hitObject.position[0],
                         y: hitObject.position[1]
                     }, {
-                        offset: hitObject.endTime - Math.min(300, hitObject.duration),
+                        offset: hitObject.endTime - Math.min(75, hitObject.duration),
                         x: hitObject.position[0],
                         y: hitObject.position[1]
                     }, {
