@@ -266,7 +266,7 @@ function processBeatmap(cb){
     // CS
     beatmap.Scale = (1.0 - 0.7 * (beatmap.CircleSize - 5) / 5) / 2;
     beatmap.Radius = OBJECT_RADIUS * beatmap.Scale;
-    beatmap.FollowpointRadius = beatmap.Radius * 3;
+    beatmap.FollowpointRadius = beatmap.Radius * 2;
 
     beatmap.StackLeniency = parseFloat(beatmap.StackLeniency);
 
@@ -457,13 +457,16 @@ function processBeatmap(cb){
         if(hitObject.objectName == 'slider'){
             hitObject.endPosition = hitObject.SliderDots[hitObject.SliderDots.length - 1];
 
-            let lazyEndOffset = Math.floor(beatmap.Radius * 3);
+            let lazyEndOffset = Math.floor(beatmap.FollowpointRadius);
 
             if(hitObject.SliderDots.length < lazyEndOffset){
                 hitObject.lazyEndPosition = hitObject.position;
                 hitObject.lazyStay = true;
             }else if(hitObject.repeatCount == 1){
                 hitObject.lazyEndPosition = hitObject.SliderDots[hitObject.SliderDots.length - 1 - lazyEndOffset];
+            }else if(Math.floor((hitObject.SliderDots.length - 1) / 2) < lazyEndOffset){
+                hitObject.lazyEndPosition = hitObject.SliderDots[Math.floor((hitObject.SliderDots.length - 1) / 2)];
+                hitObject.lazyStay = true;
             }
 
             if(hitObject.endPosition === undefined)
@@ -742,7 +745,7 @@ function processBeatmap(cb){
 
                     let distance = vectorDistance(pos_current, pos_next);
 
-                    let n = Math.max(1, Math.min(beatmap.Radius * 3, distance));
+                    let n = Math.max(1, Math.min(beatmap.FollowpointRadius, distance));
 
                     if(distance > 0){
                         endPosition = [
@@ -769,9 +772,13 @@ function processBeatmap(cb){
                         x: hitObject.position[0],
                         y: hitObject.position[1]
                     }, {
+                        offset: hitObject.startTime + hitObject.duration / hitObject.repeatCount,
+                        x: hitObject.lazyEndPosition[0],
+                        y: hitObject.lazyEndPosition[1]
+                    }, {
                         offset: hitObject.endTime - Math.min(75, hitObject.duration),
-                        x: hitObject.position[0],
-                        y: hitObject.position[1]
+                        x: hitObject.lazyEndPosition[0],
+                        y: hitObject.lazyEndPosition[1]
                     }, {
                         offset: hitObject.endTime,
                         x: endPosition[0],
