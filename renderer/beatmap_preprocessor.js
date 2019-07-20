@@ -361,7 +361,11 @@ function processBeatmap(cb){
 
                             slider_dots.push(vectorAdd(center, o));
                         }
+                    }else{
+                        slider_dots = hitObject.points.slice();
                     }
+                }else{
+                    slider_dots = hitObject.points.slice();
                 }
             }else if(hitObject.curveType == 'catmull'){
                 // Pretty much copied from osu-lazer https://github.com/ppy/osu-framework/blob/master/osu.Framework/MathUtils/PathApproximator.cs#L89
@@ -404,7 +408,6 @@ function processBeatmap(cb){
             }
 
             hitObject.SliderDots = slider_dots;
-            hitObject.endPosition = slider_dots.pop();
         }
     });
 
