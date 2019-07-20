@@ -273,6 +273,18 @@ function processBeatmap(cb){
     if(beatmap.StackLeniency === undefined || beatmap.StackLeniency === NaN || beatmap.StackLeniency === null)
             beatmap.StackLeniency = 0.7;
 
+    // HR inversion
+    beatmap.hitObjects.forEach(function(hitObject, i){
+        if(enabled_mods.includes("HR")){
+            hitObject.position[1] = PLAYFIELD_HEIGHT - hitObject.position[1];
+
+            if(hitObject.objectName == "slider"){
+                for(let x = 0; x < hitObject.points.length; x++)
+                    hitObject.points[x][1] = PLAYFIELD_HEIGHT - hitObject.points[x][1];
+            }
+        }
+    });
+
     // Calculate slider curves
     beatmap.hitObjects.forEach(function(hitObject, i){
         if(hitObject.objectName == "slider"){
@@ -392,21 +404,18 @@ function processBeatmap(cb){
                 });
             }
 
-            beatmap.hitObjects[i].SliderDots = slider_dots;
-            beatmap.hitObjects[i].endPosition = slider_dots.pop();
+            hitObject.SliderDots = slider_dots;
+            hitObject.endPosition = slider_dots.pop();
         }
     });
 
     // Interpolate slider dots
-
-    for(let i = 0; i < beatmap.hitObjects.length; i++){
-        let hitObject = beatmap.hitObjects[i];
-
+    beatmap.hitObjects.forEach((hitObject, i) => {
         if(hitObject.objectName != 'slider')
-            continue;
+            return;
 
         if(hitObject.SliderDots.length < 2)
-            continue;
+            return;
 
         let slider_dots = [];
 
@@ -437,19 +446,25 @@ function processBeatmap(cb){
         }
 
         hitObject.SliderDots = slider_dots;
-    }
+    });
 
-    for(let i = 0; i < beatmap.hitObjects.length; i++){
-        let hitObject = beatmap.hitObjects[i];
-
+    beatmap.hitObjects.forEach((hitObject, i) => {
         if(hitObject.objectName == "circle")
-            beatmap.hitObjects[i].endPosition = beatmap.hitObjects[i].position;
+            hitObject.endPosition = hitObject.position;
 
         if(hitObject.objectName == 'slider'){
-            beatmap.hitObjects[i].endPosition = hitObject.SliderDots[hitObject.SliderDots.length - 1];
+            hitObject.endPosition = hitObject.SliderDots[hitObject.SliderDots.length - 1];
 
-            if(beatmap.hitObjects[i].endPosition === undefined)
-                beatmap.hitObjects[i].endPosition = hitObject.points[hitObject.points.length - 1];
+            let lazyEndOffset = beatmap.Radius * 3;
+
+            if(hitObject.SliderDots.length < lazyEndOffset){
+                hitObject.lazyEndPosition = hitObject.position;
+            }else if(hitObject.repeatCount == 1){
+                hitObject.lazyEndPosition = hitObject.SliderDots[hitObject.SliderDots.length - 1 - lazyEndOffset];
+            }
+
+            if(hitObject.endPosition === undefined)
+                hitObject.endPosition = hitObject.points[hitObject.points.length - 1];
 
             let slider_ticks = [];
             let timingPoint = beatmap.timingPoints[0];
@@ -467,8 +482,8 @@ function processBeatmap(cb){
                 if(!Array.isArray(position) || position.length != 2)
                     continue;
 
-                if(vectorDistanceSquared(position, hitObject.position) > 5 * 5
-                && vectorDistanceSquared(position, hitObject.endPosition) > 5 * 5)
+                if(vectorDistanceSquared(position, hitObject.position) > 25 * 5
+                && vectorDistanceSquared(position, hitObject.endPosition) > 25 * 25)
                     slider_ticks.push({
                         offset: x / hitObject.repeatCount,
                         reverseOffset: (hitObject.duration / hitObject.repeatCount) - x / hitObject.repeatCount,
@@ -476,25 +491,11 @@ function processBeatmap(cb){
                     });
             }
 
-            beatmap.hitObjects[i].SliderTicks = slider_ticks;
+            hitObject.SliderTicks = slider_ticks;
         }
 
-        // HR inversion
-        if(enabled_mods.includes("HR")){
-            beatmap.hitObjects[i].position[1] = PLAYFIELD_HEIGHT - hitObject.position[1];
-            if(hitObject.objectName == "slider"){
-                beatmap.hitObjects[i].endPosition[1] = PLAYFIELD_HEIGHT - hitObject.endPosition[1];
-
-                for(let x = 0; x < hitObject.SliderDots.length; x++)
-                    beatmap.hitObjects[i].SliderDots[x][1] = PLAYFIELD_HEIGHT - hitObject.SliderDots[x][1];
-
-                for(let x = 0; x < hitObject.SliderTicks.length; x++)
-                    beatmap.hitObjects[i].SliderTicks[x].position[1] = PLAYFIELD_HEIGHT - hitObject.SliderTicks[x].position[1];
-            }
-        }
-
-        beatmap.hitObjects[i].StackHeight = 0;
-    }
+        hitObject.StackHeight = 0;
+    });
 
     // Apply Stacking (this was copied from somewhere but the project is gone)
 
@@ -509,7 +510,7 @@ function processBeatmap(cb){
 
     // Reset stacking first
     for(let i = end; i >= start; --i)
-      beatmap.hitObjects[i].stackHeight = 0;
+        beatmap.hitObjects[i].stackHeight = 0;
 
     // Just extend the end index in case it's not the base
     let extEnd = end;
@@ -612,7 +613,7 @@ function processBeatmap(cb){
     let currentComboNumber = 0;
 
     // Set combo colors and stacking offset
-    beatmap.hitObjects.forEach(function(hitObject, i){
+    beatmap.hitObjects.forEach((hitObject, i) => {
         if(beatmap["Combo1"] === undefined){
             beatmap["Combo1"] = "255,192,0";
             beatmap["Combo2"] = "0,202,0";
@@ -634,18 +635,19 @@ function processBeatmap(cb){
         }
 
         currentComboNumber++;
-        beatmap.hitObjects[i].Color = "rgba(" + beatmap["Combo" + currentCombo] + ",0.6)";
-        beatmap.hitObjects[i].ComboNumber = currentComboNumber;
-        beatmap.hitObjects[i].StackOffset = hitObject.stackHeight * beatmap.Scale * -6.4;
-        beatmap.hitObjects[i].position = [hitObject.position[0] + hitObject.StackOffset, hitObject.position[1] + hitObject.StackOffset];
+        hitObject.Color = "rgba(" + beatmap["Combo" + currentCombo] + ",0.6)";
+        hitObject.ComboNumber = currentComboNumber;
+        hitObject.StackOffset = hitObject.stackHeight * beatmap.Scale * -6.4;
+        hitObject.position = [hitObject.position[0] + hitObject.StackOffset, hitObject.position[1] + hitObject.StackOffset];
 
         if(hitObject.objectName == "slider"){
             hitObject.endPosition = [hitObject.endPosition[0] + hitObject.StackOffset, hitObject.endPosition[1] + hitObject.StackOffset];
+
             for(let x = 0; x < hitObject.SliderDots.length; x++){
                 if(!Array.isArray(hitObject.SliderDots[x]) || hitObject.SliderDots[x].length != 2)
                     continue;
 
-                beatmap.hitObjects[i].SliderDots[x] = [
+                hitObject.SliderDots[x] = [
                     hitObject.SliderDots[x][0] + hitObject.StackOffset,
                     hitObject.SliderDots[x][1] + hitObject.StackOffset
                 ];
@@ -655,7 +657,7 @@ function processBeatmap(cb){
                 if(!Array.isArray(hitObject.SliderTicks[x]) || hitObject.SliderTicks[x].length != 2)
                     continue;
 
-                beatmap.hitObjects[i].SliderTicks[x] = [
+                hitObject.SliderTicks[x] = [
                     hitObject.SliderTicks[x][0] + hitObject.StackOffset,
                     hitObject.SliderTicks[x][1] + hitObject.StackOffset
                 ];
@@ -664,12 +666,12 @@ function processBeatmap(cb){
     });
 
     // Set end time for circles and duration for spinners too for easier handling
-    beatmap.hitObjects.forEach(function(hitObject, i){
+    beatmap.hitObjects.forEach((hitObject, i) => {
         if(hitObject.objectName == "circle")
-            beatmap.hitObjects[i].endTime = hitObject.startTime;
+            hitObject.endTime = hitObject.startTime;
 
         if(hitObject.objectName == "spinner")
-            beatmap.hitObjects[i].duration = hitObject.endTime - hitObject.startTime;
+            hitObject.duration = hitObject.endTime - hitObject.startTime;
     });
 
     // Generate auto replay
