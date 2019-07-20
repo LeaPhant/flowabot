@@ -473,25 +473,30 @@ function processBeatmap(cb){
             let timingPoint = beatmap.timingPoints[0];
 
             for(let x = beatmap.timingPoints.length - 1; x >= 0; x--){
-                if(beatmap.timingPoints[x].offset <= hitObject.startTime){
+                if(beatmap.timingPoints[x].offset <= hitObject.startTime && !beatmap.timingPoints[x].timingChange){
                     timingPoint = beatmap.timingPoints[x];
                     break;
                 }
             }
 
-            for(let x = timingPoint.beatLength /  beatmap.SliderTickRate; x < hitObject.duration; x += timingPoint.beatLength / beatmap.SliderTickRate){
-                let position = hitObject.SliderDots[Math.floor(x / hitObject.duration * (hitObject.SliderDots.length - 1))];
+            let scoringDistance = 100 * beatmap.SliderMultiplier * timingPoint.velocity;
+
+            let tickDistance = scoringDistance / beatmap.SliderTickRate;
+
+            for(let x = tickDistance; x < hitObject.pixelLength; x += tickDistance){
+                let position = hitObject.SliderDots[Math.floor(x)];
 
                 if(!Array.isArray(position) || position.length != 2)
                     continue;
 
-                if(vectorDistanceSquared(position, hitObject.position) > 25 * 5
-                && vectorDistanceSquared(position, hitObject.endPosition) > 25 * 25)
-                    slider_ticks.push({
-                        offset: x / hitObject.repeatCount,
-                        reverseOffset: (hitObject.duration / hitObject.repeatCount) - x / hitObject.repeatCount,
-                        position
-                    });
+                let turnDuration = hitObject.duration / hitObject.repeatCount;
+                let offset = (x / hitObject.pixelLength) * turnDuration;
+
+                slider_ticks.push({
+                    offset: offset,
+                    reverseOffset: turnDuration - offset,
+                    position
+                });
             }
 
             hitObject.SliderTicks = slider_ticks;

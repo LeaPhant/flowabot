@@ -268,7 +268,6 @@ process.on('message', async obj => {
                     }
 
                     // Render slider ticks (WIP)
-                    /*
                     if(time <= hitObject.endTime){
                         ctx.strokeStyle = 'rgba(255,255,255,0.8)';
                         ctx.lineWidth = 5 * scale_multiplier;
@@ -305,7 +304,6 @@ process.on('message', async obj => {
 
                         ctx.globalAlpha = opacity;
                     }
-                    */
 
                     // Render repeat arrow
                     for(let x = 1; x < hitObject.repeatCount; x++){
