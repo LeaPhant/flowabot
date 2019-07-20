@@ -267,6 +267,7 @@ function processBeatmap(cb){
     beatmap.Scale = (1.0 - 0.7 * (beatmap.CircleSize - 5) / 5) / 2;
     beatmap.Radius = OBJECT_RADIUS * beatmap.Scale;
     beatmap.FollowpointRadius = beatmap.Radius * 2;
+    beatmap.ActualFollowpointRadius = beatmap.Radius * 2.4;
 
     beatmap.StackLeniency = parseFloat(beatmap.StackLeniency);
 
@@ -457,7 +458,7 @@ function processBeatmap(cb){
         if(hitObject.objectName == 'slider'){
             hitObject.endPosition = hitObject.SliderDots[hitObject.SliderDots.length - 1];
 
-            let lazyEndOffset = Math.floor(beatmap.FollowpointRadius);
+            let lazyEndOffset = Math.floor(beatmap.ActualFollowpointRadius);
 
             if(hitObject.SliderDots.length < lazyEndOffset){
                 hitObject.lazyEndPosition = hitObject.position;
@@ -745,7 +746,7 @@ function processBeatmap(cb){
 
                     let distance = vectorDistance(pos_current, pos_next);
 
-                    let n = Math.max(1, Math.min(beatmap.FollowpointRadius, distance));
+                    let n = Math.max(1, Math.min(beatmap.ActualFollowpointRadius, distance));
 
                     if(distance > 0){
                         endPosition = [
