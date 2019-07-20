@@ -310,12 +310,16 @@ process.on('message', async obj => {
                     // Render repeat arrow
                     for(let x = 1; x < hitObject.repeatCount; x++){
                         let repeatOffset = hitObject.startTime + x * (hitObject.duration / hitObject.repeatCount);
-                        let fadeInStart = x == 1 ? snakingFinish : repeatOffset - 50;
+                        let fadeInStart = x == 1 ? snakingFinish : repeatOffset - (hitObject.duration / hitObject.repeatCount) * 2;
                         let repeatPosition = (x - 1) % 2 == 0 ? hitObject.endPosition : hitObject.position;
 
                         let timeSince = Math.max(0, Math.min(1, (time - repeatOffset) / 200));
 
-                        ctx.globalAlpha = (1 - timeSince) * Math.min(1, Math.max(0, (time - fadeInStart) / 50));
+                        if(time >= repeatOffset)
+                            ctx.globalAlpha = (1 - timeSince);
+                        else
+                            ctx.globalAlpha = Math.min(1, Math.max(0, (time - fadeInStart) / 50));
+
                         let sizeFactor = 1 + timeSince * 0.3;
 
                         let comparePosition =
