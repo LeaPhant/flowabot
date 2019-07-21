@@ -496,11 +496,12 @@ function processBeatmap(cb){
                 let turnDuration = hitObject.duration / hitObject.repeatCount;
                 let offset = (x / hitObject.pixelLength) * turnDuration;
 
-                slider_ticks.push({
-                    offset: offset,
-                    reverseOffset: turnDuration - offset,
-                    position
-                });
+                if(Math.round(x) != hitObject.pixelLength)
+                    slider_ticks.push({
+                        offset: offset,
+                        reverseOffset: turnDuration - offset,
+                        position
+                    });
             }
 
             hitObject.SliderTicks = slider_ticks;
