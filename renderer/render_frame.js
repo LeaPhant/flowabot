@@ -12,7 +12,7 @@ const ffmpeg = require('ffmpeg-static');
 const unzip = require('unzip');
 const disk = require('diskusage');
 
-const { execFile, fork } = require('child_process');
+const { execFile, fork, spawn } = require('child_process');
 
 const config = require('../config.json');
 const helper = require('../helper.js');
@@ -134,7 +134,8 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 				if(hitSound in hitSoundPaths){
 					hitSounds.push({
 						offset,
-						sound: hitSoundPaths[hitSound],
+						sound: hitSound,
+						path: hitSoundPaths[hitSound],
 						volume: timingPoint.sampleVolume / 100
 					});
 				}
@@ -152,7 +153,8 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 					if(hitSound in hitSoundPaths){
 						hitSounds.push({
 							offset,
-							sound: hitSoundPaths[hitSound],
+							sound: hitSound,
+							path: hitSoundPaths[hitSound],
 							volume: edgeTimingPoint.sampleVolume / 100
 						});
 					}
@@ -173,7 +175,8 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 							hitSounds.push({
 								type: 'slidertick',
 								offset,
-								sound: hitSoundPaths[hitSound],
+								sound: hitSound,
+								path: hitSoundPaths[hitSound],
 								volume: tickTimingPoint.sampleVolume / 100
 							});
 						}
@@ -183,11 +186,22 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 		}
 	});
 
-	let ffmpegArgs = ['-i', path.resolve(file_path, 'audio.wav')];
+	let ffmpegArgs = ['-guess_layout_max', '0', '-i', path.resolve(file_path, 'audio.wav')];
+
+	let hitSoundIndexes = {};
 
 	hitSounds.forEach(hitSound => {
-		ffmpegArgs.push('-i', hitSound.sound);
+		if(!(hitSound.sound in hitSoundIndexes)){
+			ffmpegArgs.push('-guess_layout_max', '0', '-i', hitSound.path);
+			hitSoundIndexes[hitSound.sound] = Object.keys(hitSoundIndexes).length + 1;
+		}
 	});
+
+	console.log(ffmpegArgs);
+
+	/*hitSounds.forEach(hitSound => {
+		ffmpegArgs.push('-guess_layout_max', '0', '-i', hitSound.path);
+	});*/
 
 	ffmpegArgs.push('-filter_complex');
 
@@ -198,7 +212,7 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 		let fadeOutStart = actual_length - 500;
 		let fadeOut = hitSound.offset >= fadeOutStart ? (1 - (hitSound.offset - (actual_length - 500)) / 500) : 1;
 
-		filterComplex += `[${i + 1}]adelay=${hitSound.offset}|${hitSound.offset},volume=${hitSound.volume * 0.7 * fadeOut}[${i + indexStart}];`
+		filterComplex += `[${hitSoundIndexes[hitSound.sound]}]adelay=${hitSound.offset}|${hitSound.offset},volume=${hitSound.volume * 0.7 * fadeOut}[${i + indexStart}];`
 	});
 
 	filterComplex += "[0]";
@@ -209,11 +223,25 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 
 	filterComplex += `amix=inputs=${hitSounds.length + 1},volume=${hitSounds.length + 1}`;
 
-	ffmpegArgs.push(`"${filterComplex}"`, path.resolve(file_path, 'merged.wav'));
+	ffmpegArgs.push(`"${filterComplex}"`, '-ac', '2', path.resolve(file_path, 'merged.wav'));
 
-	await execFilePromise(ffmpeg.path, ffmpegArgs, { shell: true });
+	let ffmpegProcess = spawn(ffmpeg.path, ffmpegArgs, { shell: true });
 
-	return path.resolve(file_path, 'merged.wav');
+	ffmpegProcess.stderr.on('data', data => {
+		console.log(data.toString());
+	})
+
+	console.log('started generating histsounds');
+
+	return new Promise((resolve, reject) => {
+		ffmpegProcess.on('close', code => {
+			console.log('finished generating histsounds', code);
+			if(code > 0)
+				reject(code);
+			else
+				resolve(path.resolve(file_path, 'merged.wav'));
+		});
+	});
 }
 
 function downloadMedia(options, beatmap, beatmap_path, size, download_path){
