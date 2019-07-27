@@ -105,8 +105,6 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 	let media = await mediaPromise;
 	let execFilePromise = util.promisify(execFile);
 
-	console.log(media.audio_path);
-
 	try{
 		await execFilePromise(ffmpeg.path, [
 			'-ss', start_time / 1000, '-i', `"${media.audio_path}"`, '-t', actual_length / 1000,
@@ -571,7 +569,7 @@ module.exports = {
 
                                     bitrate -= 128;
                                 }).catch(e => {
-									console.log(e);
+									helper.error(e);
                                     ffmpeg_args.unshift('-f', 'lavfi', '-r', fps, '-i', `color=c=black:s=${size.join("x")}`);
                                     helper.log("rendering without audio");
                                 }).finally(() => {
