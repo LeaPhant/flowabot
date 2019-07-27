@@ -3,6 +3,7 @@ const osuBeatmapParser = require('osu-parser');
 const fs = require('fs-extra');
 const path = require('path');
 const os = require('os');
+const util = require('util');
 
 const axios = require('axios');
 const Jimp = require('jimp');
@@ -20,6 +21,8 @@ const MAX_SIZE = 8 * 1024 * 1024;
 
 let enabled_mods = [""];
 
+const resources = path.resolve(__dirname, "res");
+
 const mods_enum = {
 	"": 0,
 	"NF": Math.pow(2, 0),
@@ -32,6 +35,187 @@ const mods_enum = {
 	"NC": Math.pow(2, 9),
 	"FL": Math.pow(2, 10),
 	"SO": Math.pow(2, 12)
+}
+
+const default_hitsounds = [
+	"normal-hitnormal",
+	"normal-hitclap",
+	"normal-hitfinish",
+	"normal-hitwhistle",
+	"normal-sliderslide",
+	"normal-slidertick",
+	"normal-sliderwhistle",
+	"soft-hitnormal",
+	"soft-hitclap",
+	"soft-hitfinish",
+	"soft-hitwhistle",
+	"soft-sliderslide",
+	"soft-slidertick",
+	"soft-sliderwhistle",
+	"drum-hitnormal",
+	"drum-hitclap",
+	"drum-hitfinish",
+	"drum-hitwhistle",
+	"drum-sliderslide",
+	"drum-slidertick",
+	"drum-sliderwhistle",
+];
+
+function getTimingPoint(timingPoints, offset){
+    let timingPoint = timingPoints[0];
+
+    for(let x = timingPoints.length - 1; x >= 0; x--){
+        if(timingPoints[x].offset <= offset && !timingPoints[x].timingChange){
+            timingPoint = timingPoints[x];
+            break;
+        }
+    }
+
+    return timingPoint;
+}
+
+async function processHitsounds(beatmap_path){
+	let hitSoundPath = {};
+
+	let setHitSound = (file, base_path) => {
+		let hitSoundName = path.basename(file, path.extname(file));
+		let absolutePath = path.resolve(base_path, file);
+
+		if(path.extname(file) === '.wav')
+			hitSoundPath[hitSoundName] = absolutePath;
+
+		// prefer .wav over .mp3
+		if(path.extname(file) === '.mp3' && !(hitSoundName in hitSoundPath))
+			hitSoundPath[hitSoundName] = absolutePath;
+	};
+
+	let defaultFiles = await fs.readdir(path.resolve(resources, 'hitsounds'));
+
+	defaultFiles.forEach(file => setHitSound(file, path.resolve(resources, 'hitsounds')));
+
+	// overwrite default hitsounds with beatmap hitsounds
+	let beatmapFiles = await fs.readdir(beatmap_path);
+
+	beatmapFiles.forEach(file => setHitSound(file, beatmap_path));
+
+	return hitSoundPath;
+}
+
+async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length, time_scale, file_path){
+	let media = await mediaPromise;
+	let execFilePromise = util.promisify(execFile);
+
+	console.log(media.audio_path);
+
+	try{
+		await execFilePromise(ffmpeg.path, [
+			'-ss', start_time / 1000, '-i', `"${media.audio_path}"`, '-t', actual_length / 1000,
+			'-filter:a', `"afade=t=out:st=${actual_length / 1000 * time_scale - 0.5}:d=0.5,atempo=${time_scale},volume=0.7"`,
+			path.resolve(file_path, 'audio.wav')
+		], { shell: true });
+	}catch(e){
+		console.error(e);
+		throw "Error trimming beatmap audio";
+	}
+
+	let hitSoundPaths = await processHitsounds(media.beatmap_path);
+
+	let hitObjects = beatmap.hitObjects.filter(a => a.startTime >= start_time && a.startTime < start_time + actual_length * time_scale);
+	let hitSounds = [];
+
+	hitObjects.forEach(hitObject => {
+		let timingPoint = getTimingPoint(beatmap.timingPoints, hitObject.startTime);
+
+		if(hitObject.objectName == 'circle'){
+			hitObject.HitSounds.forEach(hitSound => {
+				let offset = hitObject.startTime;
+
+				offset -= start_time;
+				offset /= time_scale;
+
+				if(hitSound in hitSoundPaths){
+					hitSounds.push({
+						offset,
+						sound: hitSoundPaths[hitSound],
+						volume: timingPoint.sampleVolume / 100
+					});
+				}
+			});
+		}else if(hitObject.objectName == 'slider'){
+			hitObject.EdgeHitSounds.forEach((edgeHitSounds, index) => {
+				edgeHitSounds.forEach(hitSound => {
+					let offset = hitObject.startTime + index * (hitObject.duration / hitObject.repeatCount);
+
+					let edgeTimingPoint = getTimingPoint(beatmap.timingPoints, offset);
+
+					offset -= start_time;
+					offset /= time_scale;
+
+					if(hitSound in hitSoundPaths){
+						hitSounds.push({
+							offset,
+							sound: hitSoundPaths[hitSound],
+							volume: edgeTimingPoint.sampleVolume / 100
+						});
+					}
+				});
+			});
+
+			hitObject.SliderTicks.forEach(tick => {
+				for(let i = 0; i < hitObject.repeatCount; i++){
+					let offset = hitObject.startTime + (i % 2 == 0 ? tick.offset : tick.reverseOffset) + i * (hitObject.duration / hitObject.repeatCount);
+
+					let tickTimingPoint = getTimingPoint(beatmap.timingPoints, offset);
+
+					offset -= start_time;
+					offset /= time_scale;
+
+					tick.HitSounds[i].forEach(hitSound => {
+						if(hitSound in hitSoundPaths){
+							hitSounds.push({
+								type: 'slidertick',
+								offset,
+								sound: hitSoundPaths[hitSound],
+								volume: tickTimingPoint.sampleVolume / 100
+							});
+						}
+					});
+				}
+			});
+		}
+	});
+
+	let ffmpegArgs = ['-i', path.resolve(file_path, 'audio.wav')];
+
+	hitSounds.forEach(hitSound => {
+		ffmpegArgs.push('-i', hitSound.sound);
+	});
+
+	ffmpegArgs.push('-filter_complex');
+
+	let filterComplex = "";
+	let indexStart = hitSounds.length + 1;
+
+	hitSounds.forEach((hitSound, i) => {
+		let fadeOutStart = actual_length - 500;
+		let fadeOut = hitSound.offset >= fadeOutStart ? (1 - (hitSound.offset - (actual_length - 500)) / 500) : 1;
+
+		filterComplex += `[${i + 1}]adelay=${hitSound.offset}|${hitSound.offset},volume=${hitSound.volume * 0.7 * fadeOut}[${i + indexStart}];`
+	});
+
+	filterComplex += "[0]";
+
+	hitSounds.forEach((hitSound, i) => {
+		filterComplex += `[${i + indexStart}]`;
+	});
+
+	filterComplex += `amix=inputs=${hitSounds.length + 1},volume=${hitSounds.length + 1}`;
+
+	ffmpegArgs.push(`"${filterComplex}"`, path.resolve(file_path, 'merged.wav'));
+
+	await execFilePromise(ffmpeg.path, ffmpegArgs, { shell: true });
+
+	return path.resolve(file_path, 'merged.wav');
 }
 
 function downloadMedia(options, beatmap, beatmap_path, size, download_path){
@@ -84,6 +268,8 @@ function downloadMedia(options, beatmap, beatmap_path, size, download_path){
                         let extraction = fs.createReadStream(path.resolve(download_path, 'map.zip')).pipe(unzip.Extract({ path: extraction_path }));
 
                         extraction.on('close', () => {
+							output.beatmap_path = extraction_path;
+
                             if(beatmap.AudioFilename && fs.existsSync(path.resolve(extraction_path, beatmap.AudioFilename)))
                                 output.audio_path = path.resolve(extraction_path, beatmap.AudioFilename);
 
@@ -308,8 +494,7 @@ module.exports = {
                 ];
 
                 let mediaPromise = downloadMedia(options, beatmap, beatmap_path, size, file_path);
-
-                mediaPromise.catch(() => {});
+				let audioProcessingPromise = renderHitsounds(mediaPromise, beatmap, start_time, actual_length, time_scale, file_path);
 
                 if(options.type == 'mp4')
                     bitrate = Math.min(bitrate, (0.7 * MAX_SIZE) * 8 / (actual_length / 1000) / 1024);
@@ -373,18 +558,20 @@ module.exports = {
                                     cb(null, `${file_path}/video.${options.type}`, file_path);
                                 });
                             }else{
-                                Promise.resolve(mediaPromise).then(media => {
+                                Promise.all([mediaPromise, audioProcessingPromise]).then(response => {
+									let media = response[0];
+									let audio = response[1];
+
                                     if(media.background_path)
                                         ffmpeg_args.unshift('-loop', '1', '-r', fps, '-i', `"${media.background_path}"`);
                                     else
                                         ffmpeg_args.unshift('-f', 'lavfi', '-r', fps, '-i', `color=c=black:s=${size.join("x")}`);
 
-                                    ffmpeg_args.push(
-                                        '-ss', start_time / 1000, '-i', `"${media.audio_path}"`, '-filter:a', `"afade=t=out:st=${actual_length / 1000 * time_scale - 0.5}:d=0.5,atempo=${time_scale},volume=0.7"`
-                                    );
+                                    ffmpeg_args.push('-i', audio);
 
                                     bitrate -= 128;
-                                }).catch(() => {
+                                }).catch(e => {
+									console.log(e);
                                     ffmpeg_args.unshift('-f', 'lavfi', '-r', fps, '-i', `color=c=black:s=${size.join("x")}`);
                                     helper.log("rendering without audio");
                                 }).finally(() => {

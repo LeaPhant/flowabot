@@ -9,7 +9,7 @@ const PLAYFIELD_HEIGHT = 384;
 const resources = path.resolve(__dirname, "res");
 
 let images = {
-    "arrow": path.resolve(resources, "arrow.svg")
+    "arrow": path.resolve(resources, "images", "arrow.svg")
 };
 
 process.on('uncaughtException', err => {

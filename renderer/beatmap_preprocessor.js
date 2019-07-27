@@ -252,6 +252,19 @@ function calculate_csarod(cs_raw, ar_raw, od_raw, mods_enabled){
 	}
 }
 
+function getTimingPoint(timingPoints, offset){
+    let timingPoint = timingPoints[0];
+
+    for(let x = timingPoints.length - 1; x >= 0; x--){
+        if(timingPoints[x].offset <= offset && !timingPoints[x].timingChange){
+            timingPoint = timingPoints[x];
+            break;
+        }
+    }
+
+    return timingPoint;
+}
+
 function processBeatmap(cb){
 
     // AR
@@ -451,13 +464,17 @@ function processBeatmap(cb){
         hitObject.SliderDots = slider_dots;
     });
 
+    // Generate slider ticks and apply lazy end position
     beatmap.hitObjects.forEach((hitObject, i) => {
+        let timingPoint = getTimingPoint(beatmap.timingPoints, hitObject.startTime);
+
         if(hitObject.objectName == "circle")
             hitObject.endPosition = hitObject.position;
 
         if(hitObject.objectName == 'slider'){
             hitObject.endPosition = hitObject.SliderDots[hitObject.SliderDots.length - 1];
 
+            // How far away you can stay away from the slider end without missing it
             let lazyEndOffset = Math.floor(beatmap.ActualFollowpointRadius);
 
             if(hitObject.SliderDots.length < lazyEndOffset){
@@ -474,14 +491,6 @@ function processBeatmap(cb){
                 hitObject.endPosition = hitObject.points[hitObject.points.length - 1];
 
             let slider_ticks = [];
-            let timingPoint = beatmap.timingPoints[0];
-
-            for(let x = beatmap.timingPoints.length - 1; x >= 0; x--){
-                if(beatmap.timingPoints[x].offset <= hitObject.startTime && !beatmap.timingPoints[x].timingChange){
-                    timingPoint = beatmap.timingPoints[x];
-                    break;
-                }
-            }
 
             let scoringDistance = 100 * beatmap.SliderMultiplier * timingPoint.velocity;
 
@@ -496,6 +505,7 @@ function processBeatmap(cb){
                 let turnDuration = hitObject.duration / hitObject.repeatCount;
                 let offset = (x / hitObject.pixelLength) * turnDuration;
 
+                // Don't render slider tick on slider end
                 if(Math.round(x) != hitObject.pixelLength)
                     slider_ticks.push({
                         offset: offset,
@@ -507,11 +517,101 @@ function processBeatmap(cb){
             hitObject.SliderTicks = slider_ticks;
         }
 
+        let sampleSetToName = sampleSetId => {
+            switch(sampleSetId){
+                case 2:
+                    return "soft";
+                case 3:
+                    return "drum";
+                default:
+                    return "normal";
+            }
+        };
+
+        let getHitSounds = (timingPoint, name, soundTypes, additions) => {
+            let output = [];
+
+            let sampleSetName = sampleSetToName(timingPoint.sampleSetId);
+            let sampleSetNameAddition = sampleSetName;
+
+            if(!soundTypes.includes('normal'))
+                soundTypes.push('normal');
+
+            if('sample' in additions)
+                sampleSetName = additions.sample;
+
+            if('additionalSample' in additions)
+                sampleSetNameAddition = additions.additionalSample;
+
+            let hitSoundBase = `${sampleSetName}-${name}`;
+            let hitSoundBaseAddition = `${sampleSetNameAddition}-${name}`;
+            let customSampleIndex = timingPoint.customSampleIndex > 1 ? timingPoint.customSampleIndex : '';
+
+            if(name == 'hit'){
+                soundTypes.forEach(soundType => {
+                    let base = soundType == 'normal' ? hitSoundBase : hitSoundBaseAddition;
+                    output.push(
+                        `${base}${soundType}${customSampleIndex}`
+                    );
+                });
+            }else if(name == 'slider'){
+                output.push(
+                    `${hitSoundBase}slide${customSampleIndex}`
+                );
+
+                if(soundTypes.includes('whistle'))
+                    output.push(
+                        `${hitSoundBase}whistle${customSampleIndex}`
+                    );
+            }else if(name == 'slidertick'){
+                output.push(
+                    `${hitSoundBase}${customSampleIndex}`
+                )
+            }
+
+            return output;
+        };
+
+        hitObject.HitSounds = getHitSounds(timingPoint, 'hit', hitObject.soundTypes, hitObject.additions);
+        hitObject.EdgeHitSounds = [];
+        hitObject.SliderHitSounds = [];
+
+        if(hitObject.objectName == 'slider'){
+            hitObject.edges.forEach((edge, i) => {
+                let offset = i * (hitObject.duration / hitObject.repeatCount)
+
+                let edgeTimingPoint = getTimingPoint(beatmap.timingPoints, hitObject.startTime + offset);
+
+                hitObject.EdgeHitSounds.push(
+                    getHitSounds(edgeTimingPoint, 'hit', edge.soundTypes, edge.additions)
+                );
+
+                hitObject.SliderHitSounds.push(
+                    getHitSounds(edgeTimingPoint, 'slider', hitObject.soundTypes, hitObject.additions)
+                );
+            });
+
+            hitObject.SliderTicks.forEach(tick => {
+                for(let i = 0; i < hitObject.repeatCount; i++){
+                    if(i == 0)
+                        tick.HitSounds = [];
+
+                    let edgeOffset =  i * (hitObject.duration / hitObject.repeatCount);
+                    let offset = edgeOffset + (i % 2 == 0 ? tick.offset : tick.reverseOffset);
+
+                    let tickTimingPoint = getTimingPoint(beatmap.timingPoints, hitObject.startTime + offset);
+
+                    tick.HitSounds.push(
+                        getHitSounds(tickTimingPoint, 'slidertick', hitObject.soundTypes, hitObject.additions)
+                    );
+                }
+            });
+        }
+
         hitObject.StackHeight = 0;
     });
 
     // Apply Stacking (this was copied from somewhere but the project is gone)
-
     var end = -1;
     var start = 0;
     let nObj = beatmap.hitObjects.length;
