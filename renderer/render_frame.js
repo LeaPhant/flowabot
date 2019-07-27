@@ -197,12 +197,6 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 		}
 	});
 
-	console.log(ffmpegArgs);
-
-	/*hitSounds.forEach(hitSound => {
-		ffmpegArgs.push('-guess_layout_max', '0', '-i', hitSound.path);
-	});*/
-
 	ffmpegArgs.push('-filter_complex');
 
 	let filterComplex = "";
@@ -227,15 +221,8 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 
 	let ffmpegProcess = spawn(ffmpeg.path, ffmpegArgs, { shell: true });
 
-	ffmpegProcess.stderr.on('data', data => {
-		console.log(data.toString());
-	})
-
-	console.log('started generating histsounds');
-
 	return new Promise((resolve, reject) => {
 		ffmpegProcess.on('close', code => {
-			console.log('finished generating histsounds', code);
 			if(code > 0)
 				reject(code);
 			else
