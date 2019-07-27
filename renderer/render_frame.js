@@ -186,60 +186,66 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 		}
 	});
 
-	let ffmpegArgs = ['-guess_layout_max', '0', '-i', path.resolve(file_path, 'audio.wav')];
+	let ffmpegArgs = [];
 
 	let hitSoundIndexes = {};
 
 	hitSounds.forEach(hitSound => {
 		if(!(hitSound.sound in hitSoundIndexes)){
 			ffmpegArgs.push('-guess_layout_max', '0', '-i', hitSound.path);
-			hitSoundIndexes[hitSound.sound] = Object.keys(hitSoundIndexes).length + 1;
+			hitSoundIndexes[hitSound.sound] = Object.keys(hitSoundIndexes).length;
 		}
 	});
+	// process in chunks
+	let chunkLength = 2500;
+	let chunkCount = Math.floor(actual_length / chunkLength);
+	let hitSoundPromises = [];
 
-	console.log(ffmpegArgs);
+	let mergeHitSoundArgs = [];
 
-	/*hitSounds.forEach(hitSound => {
-		ffmpegArgs.push('-guess_layout_max', '0', '-i', hitSound.path);
-	});*/
+	for(let i = 0; i < chunkCount; i++){
+		let hitSoundsChunk = hitSounds.filter(a => a.offset >= i * chunkLength && a.offset < (i + 1) * chunkLength);
+		let ffmpegArgsChunk = ffmpegArgs.slice();
 
-	ffmpegArgs.push('-filter_complex');
+		ffmpegArgsChunk.push('-filter_complex');
 
-	let filterComplex = "";
-	let indexStart = hitSounds.length + 1;
+		let filterComplex = "";
+		let indexStart = Object.keys(hitSoundIndexes).length;
 
-	hitSounds.forEach((hitSound, i) => {
-		let fadeOutStart = actual_length - 500;
-		let fadeOut = hitSound.offset >= fadeOutStart ? (1 - (hitSound.offset - (actual_length - 500)) / 500) : 1;
+		hitSoundsChunk.forEach((hitSound, i) => {
+			let fadeOutStart = actual_length - 500;
+			let fadeOut = hitSound.offset >= fadeOutStart ? (1 - (hitSound.offset - (actual_length - 500)) / 500) : 1;
 
-		filterComplex += `[${hitSoundIndexes[hitSound.sound]}]adelay=${hitSound.offset}|${hitSound.offset},volume=${hitSound.volume * 0.7 * fadeOut}[${i + indexStart}];`
-	});
+			filterComplex += `[${hitSoundIndexes[hitSound.sound]}]adelay=${hitSound.offset}|${hitSound.offset},volume=${hitSound.volume * 0.7 * fadeOut}[${i + indexStart}];`
+		});
 
-	filterComplex += "[0]";
+		hitSoundsChunk.forEach((hitSound, i) => {
+			filterComplex += `[${i + indexStart}]`;
+		});
 
-	hitSounds.forEach((hitSound, i) => {
-		filterComplex += `[${i + indexStart}]`;
-	});
+		filterComplex += `amix=inputs=${hitSoundsChunk.length},volume=${hitSoundsChunk.length}`;
 
-	filterComplex += `amix=inputs=${hitSounds.length + 1},volume=${hitSounds.length + 1}`;
+		ffmpegArgsChunk.push(`"${filterComplex}"`, '-ac', '2', path.resolve(file_path, `hitsounds${i}.wav`));
+		mergeHitSoundArgs.push('-guess_layout_max', '0', '-i', path.resolve(file_path, `hitsounds${i}.wav`));
 
-	ffmpegArgs.push(`"${filterComplex}"`, '-ac', '2', path.resolve(file_path, 'merged.wav'));
-
-	let ffmpegProcess = spawn(ffmpeg.path, ffmpegArgs, { shell: true });
-
-	ffmpegProcess.stderr.on('data', data => {
-		console.log(data.toString());
-	})
-
-	console.log('started generating histsounds');
+		hitSoundPromises.push(execFilePromise(ffmpeg.path, ffmpegArgsChunk, { shell: true }));
+	}
 
 	return new Promise((resolve, reject) => {
-		ffmpegProcess.on('close', code => {
-			console.log('finished generating histsounds', code);
-			if(code > 0)
-				reject(code);
-			else
-				resolve(path.resolve(file_path, 'merged.wav'));
+		Promise.all(hitSoundPromises).then(async () => {
+			mergeHitSoundArgs.push('-filter_complex', `amix=inputs=${chunkCount},volume=${chunkCount},dynaudnorm`, path.resolve(file_path, `hitsounds.wav`));
+
+			await execFilePromise(ffmpeg.path, mergeHitSoundArgs, { shell: true });
+
+			let mergeArgs = [
+				'-guess_layout_max', '0', '-i', path.resolve(file_path, `audio.wav`),
+				'-guess_layout_max', '0', '-i', path.resolve(file_path, `hitsounds.wav`),
+				'-filter_complex', `amix=inputs=2,volume=2,dynaudnorm`, path.resolve(file_path, 'merged.wav')
+			];
+
+			await execFilePromise(ffmpeg.path, mergeArgs, { shell: true });
+
+			resolve(path.resolve(file_path, 'merged.wav'));
 		});
 	});
 }
@@ -610,7 +616,7 @@ module.exports = {
                                         if(err){
                                             helper.error(err);
                                             cb("Error encoding video");
-                                            fs.remove(file_path);
+                                            //fs.remove(file_path);
                                             return false;
                                         }
 
