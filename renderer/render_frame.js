@@ -202,9 +202,16 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 	let hitSoundPromises = [];
 
 	let mergeHitSoundArgs = [];
+	let chunksToMerge = 0;
 
 	for(let i = 0; i < chunkCount; i++){
 		let hitSoundsChunk = hitSounds.filter(a => a.offset >= i * chunkLength && a.offset < (i + 1) * chunkLength);
+
+		if(hitSoundsChunk.length == 0)
+			continue;
+
+		chunksToMerge++;
+
 		let ffmpegArgsChunk = ffmpegArgs.slice();
 
 		ffmpegArgsChunk.push('-filter_complex');
@@ -233,7 +240,7 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 
 	return new Promise((resolve, reject) => {
 		Promise.all(hitSoundPromises).then(async () => {
-			mergeHitSoundArgs.push('-filter_complex', `amix=inputs=${chunkCount}:dropout_transition=${actual_length},volume=${chunkCount}`, path.resolve(file_path, `hitsounds.wav`));
+			mergeHitSoundArgs.push('-filter_complex', `amix=inputs=${chunksToMerge}:dropout_transition=${actual_length},volume=${chunksToMerge}`, path.resolve(file_path, `hitsounds.wav`));
 
 			await execFilePromise(ffmpeg.path, mergeHitSoundArgs, { shell: true });
 
