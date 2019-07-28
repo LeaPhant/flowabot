@@ -627,7 +627,7 @@ module.exports = {
                                         if(err){
                                             helper.error(err);
                                             cb("Error encoding video");
-                                            //fs.remove(file_path);
+                                            fs.remove(file_path);
                                             return false;
                                         }
 
