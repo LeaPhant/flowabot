@@ -767,12 +767,12 @@ function processBeatmap(cb){
             }
 
             for(let x = 0; x < hitObject.SliderTicks.length; x++){
-                if(!Array.isArray(hitObject.SliderTicks[x]) || hitObject.SliderTicks[x].length != 2)
+                if(!Array.isArray(hitObject.SliderTicks[x].position) || hitObject.SliderTicks[x].position.length != 2)
                     continue;
 
-                hitObject.SliderTicks[x] = [
-                    hitObject.SliderTicks[x][0] + hitObject.StackOffset,
-                    hitObject.SliderTicks[x][1] + hitObject.StackOffset
+                hitObject.SliderTicks[x].position = [
+                    hitObject.SliderTicks[x].position[0] + hitObject.StackOffset,
+                    hitObject.SliderTicks[x].position[1] + hitObject.StackOffset
                 ];
             }
         }
