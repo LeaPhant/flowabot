@@ -501,7 +501,7 @@ module.exports = {
             let bitrate = 500 * 1024;
 
             if(actual_length > 160 * 1000 && actual_length < 210 * 1000)
-                size = [250, 262];
+                size = [350, 262];
             else if(actual_length >= 210 * 1000)
                 size = [180, 128];
 
