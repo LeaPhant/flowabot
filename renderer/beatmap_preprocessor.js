@@ -478,7 +478,7 @@ function processBeatmap(cb){
             let lazyEndOffset = Math.floor(beatmap.ActualFollowpointRadius);
 
             if(hitObject.SliderDots.length < lazyEndOffset){
-                hitObject.lazyEndPosition = hitObject.position;
+                hitObject.lazyEndPosition = hitObject.endPosition;
                 hitObject.lazyStay = true;
             }else if(hitObject.repeatCount == 1){
                 hitObject.lazyEndPosition = hitObject.SliderDots[hitObject.SliderDots.length - 1 - lazyEndOffset];
@@ -868,7 +868,7 @@ function processBeatmap(cb){
                         x: endPosition[0],
                         y: endPosition[1]
                     });
-                }else if(hitObject.repeatCount > 1 && hitObject.lazyStay){
+                }else if(hitObject.repeatCount > 1 && hitObject.lazyStay && (hitObject.duration / hitObject.repeatCount) < 200){
                     replay.replay_data.push({
                         offset: hitObject.startTime,
                         x: hitObject.position[0],
