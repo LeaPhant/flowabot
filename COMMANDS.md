@@ -4,6 +4,7 @@
 - [!ar](#ar)
 - [!bmi](#bmi)
 - [!bpm](#bpm)
+- [!bttv](#bttv)
 - [!compare](#compare)
 - [!emojipedia](#emojipedia)
 - [!emote](#emote)
@@ -89,6 +90,16 @@ Returns BPM graph for the last beatmap.
 !bpm https://osu.ppy.sh/b/75 +DT
 ```
 Returns BPM graph with DT for specific beatmap.
+## !bttv
+Show a BTTV emote by name. Emotes from <https://betterttv.com/>.
+
+**Usage**: `!bttv <emote name>`
+### Example:
+
+```
+!bttv WoweeHOP
+```
+Returns WoweeHOP BTTV emote
 ## !compare
 Search for best score on the last beatmap.
 
@@ -200,7 +211,8 @@ Show information about this bot.
 **Usage**: `!flowabot`
 ## !help
 Get help for a command.
-List of all commands: https://github.com/LeaPhant/flowabot/blob/master/COMMANDS.md
+
+**List of all commands:** https://github.com/LeaPhant/flowabot/blob/master/COMMANDS.md
 
 **Usage**: `!help <command>`
 ### Example:

@@ -8,7 +8,7 @@ const Discord = require('discord.js');
 
 const ffzApi = axios.create({
     baseURL: 'https://api.frankerfacez.com/v1'
-})
+});
 
 module.exports = {
     command: 'ffz',
@@ -69,9 +69,7 @@ module.exports = {
                                 footer: {
                                     text: `Submitted by ${emote.owner.display_name}`
                                 }
-                            }, file: attachment}).then(() => {
-                                fs.unlinkSync(file);
-                            });
+                            }, file: attachment, remove_path: file});
                         });
                     });
                 }else{
