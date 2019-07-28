@@ -85,11 +85,7 @@ async function processHitsounds(beatmap_path){
 
 		let absolutePath = path.resolve(base_path, file);
 
-		if(path.extname(file) === '.wav')
-			hitSoundPath[hitSoundName] = absolutePath;
-
-		// prefer .wav over .mp3
-		if(path.extname(file) === '.mp3' && !(hitSoundName in hitSoundPath))
+		if(path.extname(file) === '.wav' || path.extname(file) === '.mp3')
 			hitSoundPath[hitSoundName] = absolutePath;
 	};
 
