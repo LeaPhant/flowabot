@@ -77,8 +77,12 @@ function getTimingPoint(timingPoints, offset){
 async function processHitsounds(beatmap_path){
 	let hitSoundPath = {};
 
-	let setHitSound = (file, base_path) => {
+	let setHitSound = (file, base_path, custom) => {
 		let hitSoundName = path.basename(file, path.extname(file));
+
+		if(hitSoundName.match(/\d+/) === null && custom)
+			hitSoundName += '1';
+
 		let absolutePath = path.resolve(base_path, file);
 
 		if(path.extname(file) === '.wav')
@@ -96,7 +100,7 @@ async function processHitsounds(beatmap_path){
 	// overwrite default hitsounds with beatmap hitsounds
 	let beatmapFiles = await fs.readdir(beatmap_path);
 
-	beatmapFiles.forEach(file => setHitSound(file, beatmap_path));
+	beatmapFiles.forEach(file => setHitSound(file, beatmap_path, true));
 
 	return hitSoundPath;
 }

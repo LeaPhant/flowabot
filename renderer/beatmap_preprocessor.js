@@ -545,7 +545,7 @@ function processBeatmap(cb){
 
             let hitSoundBase = `${sampleSetName}-${name}`;
             let hitSoundBaseAddition = `${sampleSetNameAddition}-${name}`;
-            let customSampleIndex = timingPoint.customSampleIndex > 1 ? timingPoint.customSampleIndex : '';
+            let customSampleIndex = timingPoint.customSampleIndex > 0 ? timingPoint.customSampleIndex : '';
 
             if(name == 'hit'){
                 soundTypes.forEach(soundType => {
