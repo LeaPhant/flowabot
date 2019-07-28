@@ -791,7 +791,7 @@ function processBeatmap(cb){
     if(!beatmap.Replay){
         let replay = {
             lastCursor: 0,
-            replay_data: []
+            replay_data: [{offset: 0, x: 0, y: 0}]
         };
 
         beatmap.hitObjects.forEach((hitObject, i) => {

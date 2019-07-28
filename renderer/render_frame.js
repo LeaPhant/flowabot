@@ -473,7 +473,7 @@ module.exports = {
 
             }else{
                 let firstNonSpinner = beatmap.hitObjects.filter(x => x.objectName != 'spinner');
-                time = Math.max(time, firstNonSpinner[0].startTime);
+                time = Math.max(time, Math.max(0, firstNonSpinner[0].startTime - 1000));
             }
 
             length = Math.min(400 * 1000, length);
