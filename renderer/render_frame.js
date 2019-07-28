@@ -97,6 +97,9 @@ async function processHitsounds(beatmap_path){
 
 	defaultFiles.forEach(file => setHitSound(file, path.resolve(resources, 'hitsounds')));
 
+	// some beatmaps use custom 1 without having a file for it, set default custom 1 hitsounds
+	defaultFiles.forEach(file => setHitSound(file, path.resolve(resources, 'hitsounds'), true));
+
 	// overwrite default hitsounds with beatmap hitsounds
 	let beatmapFiles = await fs.readdir(beatmap_path);
 
@@ -243,6 +246,11 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 	}
 
 	return new Promise((resolve, reject) => {
+		if(chunksToMerge < 1){
+			reject();
+			return;
+		}
+
 		Promise.all(hitSoundPromises).then(async () => {
 			mergeHitSoundArgs.push('-filter_complex', `amix=inputs=${chunksToMerge}:dropout_transition=${actual_length},volume=${chunksToMerge}`, path.resolve(file_path, `hitsounds.wav`));
 
