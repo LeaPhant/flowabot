@@ -90,7 +90,7 @@ process.on('message', async obj => {
 
         let n = Math.max(1, progress * distance);
 
-        if(distance > 0 && pos_current[0] != pos_next[0] && pos_current[1] != pos_next[1]){
+        if(distance > 0){
             current.x = pos_current[0] + (n / distance) * (pos_next[0] - pos_current[0]);
             current.y = pos_current[1] + (n / distance) * (pos_next[1] - pos_current[1]);
         }
