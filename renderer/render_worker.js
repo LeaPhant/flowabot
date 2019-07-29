@@ -631,6 +631,8 @@ process.on('message', async obj => {
 
             fs.writeFileSync(path.resolve(file_path, `${current_frame}.rgba`), Buffer.from(image_data));
 
+            process.send(current_frame);
+
             current_frame += threads;
             time += time_frame;
         }

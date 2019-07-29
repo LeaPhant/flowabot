@@ -432,6 +432,8 @@ module.exports = {
 
         let worker = fork(path.resolve(__dirname, 'beatmap_preprocessor.js'));
 
+		let frames_rendered = [], frames_piped = [], current_frame = 0;
+
         worker.send({
             beatmap_path,
             options,
@@ -521,7 +523,49 @@ module.exports = {
             file_path = path.resolve(os.tmpdir(), 'frames', `${rnd}`);
             fs.ensureDirSync(file_path);
 
-            let frames_size = actual_length / time_frame * size[0] * size[1] * 4;
+			let threads = require('os').cpus().length;
+
+			let amount_frames = Math.floor(actual_length / time_frame);
+
+            let frames_size = amount_frames * size[0] * size[1] * 4;
+
+			let pipeFrameLoop = (ffmpegProcess, cb) => {
+				if(frames_rendered.includes(current_frame)){
+					let frame_path = path.resolve(file_path, `${current_frame}.rgba`);
+					fs.readFile(frame_path, (err, buf) => {
+						if(err){
+							cb('Error encoding video');
+							return;
+						}
+
+						ffmpegProcess.stdin.write(buf, err => {
+							if(err){
+								helper.error(err);
+								cb('Error encoding video');
+								return;
+							}
+
+							fs.remove(frame_path);
+
+							frames_piped.push(current_frame);
+							frames_rendered.slice(frames_rendered.indexOf(current_frame), 1);
+
+							if(frames_piped.length == amount_frames){
+								ffmpegProcess.stdin.end();
+								cb(null);
+								return;
+							}
+
+							current_frame++;
+							pipeFrameLoop(ffmpegProcess, cb);
+						});
+					});
+				}else{
+					setTimeout(() => {
+						pipeFrameLoop(ffmpegProcess, cb);
+					}, 100);
+				}
+			}
 
             disk.check(file_path, (err, info) => {
                 if(err){
@@ -536,8 +580,8 @@ module.exports = {
                 }
 
                 let ffmpeg_args = [
-                    '-f', 'image2', '-r', fps, '-s', size.join('x'), '-pix_fmt', 'rgba', '-c:v', 'rawvideo',
-                    '-i', `${file_path}/%d.rgba`
+                    '-f', 'rawvideo', '-r', fps, '-s', size.join('x'), '-pix_fmt', 'rgba', '-c:v', 'rawvideo',
+                    '-i', 'pipe:0'
                 ];
 
                 let mediaPromise = downloadMedia(options, beatmap, beatmap_path, size, file_path);
@@ -549,7 +593,6 @@ module.exports = {
                 time_frame *= time_scale;
 
                 let workers = [];
-                let threads = require('os').cpus().length;
 
                 for(let i = 0; i < threads; i++){
                     workers.push(
@@ -560,7 +603,88 @@ module.exports = {
                 let done = 0;
 
                 if(config.debug)
-                    console.time('render beatmap');
+                	console.time('render beatmap');
+
+				if(options.type == 'gif'){
+					if(config.debug)
+						console.time('encode video');
+
+					ffmpeg_args.push(`${file_path}/video.gif`);
+
+					let ffmpegProcess = spawn(ffmpeg.path, ffmpeg_args, { shell: true });
+
+					ffmpegProcess.on('close', code => {
+						if(code > 0){
+							cb("Error encoding video");
+							fs.remove(file_path);
+							return false;
+						}
+
+						if(config.debug)
+							console.timeEnd('encode video');
+
+						cb(null, `${file_path}/video.${options.type}`, file_path);
+					});
+
+					pipeFrameLoop(ffmpegProcess, err => {
+						if(err){
+							cb("Error encoding video");
+							fs.remove(file_path);
+							return false;
+						}
+					});
+				}else{
+					Promise.all([mediaPromise, audioProcessingPromise]).then(response => {
+						let media = response[0];
+						let audio = response[1];
+
+						if(media.background_path)
+							ffmpeg_args.unshift('-loop', '1', '-r', fps, '-i', `"${media.background_path}"`);
+						else
+							ffmpeg_args.unshift('-f', 'lavfi', '-r', fps, '-i', `color=c=black:s=${size.join("x")}`);
+
+						ffmpeg_args.push('-i', audio);
+
+						bitrate -= 128;
+					}).catch(e => {
+						helper.error(e);
+						ffmpeg_args.unshift('-f', 'lavfi', '-r', fps, '-i', `color=c=black:s=${size.join("x")}`);
+						helper.log("rendering without audio");
+					}).finally(() => {
+						if(config.debug)
+							console.time('encode video');
+
+						ffmpeg_args.push(
+							'-filter_complex', `"overlay=(W-w)/2:shortest=1"`,
+							'-pix_fmt', 'yuv420p', '-r', fps, '-c:v', 'libx264', '-b:v', `${bitrate}k`,
+							'-c:a', 'aac', '-b:a', '128k', '-shortest', '-preset', 'veryfast',
+							'-movflags', 'faststart', `${file_path}/video.mp4`
+						);
+
+						let ffmpegProcess = spawn(ffmpeg.path, ffmpeg_args, { shell: true });
+
+						ffmpegProcess.on('close', code => {
+							if(code > 0){
+								cb("Error encoding video");
+								fs.remove(file_path);
+								return false;
+							}
+
+							if(config.debug)
+								console.timeEnd('encode video');
+
+							cb(null, `${file_path}/video.${options.type}`, file_path);
+						});
+
+						pipeFrameLoop(ffmpegProcess, err => {
+							if(err){
+								cb("Error encoding video");
+								fs.remove(file_path);
+								return false;
+							}
+						});
+					});
+				}
 
                 workers.forEach((worker, index) => {
                     worker.send({
@@ -575,6 +699,10 @@ module.exports = {
                         size
                     });
 
+					worker.on('message', frame => {
+						frames_rendered.push(frame);
+					});
+
                     worker.on('close', code => {
 						if(code > 0){
 							cb("Error rendering beatmap");
@@ -584,64 +712,8 @@ module.exports = {
                         done++;
 
                         if(done == threads){
-                            if(config.debug){
-                                console.timeEnd('render beatmap');
-                                console.time('encode video');
-                            }
-
-                            if(options.type == 'gif'){
-                                ffmpeg_args.push(`${file_path}/video.gif`);
-
-                                execFile(ffmpeg.path, ffmpeg_args, err => {
-                                    if(err){
-                                        helper.error(err);
-                                        cb("Error encoding video");
-                                        return false;
-                                    }
-
-                                    if(config.debug)
-                                        console.timeEnd('encode video');
-
-                                    cb(null, `${file_path}/video.${options.type}`, file_path);
-                                });
-                            }else{
-                                Promise.all([mediaPromise, audioProcessingPromise]).then(response => {
-									let media = response[0];
-									let audio = response[1];
-
-                                    if(media.background_path)
-                                        ffmpeg_args.unshift('-loop', '1', '-r', fps, '-i', `"${media.background_path}"`);
-                                    else
-                                        ffmpeg_args.unshift('-f', 'lavfi', '-r', fps, '-i', `color=c=black:s=${size.join("x")}`);
-
-                                    ffmpeg_args.push('-i', audio);
-
-                                    bitrate -= 128;
-                                }).catch(e => {
-									helper.error(e);
-                                    ffmpeg_args.unshift('-f', 'lavfi', '-r', fps, '-i', `color=c=black:s=${size.join("x")}`);
-                                    helper.log("rendering without audio");
-                                }).finally(() => {
-                                    ffmpeg_args.push(
-                                        '-filter_complex', `"overlay=(W-w)/2:shortest=1"`,
-                                        '-pix_fmt', 'yuv420p', '-r', fps, '-c:v', 'libx264', '-b:v', `${bitrate}k`, '-c:a', 'aac', '-b:a', '128k', '-shortest', '-preset', 'veryfast', `${file_path}/video.mp4`
-                                    );
-
-                                    execFile(ffmpeg.path, ffmpeg_args, { shell: true }, err => {
-                                        if(err){
-                                            helper.error(err);
-                                            cb("Error encoding video");
-                                            fs.remove(file_path);
-                                            return false;
-                                        }
-
-                                        if(config.debug)
-                                            console.timeEnd('encode video');
-
-                                        cb(null, `${file_path}/video.${options.type}`, file_path);
-                                    });
-                                });
-                            }
+							if(config.debug)
+								console.timeEnd('render beatmap');
                         }
                     });
                 });
