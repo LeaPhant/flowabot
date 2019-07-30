@@ -49,8 +49,7 @@ module.exports = {
                         let channel = stream.channel;
 
                         let display_name = channel.display_name;
-                        let viewers = stream.viewers.toLocaleString() + " viewer";
-                        if(parseInt(stream.viewers) != 1) viewers += "s";
+                        let viewers = stream.viewers.toLocaleString();
                         let game = stream.game;
                         let status = channel.status;
                         let quality = Math.round(stream.video_height) + "p" + Math.round(stream.average_fps);
