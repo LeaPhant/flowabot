@@ -4,7 +4,7 @@ const config = require('../config.json');
 const moment = require('moment');
 require("moment-duration-format");
 
-const twitchkraken = axios.create({
+const twitchKraken = axios.create({
     baseURL: 'https://api.twitch.tv/kraken',
     headers: {
         'Accept': 'application/vnd.twitchtv.v5+json',
@@ -28,7 +28,7 @@ module.exports = {
 
             let channel_name = argv[1];
 
-            twitchkraken.get(`/users`, {
+            twitchKraken.get(`/users`, {
                 params: {
                     'login': channel_name,
                 },
@@ -42,7 +42,7 @@ module.exports = {
 
                 let user_id = users[0]._id;
 
-                twitchkraken.get(`/streams/${user_id}`).then(response => {
+                twitchKraken.get(`/streams/${user_id}`).then(response => {
                     let stream = response.data.stream;
 
                     if(stream != null){
