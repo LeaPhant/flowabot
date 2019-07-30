@@ -1,10 +1,16 @@
 const helper = require('../helper.js');
 const axios = require('axios');
 const config = require('../config.json');
+const moment = require('moment');
+require("moment-duration-format");
 
-const twitchKraken = axios.create({
-    baseURL: 'https://api.twitch.tv/kraken'
-})
+const twitchkraken = axios.create({
+    baseURL: 'https://api.twitch.tv/kraken',
+    headers: {
+        'Accept': 'application/vnd.twitchtv.v5+json',
+        'Client-ID': config.credentials.twitch_client_id
+    }
+});
 
 module.exports = {
     command: 'viewers',
@@ -22,26 +28,59 @@ module.exports = {
 
             let channel_name = argv[1];
 
-            twitchKraken.get(`/streams/${channel_name}`, {
+            twitchkraken.get(`/users`, {
                 params: {
-                    client_id: config.credentials.twitch_client_id
-                }
+                    'login': channel_name,
+                },
             }).then(response => {
-                let stream = response.data.stream;
+                let users = response.data.users;
 
-                if(stream != null){
-                    let display_name = stream.channel.display_name;
-                    let viewers = stream.viewers.toLocaleString() + " viewer";
-                    if(parseInt(stream.viewers) != 1) viewers += "s";
-                    let game = stream.game;
-                    let status = stream.channel.status;
-                    let quality = Math.round(stream.video_height) + "p" + Math.round(stream.average_fps);
-                    resolve(
-                        `"${status}" - <https://twitch.tv/${stream.channel.name}> is currently streaming **${game}** for **${viewers}** [${quality}]`
-                    );
-                }else{
-                    reject(`${channel_name} is currently not live`);
+                if(users.length == 0){
+                    reject('User not found');
+                    return;
                 }
+
+                let user_id = users[0]._id;
+
+                twitchkraken.get(`/streams/${user_id}`).then(response => {
+                    let stream = response.data.stream;
+
+                    if(stream != null){
+                        let channel = stream.channel;
+
+                        let display_name = channel.display_name;
+                        let viewers = stream.viewers.toLocaleString() + " viewer";
+                        if(parseInt(stream.viewers) != 1) viewers += "s";
+                        let game = stream.game;
+                        let status = channel.status;
+                        let quality = Math.round(stream.video_height) + "p" + Math.round(stream.average_fps);
+
+                        resolve({
+                            embed: {
+                                color: 6570404,
+                                author: {
+                                    icon_url: "https://cdn.discordapp.com/attachments/572429763700981780/572429816851202059/GlitchBadge_Purple_64px.png",
+                                    url: channel.url,
+                                    name: display_name
+                                },
+                                title: status,
+                                url: channel.url,
+                                description: `**Game**: ${game}\n**Viewers**: ${viewers}\n**Quality**: ${quality}`,
+                                thumbnail: {
+                                    url: channel.logo
+                                },
+                                footer: {
+                                    text: `Live for ${moment.duration(Math.max(0, moment().unix() - moment(stream.created_at).unix()), "seconds").format("h [hour and] m [minute]")}`
+                                }
+                            }
+                        });
+                    }else{
+                        reject(`${channel_name} is currently not live`);
+                    }
+                }).catch(err => {
+                    helper.error(err);
+                    reject('User not found');
+                });
             }).catch(err => {
                 helper.error(err);
                 reject('User not found');
