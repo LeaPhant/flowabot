@@ -506,7 +506,7 @@ module.exports = {
             if(options.type == 'gif')
                 fps = 50;
 
-            let time_frame = 1000 / fps;
+            let time_frame = 1000 / fps * time_scale;
 
             let bitrate = 500 * 1024;
 
@@ -525,7 +525,7 @@ module.exports = {
 
 			let threads = require('os').cpus().length;
 
-			let amount_frames = Math.floor(actual_length / time_frame);
+			let amount_frames = Math.floor(actual_length * time_scale / time_frame);
 
             let frames_size = amount_frames * size[0] * size[1] * 4;
 
@@ -590,8 +590,6 @@ module.exports = {
 
                 if(options.type == 'mp4')
                     bitrate = Math.min(bitrate, (0.7 * MAX_SIZE) * 8 / (actual_length / 1000) / 1024);
-
-                time_frame *= time_scale;
 
                 let workers = [];
 
