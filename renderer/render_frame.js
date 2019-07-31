@@ -580,7 +580,8 @@ module.exports = {
                 }
 
                 let ffmpeg_args = [
-                    '-f', 'rawvideo', '-r', fps, '-s', size.join('x'), '-pix_fmt', 'rgba', '-c:v', 'rawvideo',
+                    '-f', 'rawvideo', '-r', fps, '-s', size.join('x'), '-pix_fmt', 'rgba',
+					'-c:v', 'rawvideo', '-thread_queue_size', 1024,
                     '-i', 'pipe:0'
                 ];
 
@@ -657,7 +658,7 @@ module.exports = {
 						ffmpeg_args.push(
 							'-filter_complex', `"overlay=(W-w)/2:shortest=1"`,
 							'-pix_fmt', 'yuv420p', '-r', fps, '-c:v', 'libx264', '-b:v', `${bitrate}k`,
-							'-c:a', 'aac', '-b:a', '128k', '-shortest', '-preset', 'veryfast',
+							'-c:a', 'aac', '-b:a', '128k', '-preset', 'veryfast',
 							'-movflags', 'faststart', `${file_path}/video.mp4`
 						);
 
