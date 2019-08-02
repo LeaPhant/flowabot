@@ -288,7 +288,7 @@ function processBeatmap(cb){
             beatmap.StackLeniency = 0.7;
 
     // HR inversion
-    beatmap.hitObjects.forEach(function(hitObject, i){
+    beatmap.hitObjects.forEach((hitObject, i) => {
         if(enabled_mods.includes("HR")){
             hitObject.position[1] = PLAYFIELD_HEIGHT - hitObject.position[1];
 
@@ -300,7 +300,7 @@ function processBeatmap(cb){
     });
 
     // Calculate slider curves
-    beatmap.hitObjects.forEach(function(hitObject, i){
+    beatmap.hitObjects.forEach((hitObject, i) => {
         if(hitObject.objectName == "slider"){
             let slider_parts = [];
             let slider_part = [];
@@ -398,7 +398,7 @@ function processBeatmap(cb){
                     }
                 }
             }else{
-                hitObject.points.forEach(function(point, index){
+                hitObject.points.forEach((point, index) => {
                     slider_part.push(point);
                     if(index < hitObject.points.length - 1){
                         if(point[0] == hitObject.points[index + 1][0] && point[1] == hitObject.points[index + 1][1]){
@@ -411,7 +411,7 @@ function processBeatmap(cb){
                     }
                 });
 
-                slider_parts.forEach(function(part, index){
+                slider_parts.forEach((part, index) => {
                     if(part.length == 2){
                         slider_dots.push(part[0], part[1])
                     }else{

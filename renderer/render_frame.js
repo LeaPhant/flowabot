@@ -104,14 +104,14 @@ async function processHitsounds(beatmap_path){
 	return hitSoundPath;
 }
 
-async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length, time_scale, file_path){
+async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length, modded_length, time_scale, file_path){
 	let media = await mediaPromise;
 	let execFilePromise = util.promisify(execFile);
 
 	try{
 		await execFilePromise(ffmpeg.path, [
-			'-ss', start_time / 1000, '-i', `"${media.audio_path}"`, '-t', actual_length / 1000,
-			'-filter:a', `"afade=t=out:st=${actual_length / 1000 * time_scale - 0.5}:d=0.5,atempo=${time_scale},volume=0.7"`,
+			'-ss', start_time / 1000, '-i', `"${media.audio_path}"`, '-t', actual_length * Math.max(1, time_scale) / 1000,
+			'-filter:a', `"afade=t=out:st=${actual_length * time_scale / 1000 - 0.5 / time_scale}:d=0.5,atempo=${time_scale},volume=0.7"`,
 			path.resolve(file_path, 'audio.wav')
 		], { shell: true });
 	}catch(e){
@@ -201,7 +201,7 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 	});
 	// process in chunks
 	let chunkLength = 2500;
-	let chunkCount = Math.ceil(actual_length / chunkLength);
+	let chunkCount = Math.ceil(modded_length / chunkLength);
 	let hitSoundPromises = [];
 
 	let mergeHitSoundArgs = [];
@@ -233,7 +233,7 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 			filterComplex += `[${i + indexStart}]`;
 		});
 
-		filterComplex += `amix=inputs=${hitSoundsChunk.length}:dropout_transition=${actual_length},volume=${hitSoundsChunk.length}`;
+		filterComplex += `amix=inputs=${hitSoundsChunk.length}:dropout_transition=${actual_length},volume=${hitSoundsChunk.length},dynaudnorm`;
 
 		ffmpegArgsChunk.push(`"${filterComplex}"`, '-ac', '2', path.resolve(file_path, `hitsounds${i}.wav`));
 		mergeHitSoundArgs.push('-guess_layout_max', '0', '-i', path.resolve(file_path, `hitsounds${i}.wav`));
@@ -248,14 +248,14 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 		}
 
 		Promise.all(hitSoundPromises).then(async () => {
-			mergeHitSoundArgs.push('-filter_complex', `amix=inputs=${chunksToMerge}:dropout_transition=${actual_length},volume=${chunksToMerge}`, path.resolve(file_path, `hitsounds.wav`));
+			mergeHitSoundArgs.push('-filter_complex', `amix=inputs=${chunksToMerge}:dropout_transition=${actual_length},volume=${chunksToMerge},dynaudnorm`, path.resolve(file_path, `hitsounds.wav`));
 
 			await execFilePromise(ffmpeg.path, mergeHitSoundArgs, { shell: true });
 
 			let mergeArgs = [
 				'-guess_layout_max', '0', '-i', path.resolve(file_path, `audio.wav`),
 				'-guess_layout_max', '0', '-i', path.resolve(file_path, `hitsounds.wav`),
-				'-filter_complex', `amix=inputs=2:dropout_transition=${actual_length},volume=2`, path.resolve(file_path, 'merged.wav')
+				'-filter_complex', `amix=inputs=2:duration=first:dropout_transition=${actual_length},volume=2,dynaudnorm`, path.resolve(file_path, 'merged.wav')
 			];
 
 			await execFilePromise(ffmpeg.path, mergeArgs, { shell: true });
@@ -478,11 +478,15 @@ module.exports = {
                 time = Math.max(time, Math.max(0, firstNonSpinner[0].startTime - 1000));
             }
 
+			let lastObject = beatmap.hitObjects[beatmap.hitObjects.length - 1];
+
+			let lastObjectTime = lastObject.endTime + 1500;
+
             length = Math.min(400 * 1000, length);
 
             let start_time = time;
 
-            let time_max = Math.min(time + length + 1000, beatmap.hitObjects[beatmap.hitObjects.length - 1].endTime + 1500);
+            let time_max = Math.min(time + length + 1000, lastObjectTime);
 
             let actual_length = time_max - time;
 
@@ -499,6 +503,8 @@ module.exports = {
 
             if(enabled_mods.includes('HT'))
                 time_scale *= 0.75;
+
+			actual_length = Math.min(length + 1000, Math.max(actual_length, actual_length / time_scale));
 
             if(!('type' in options))
                 options.type = 'gif';
@@ -525,7 +531,9 @@ module.exports = {
 
 			let threads = require('os').cpus().length;
 
-			let amount_frames = Math.floor(actual_length * time_scale / time_frame);
+			let modded_length = time_scale > 1 ? Math.min(actual_length * time_scale, lastObjectTime) : actual_length;
+
+			let amount_frames = Math.floor(modded_length / time_frame);
 
             let frames_size = amount_frames * size[0] * size[1] * 4;
 
@@ -540,8 +548,7 @@ module.exports = {
 
 						ffmpegProcess.stdin.write(buf, err => {
 							if(err){
-								helper.error(err);
-								cb('Error encoding video');
+								cb(null);
 								return;
 							}
 
@@ -586,7 +593,7 @@ module.exports = {
                 ];
 
                 let mediaPromise = downloadMedia(options, beatmap, beatmap_path, size, file_path);
-				let audioProcessingPromise = renderHitsounds(mediaPromise, beatmap, start_time, actual_length, time_scale, file_path);
+				let audioProcessingPromise = renderHitsounds(mediaPromise, beatmap, start_time, actual_length, modded_length, time_scale, file_path);
 
                 if(options.type == 'mp4')
                     bitrate = Math.min(bitrate, (0.7 * MAX_SIZE) * 8 / (actual_length / 1000) / 1024);
@@ -656,7 +663,7 @@ module.exports = {
 						ffmpeg_args.push(
 							'-filter_complex', `"overlay=(W-w)/2:shortest=1"`,
 							'-pix_fmt', 'yuv420p', '-r', fps, '-c:v', 'libx264', '-b:v', `${bitrate}k`,
-							'-c:a', 'aac', '-b:a', '128k', '-preset', 'veryfast',
+							'-c:a', 'aac', '-b:a', '128k', '-shortest', '-preset', 'veryfast',
 							'-movflags', 'faststart', `${file_path}/video.mp4`
 						);
 
@@ -689,7 +696,7 @@ module.exports = {
                     worker.send({
                         beatmap,
                         start_time: time + index * time_frame,
-                        end_time: time + index * time_frame + time_scale * actual_length,
+                        end_time: time + index * time_frame + modded_length,
                         time_frame: time_frame * threads,
                         file_path,
                         options,
