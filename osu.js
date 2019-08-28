@@ -1630,7 +1630,7 @@ module.exports = {
 
 		strain_chunks.forEach((strain, index) => {
 			let _strain = strain / max_strain;
-			let x = index / strain_chunks.length * 399;
+			let x = (index + 1) / strain_chunks.length * 399;
 			let y = Math.min(30, 5 + 35 - _strain * 35);
 			points.push({x, y});
 		});
