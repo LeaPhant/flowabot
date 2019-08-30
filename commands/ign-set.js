@@ -12,7 +12,7 @@ module.exports = {
         return new Promise((resolve, reject) => {
             let { msg, user_ign } = obj;
 
-            let split = helper.splitWithTail(msg.content, ' ', 2);
+            let split = helper.splitWithTail(msg.content, ' ', 1);
 
             if(split.length < 2){
                 reject(helper.commandHelp('ign-set'));
