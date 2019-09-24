@@ -1,6 +1,7 @@
 const axios = require('axios');
 const moment = require('moment');
 const ojsama = require('ojsama');
+const osuBeatmapParser = require('osu-parser');
 const path = require('path');
 const fs = require('fs-extra');
 
@@ -1671,6 +1672,24 @@ module.exports = {
 		ctx.fill();
 
 		return bar.toBuffer();
+	},
+
+	get_preview_point: function(osu_file_path){
+		return new Promise((resolve, reject) => {
+			osuBeatmapParser.parseFile(osu_file_path, function(err, beatmap){
+				if(err){
+					helper.log(err);
+					reject();
+				}
+
+				let previewTime = Number(beatmap.PreviewTime);
+
+				if(previewTime < 0 || isNaN(previewTime))
+					previewTime = 0.4 * totalTime * 1000;
+
+				resolve(previewTime);
+			});
+		});
 	},
 
     get_strains: function(osu_file_path, mods_string, type){

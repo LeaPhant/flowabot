@@ -18,7 +18,7 @@
     "license": "MIT",
     "dependencies": {
         "axios": "0.18.1",
-        "canvas": "^2.5.0",
+        "canvas": "^2.6.0",
         "chalk": "^2.4.2",
         "cheerio": "^1.0.0-rc.2",
         "discord.js": "^11.5.1",
