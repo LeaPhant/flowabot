@@ -84,8 +84,10 @@ module.exports = {
                     type = arg;
                     length = 4;
 				}else if(arg == 'preview'){
-					type = arg;
-					length = 10;
+                    type = arg
+                    length = 9;
+                    video_type = 'mp4';
+                    audio = true;
                 }else if(arg == 'mp4'){
                     video_type = 'mp4';
                 }else if(arg == 'audio'){
