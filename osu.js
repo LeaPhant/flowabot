@@ -586,7 +586,7 @@ function getScore(recent_raw, cb){
 	                        }, ur => {
 	                            recent.ur = ur;
 
-	                            if(recent.mods.includes("DT"))
+	                            if(recent.mods.includes("DT") || recent.mods.includes("NC"))
 	                                recent.cvur = ur / 1.5;
 	                            else if(recent.mods.includes("HT"))
 	                                recent.cvur = ur * 1.5;
@@ -594,6 +594,7 @@ function getScore(recent_raw, cb){
 	                            resolve(recent);
 	                        });
 	                });
+
 	                recent.ur = -1;
 	                if(recent.mods.includes("DT") || recent.mods.includes("HT"))
 	                    recent.cvur = -1;
