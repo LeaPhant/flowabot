@@ -478,6 +478,33 @@ module.exports = {
                 time = Math.max(time, Math.max(0, firstNonSpinner[0].startTime - 1000));
             }
 
+			if(options.combo){
+				let current_combo = 0;
+
+				for(let hitObject of beatmap.hitObjects){
+					console.log(hitObject.startTime, current_combo, options.combo)
+
+					if(hitObject.objectName == 'slider'){
+						for(let i = 0; i < hitObject.repeatCount; i++){
+							current_combo += 2 + hitObject.SliderTicks.length;
+							time = hitObject.startTime + i * (hitObject.duration / hitObject.repeatCount);
+
+							if(current_combo >= options.combo)
+								break;
+						}
+
+						if(current_combo >= options.combo)
+							break;
+					}else{
+						current_combo += 1;
+						time = hitObject.endTime;
+
+						if(current_combo >= options.combo)
+							break;
+					}
+				}
+			}
+
 			let lastObject = beatmap.hitObjects[beatmap.hitObjects.length - 1];
 
 			let lastObjectTime = lastObject.endTime + 1500;

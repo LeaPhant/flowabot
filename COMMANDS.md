@@ -315,7 +315,7 @@ Render picture or gif of a beatmap at a specific time. Videos 10 seconds or long
 
 **Variations**: `!render`, `!frame`, `!fail`
 
-**Usage**: `!render [beatmap url] [+mods] [AR8] [CS6] [strains/aim/speed/fail] [mp4] [plain] [120fps] [mm:ss] [4s]`
+**Usage**: `!render [beatmap url] [+mods] [AR8] [CS6] [preview/strains/aim/speed/fail] [mp4] [plain] [120fps] [mm:ss] [353x] [4s]`
 ### Examples:
 
 ```
@@ -339,9 +339,9 @@ Returns an image of the last beatmap at 1 minute and 5 seconds.
 Returns a 10 second video of the streamiest part on the last beatmap.
 
 ```
-!render strains 120fps plain
+!render 120fps 353x plain
 ```
-Returns a 120fps video of the hardest part on the last beatmap without sound and black background.
+Returns a 120fps video at 353 combo on the last beatmap without sound and black background.
 ## !score
 Search for a score on a beatmap.
 

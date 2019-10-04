@@ -13,7 +13,7 @@ const config = require('../config.json');
 module.exports = {
     command: ['render', 'frame', 'fail'],
     description: "Render picture or gif of a beatmap at a specific time. Videos 10 seconds or longer are automatically rendered as mp4 video with audio and beatmap background.",
-    usage: '[beatmap url] [+mods] [AR8] [CS6] [preview/strains/aim/speed/fail] [mp4] [plain] [120fps] [mm:ss] [4s]',
+    usage: '[beatmap url] [+mods] [AR8] [CS6] [preview/strains/aim/speed/fail] [mp4] [plain] [120fps] [mm:ss] [353x] [4s]',
     example: [
         {
             run: "render strains",
@@ -32,8 +32,8 @@ module.exports = {
             result: "Returns a 10 second video of the streamiest part on the last beatmap."
         },
         {
-            run: "render strains 120fps plain",
-            result: "Returns a 120fps video of the hardest part on the last beatmap without sound and black background."
+            run: "render 120fps 353x plain",
+            result: "Returns a 120fps video at 353 combo on the last beatmap without sound and black background."
         }
     ],
     configRequired: ['debug'],
@@ -61,6 +61,7 @@ module.exports = {
             }
 
             let fps = 60;
+            let combo = 0;
 
             argv.map(arg => arg.toLowerCase());
 
@@ -103,6 +104,8 @@ module.exports = {
                     }
                 }else if(arg.endsWith('s')){
                     length = parseFloat(arg);
+                }else if(arg.endsWith('x')){
+                    combo = parseInt(arg);
                 }else if(/^([0-9]+)$/g.test(arg)){
                     time += parseInt(arg) * 1000;
                 }else if(arg.toLowerCase().startsWith('ar')){
@@ -193,6 +196,7 @@ module.exports = {
 								content: 'Rendering...',
 								replace_promise: new Promise((resolve, reject) => {
 									frame.get_frames(download_path, time, length * 1000, mods, size, {
+                                        combo,
 										type: video_type, cs, ar, black: false, score_id, audio, fps,
 										fill: video_type == 'mp4', noshadow: true, percent, border: false, objects
 									}, (err, send, remove_path) => {
@@ -205,6 +209,7 @@ module.exports = {
 							});
 						}else{
 							frame.get_frame(download_path, time, mods, [800, 600], {
+                                combo,
 								cs: cs, ar: ar, score_id, black: true, fill: true, percent: percent
 							}, (err, buf) => {
 								if(err)
