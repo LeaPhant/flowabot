@@ -480,13 +480,13 @@ module.exports = {
 
 			if(options.combo){
 				let current_combo = 0;
-
+				
 				for(let hitObject of beatmap.hitObjects){
-					console.log(hitObject.startTime, current_combo, options.combo)
-
 					if(hitObject.objectName == 'slider'){
+						current_combo += 1;
+
 						for(let i = 0; i < hitObject.repeatCount; i++){
-							current_combo += 2 + hitObject.SliderTicks.length;
+							current_combo += 1 + hitObject.SliderTicks.length;
 							time = hitObject.startTime + i * (hitObject.duration / hitObject.repeatCount);
 
 							if(current_combo >= options.combo)
