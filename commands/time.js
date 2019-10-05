@@ -13,7 +13,6 @@ module.exports = {
     command: 'time',
     description: "Get the current time at a place.",
     usage: '[name of place, e.g. city]',
-    argsRequired: 1,
     example: [
         {
             run: "time london",
@@ -24,7 +23,16 @@ module.exports = {
         return new Promise((resolve, reject) => {
             let { argv } = obj;
 
-            let q = argv.slice(1).join(" ");
+            if(argv.length == 1){
+                let timezones = moment.tz.names();
+                let timezone = timezones[Math.floor(Math.random() * timezones.length)];
+
+                resolve(`${moment().tz(timezone).format('HH:mm, MMM DD')} (${timezone})`);
+
+                return;
+            }
+
+            let q = argv.slice(2).join(" ");
 
             Nominatim.get('search', { params: { q } }).then(response => {
                 if(response.data.length > 0){
