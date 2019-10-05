@@ -32,7 +32,7 @@ module.exports = {
                 return;
             }
 
-            let q = argv.slice(2).join(" ");
+            let q = argv.slice(1).join(" ");
 
             Nominatim.get('search', { params: { q } }).then(response => {
                 if(response.data.length > 0){
