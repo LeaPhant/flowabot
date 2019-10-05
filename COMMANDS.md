@@ -27,6 +27,7 @@
 - [!render](#render)
 - [!score](#score)
 - [!strains](#strains)
+- [!time](#time)
 - [!top](#top)
 - [!uptime](#uptime)
 - [!viewers](#viewers)
@@ -382,6 +383,16 @@ Returns strain graph with HR applied and CS set to 5 for the last beatmap.
 !strains https://osu.ppy.sh/b/75 aim
 ```
 Returns aim strain graph for this beatmap.
+## !time
+Get the current time at a place.
+
+**Usage**: `!time [name of place, e.g. city]`
+### Example:
+
+```
+!time london
+```
+Returns the current time in London.
 ## !top
 Show a specific top play.
 
