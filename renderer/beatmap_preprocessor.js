@@ -97,6 +97,15 @@ function parseReplay(buf){
     return output_frames;
 }
 
+function getCursorAt(timestamp, replay){
+    while(replay.replay_data[replay.lastCursor].offset <= timestamp){
+        replay.lastCursor++;
+    }
+    let current = replay.replay_data[replay.lastCursor - 1];
+    let next = replay.replay_data[replay.lastCursor];
+    return {current: current, next: next};
+}
+
 function catmullFindPoint(vec1, vec2, vec3, vec4, t){
     let t2 = t * t;
     let t3 = t * t2;
@@ -179,6 +188,9 @@ function vectorDivide(a, d){
 function vectorDistanceSquared(hitObject1, hitObject2){
     return (hitObject2[0] - hitObject1[0]) * (hitObject2[0] - hitObject1[0])
         + (hitObject2[1] - hitObject1[1]) * (hitObject2[1] - hitObject1[1]);
+}
+function withinCircle(x, y, centerX,  centerY, radius){
+    return Math.pow((x - centerX), 2) + Math.pow((y - centerY), 2) < Math.pow(radius, 2);
 }
 
 function difficultyRange(difficulty, min, mid, max){
@@ -275,6 +287,7 @@ function processBeatmap(cb){
     beatmap.HitWindow50 = difficultyRange(beatmap.OverallDifficulty, 200, 150, 100);
     beatmap.HitWindow100 = difficultyRange(beatmap.OverallDifficulty, 140, 100, 60);
     beatmap.HitWindow300 = difficultyRange(beatmap.OverallDifficulty, 80, 50, 20);
+    beatmap.SpinsPerSecond = difficultyRange(beatmap.OverallDifficulty, 3, 5, 7.5);
 
     // CS
     beatmap.Scale = (1.0 - 0.7 * (beatmap.CircleSize - 5) / 5) / 2;
@@ -423,6 +436,10 @@ function processBeatmap(cb){
 
             hitObject.SliderDots = slider_dots;
         }
+
+        // apply absolute amount of spins required to get a 300
+        if(hitObject.objectName == 'spinner')
+            hitObject.SpinsRequired = beatmap.SpinsPerSecond * hitObject.duration;
     });
 
     // Interpolate slider dots
@@ -909,6 +926,120 @@ function processBeatmap(cb){
 
         beatmap.Replay = replay;
     }
+
+    let hitObjectsOnScreen = [];
+    let alreadyAppeared = [];
+    let hitObjectIndex = 0;
+    let previousKeyStateK1 = false;
+    let previousKeyStateK2 = false;
+    let previousKeyStateM1 = false;
+    let previousKeyStateM2 = false;
+    let currentPresses = 0;
+    let currentReplayPoint = beatmap.Replay.replay_data[0];
+    let unstablerate = 0;
+    let errorearly = 0;
+    let errorlate = 0;
+    let allhits = [];
+    let allhitsraw = [];
+    let earlyhits = [];
+    let latehits = [];
+    let replayPoints = {};
+    let miss = 0;
+
+    let time = 0;
+
+    while(time <= beatmap.hitObjects[beatmap.hitObjects.length - 1].endTime + beatmap.HitWindow50){
+        try{
+            replayPoints = getCursorAt(time, beatmap.Replay);
+            currentReplayPoint = replayPoints.current;
+        }catch(e){
+            helper.error(e);
+        }
+
+        if(currentReplayPoint.K1 && currentReplayPoint.K1 != previousKeyStateK1) currentPresses++;
+        if(currentReplayPoint.K2 && currentReplayPoint.K2 != previousKeyStateK2) currentPresses++;
+        if(currentReplayPoint.M1 && currentReplayPoint.M1 != previousKeyStateM1) currentPresses++;
+        if(currentReplayPoint.M2 && currentReplayPoint.M2 != previousKeyStateM2) currentPresses++;
+
+        previousKeyStateK1 = currentReplayPoint.K1;
+        previousKeyStateK2 = currentReplayPoint.K2;
+        previousKeyStateM1 = currentReplayPoint.M1;
+        previousKeyStateM2 = currentReplayPoint.M2;
+
+        let currentHolding = currentReplayPoint.K1 || currentReplayPoint.K2 || currentReplayPoint.M1 || currentReplayPoint.M2;
+
+        let rangeObjects = beatmap.hitObjects.filter(a => a.HitResult === undefined && time >= a.startTime - beatmap.HitWindow50 && time <= a.endTime + beatmap.HitWindow50);
+
+        while(currentPresses > 0){
+            let firstCircle = rangeObjects.filter(a => {
+                if(a.HitResult !== undefined)
+                    return false;
+
+                if(a.objectName == 'circle')
+                    return true;
+                if(a.objectName == 'slider' && !a.SliderHead)
+                    return true;
+
+                return false;
+            })[0];
+
+            if(firstCircle !== undefined){
+                if(withinCircle(currentReplayPoint.x, currentReplayPoint.y, ...firstCircle.position, beatmap.Radius)){
+                    let offsetRaw = currentReplayPoint.offset - firstCircle.startTime;
+                    let offset = Math.abs(offsetRaw);
+
+                    firstCircle.HitTime = firstCircle.startTime + offsetRaw;
+
+                    if(firstCircle.objectName == 'circle'){
+                        if(offset <= beatmap.HitWindow300)
+                            firstCircle.HitResult = 300;
+                        else if(offset <= beatmap.HitWindow100)
+                            firstCircle.HitResult = 100;
+                        else if(offset <= beatmap.HitWindow50)
+                            firstCircle.HitResult = 50;
+                        else
+                            firstCircle.HitResult = 0;
+                    }else{
+                        firstCircle.SliderHead = true;
+                    }
+
+                }
+            }
+
+            currentPresses--;
+        }
+
+        let currentSpinner = rangeObjects.filter(a => a.objectName == 'spinner')[0];
+
+        if(currentHolding && currentSpinner){
+
+        }
+
+        time = replayPoints.next.offset;
+    }
+
+    beatmap.hitObjects.forEach(hitObject => {
+        if(hitObject.objectName == 'circle')
+            if(hitObject.HitResult === undefined){
+                hitObject.HitResult = 0;
+                hitObject.HitTime = hitObject.endTime + beatmap.HitWindow50;
+            }
+    });
+
+    let count100 = beatmap.hitObjects.filter(a => a.HitResult == 100).length;
+    let count50 = beatmap.hitObjects.filter(a => a.HitResult == 50).length;
+    let countMiss = beatmap.hitObjects.filter(a => a.HitResult == 0).length;
+
+    beatmap.hitObjects.forEach(hitObject => {
+        if(hitObject.objectName == 'circle' && hitObject.HitResult == 0)
+            console.log(hitObject);
+    });
+
+    console.log('Count100', count100);
+    console.log('Count50', count50);
+    console.log('CountMiss', countMiss);
+
+    beatmap.Replay.lastCursor = 0;
 
     cb();
 }

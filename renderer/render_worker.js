@@ -557,6 +557,48 @@ process.on('message', async obj => {
             }
         });
 
+        ctx.globalAlpha = 1;
+
+        // Draw 100s, 50s and Misses
+        beatmap.hitObjects.filter(a => a.HitResult != 300 && time >= a.HitTime && time < a.HitTime + 1500).forEach(hitObject => {
+            if(time >= hitObject.HitTime){
+                let text = "";
+                let fontSize = 26;
+
+                switch(hitObject.HitResult){
+                    case 300:
+                        ctx.fillStyle = '#e0c467';
+                        text = "300";
+                        break;
+                    case 100:
+                        ctx.fillStyle = '#49ba67';
+                        text = "100";
+                        break;
+                    case 50:
+                        ctx.fillStyle = '#4980ba';
+                        text = "50";
+                        break;
+                    case 0:
+                        ctx.fillStyle = '#ba4949';
+                        text = "X";
+                        fontSize = 50;
+                        break;
+                }
+
+                ctx.textBaseline = "middle";
+                ctx.textAlign = "center";
+
+                fontSize *= scale_multiplier;
+
+                // Draw combo number on circle
+                ctx.font = `bold ${fontSize}px sans-serif`;
+
+                let position = playfieldPosition(...hitObject.position);
+
+                ctx.fillText(text, ...position);
+            }
+        });
+
         // Draw replay cursor
         if(beatmap.Replay){
             let replay_point = getCursorAt(time, beatmap.Replay);
