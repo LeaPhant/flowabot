@@ -1217,6 +1217,25 @@ module.exports = {
 
     },
 
+	get_tops: function(options, cb){
+		let requests = [
+	        api.get('/get_user_best', { params: { u: options.user, limit: tops } }),
+	        api.get('/get_user', { params: { u: options.user } })
+	    ];
+
+	    Promise.all(requests).then(results => {
+			let user_best = results[0].data;
+	        let user = results[1].data[0];
+
+			if(user_best.length < 1){
+                cb(`No top plays found for ${options.user}`);
+                return;
+            }
+
+			cb(null, user, user_best);
+		});
+	},
+
     get_top: function(options, cb){
         let params = {
             limit: options.rb | options.ob ? 100 : options.index,
