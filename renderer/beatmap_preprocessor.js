@@ -745,7 +745,7 @@ function processBeatmap(cb){
         currentComboNumber++;
         hitObject.Color = "rgba(" + beatmap["Combo" + currentCombo] + ",0.6)";
         hitObject.ComboNumber = currentComboNumber;
-        hitObject.StackOffset = hitObject.stackHeight * beatmap.Scale * -6.4;
+        hitObject.StackOffset = hitObject.StackHeight * beatmap.Scale * -6.4;
         hitObject.position = [hitObject.position[0] + hitObject.StackOffset, hitObject.position[1] + hitObject.StackOffset];
 
         if(hitObject.objectName == "slider"){
