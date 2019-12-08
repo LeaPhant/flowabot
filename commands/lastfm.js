@@ -35,7 +35,7 @@ const periods = {
     },
     'overall': {
         name: 'Stats of all time',
-        time: -Number.MAX_SAFE_INTEGER
+        time: Number.MAX_SAFE_INTEGER
     }
 };
 
