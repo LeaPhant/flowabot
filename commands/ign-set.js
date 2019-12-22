@@ -27,6 +27,11 @@ module.exports = {
                 return false;
             }
 
+            if(!helper.validUsername(ign)){
+                reject('Not a valid osu! username!');
+                return false;
+            }
+
             user_ign[user_id] = ign;
             helper.setItem('user_ign', JSON.stringify(user_ign));
 
