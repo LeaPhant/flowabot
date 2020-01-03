@@ -266,8 +266,8 @@ function getTimingPoint(timingPoints, offset){
 function processBeatmap(cb){
 
     // AR
-    beatmap.TimeFadein = difficultyRange(beatmap.ApproachRateReal, 1800, 1200, 450);
-    beatmap.TimePreempt = difficultyRange(beatmap.ApproachRateReal, 1200, 800, 300);
+    beatmap.TimeFadein = difficultyRange(beatmap.ApproachRate, 1800, 1200, 450);
+    beatmap.TimePreempt = difficultyRange(beatmap.ApproachRate, 1200, 800, 300);
 
     // OD
     beatmap.HitWindow50 = difficultyRange(beatmap.OverallDifficulty, 200, 150, 100);
@@ -935,9 +935,8 @@ function prepareBeatmap(cb){
         let {cs, ar, od} = calculate_csarod(beatmap.CircleSize, beatmap.ApproachRate, beatmap.OverallDifficulty, enabled_mods);
 
         beatmap.CircleSize = cs;
-        beatmap.ApproachRateReal = beatmap.ApproachRate;
-        beatmap.ApproachRate = ar;
-        beatmap.OverallDifficulty = od;
+        beatmap.ApproachRateRealtime = ar;
+        beatmap.OverallDifficultyRealtime = od;
 
         if(replay){
             beatmap.Replay = replay;
