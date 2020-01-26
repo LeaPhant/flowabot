@@ -437,7 +437,8 @@ module.exports = {
         worker.send({
             beatmap_path,
             options,
-            enabled_mods
+            enabled_mods,
+			speed_override: options.speed
         });
 
 		worker.on('close', code => {
@@ -480,7 +481,7 @@ module.exports = {
 
 			if(options.combo){
 				let current_combo = 0;
-				
+
 				for(let hitObject of beatmap.hitObjects){
 					if(hitObject.objectName == 'slider'){
 						current_combo += 1;
@@ -530,6 +531,9 @@ module.exports = {
 
             if(enabled_mods.includes('HT'))
                 time_scale *= 0.75;
+
+			if(options.speed != 1)
+				time_scale = options.speed;
 
 			actual_length = Math.min(length + 1000, Math.max(actual_length, actual_length / time_scale));
 

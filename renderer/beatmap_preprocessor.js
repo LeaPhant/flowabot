@@ -5,7 +5,7 @@ const os = require('os');
 const lzma = require('lzma');
 const helper = require('../helper.js');
 
-let options, beatmap_path, enabled_mods, beatmap, speed_multiplier = 1;
+let options, beatmap_path, enabled_mods, beatmap, speed_override, speed_multiplier = 1;
 
 const PLAYFIELD_WIDTH = 512;
 const PLAYFIELD_HEIGHT = 384;
@@ -195,6 +195,9 @@ function calculate_csarod(cs_raw, ar_raw, od_raw, mods_enabled){
 	}else if(mods_enabled.includes("HT")){
 		speed *= .75;
 	}
+
+    if(speed_override != 1)
+        speed = speed_override;
 
 	if(mods_enabled.includes("HR")){
 		ar_multiplier *= 1.4;
@@ -932,6 +935,9 @@ function prepareBeatmap(cb){
             speed_multiplier = 0.75;
         }
 
+        if(speed_override)
+            speed_multiplier = speed_override;
+
         let {cs, ar, od} = calculate_csarod(beatmap.CircleSize, beatmap.ApproachRate, beatmap.OverallDifficulty, enabled_mods);
 
         beatmap.CircleSize = cs;
@@ -956,7 +962,7 @@ function prepareBeatmap(cb){
 }
 
 process.on('message', obj => {
-    ({beatmap_path, options, enabled_mods} = obj);
+    ({beatmap_path, options, speed, enabled_mods} = obj);
 
     prepareBeatmap(() => {
         process.send(beatmap, () => {

@@ -13,7 +13,7 @@ const config = require('../config.json');
 module.exports = {
     command: ['render', 'frame', 'fail'],
     description: "Render picture or gif of a beatmap at a specific time. Videos 10 seconds or longer are automatically rendered as mp4 video with audio and beatmap background.",
-    usage: '[beatmap url] [+mods] [AR8] [CS6] [preview/strains/aim/speed/fail] [mp4] [plain] [120fps] [mm:ss] [353x] [4s]',
+    usage: '[beatmap url] [+mods] [AR8] [CS6] [preview/strains/aim/speed/fail] [20%] [mp4] [plain] [120fps] [mm:ss] [353x] [4s]',
     example: [
         {
             run: "render strains",
@@ -28,8 +28,8 @@ module.exports = {
             result: "Returns an image of the last beatmap at 1 minute and 5 seconds."
         },
         {
-            run: "render speed 10s",
-            result: "Returns a 10 second video of the streamiest part on the last beatmap."
+            run: "render speed 10s 50%",
+            result: "Returns a 10 second video of the streamiest part on the last beatmap at half speed."
         },
         {
             run: "render 120fps 353x plain",
@@ -62,6 +62,7 @@ module.exports = {
 
             let fps = 60;
             let combo = 0;
+            let speed = 1;
 
             argv.map(arg => arg.toLowerCase());
 
@@ -96,6 +97,8 @@ module.exports = {
                     video_type = 'mp4';
                 }else if(arg == 'plain'){
                     audio = false;
+                }else if(arg.endsWith('%')){
+                    speed = parseInt(arg) / 100;
                 }else if(arg.endsWith('fps')){
                     let _fps = parseInt(arg);
                     if(!isNaN(_fps)){
@@ -197,7 +200,7 @@ module.exports = {
 								replace_promise: new Promise((resolve, reject) => {
 									frame.get_frames(download_path, time, length * 1000, mods, size, {
                                         combo,
-										type: video_type, cs, ar, black: false, score_id, audio, fps,
+										type: video_type, cs, ar, black: false, score_id, audio, fps, speed,
 										fill: video_type == 'mp4', noshadow: true, percent, border: false, objects
 									}, (err, send, remove_path) => {
 										if(err)
