@@ -1538,7 +1538,7 @@ module.exports = {
             grades += `${getRankEmoji('S')} ${Number(data.count_rank_s).toLocaleString()} `;
             grades += `${getRankEmoji('A')} ${Number(data.count_rank_a).toLocaleString()}`;
 
-            let play_time = `${Math.floor(Number(data.total_seconds_played) / 3600)}h`;
+            let play_time = `${Math.ceil(Number(data.total_seconds_played) / 3600)}h`;
             play_time += ` ${Math.floor(Number(data.total_seconds_played) % 3600 / 60)}m`;
 
             let embed = {
