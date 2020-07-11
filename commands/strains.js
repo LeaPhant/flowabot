@@ -89,8 +89,8 @@ module.exports = {
                             helper.updateLastBeatmap({
                                 beatmap_id,
                                 mods,
-                                fail_percent: 1,
-                                acc: 1
+                                fail_percent: last_beatmap[msg.channel.id].fail_percent || 1,
+                                acc: last_beatmap[msg.channel.id].acc || 100
                             }, msg.channel.id, last_beatmap);
                         }
 
