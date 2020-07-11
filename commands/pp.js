@@ -42,7 +42,7 @@ module.exports = {
 
             for(let i = 2; i < argv.length; ++i){
                 if(argv[i].startsWith("+"))
-                    mods = argv[i].substr(1).match(/.{1,2}/g);
+                    mods = argv[i].substr(1).toLowerCase().match(/.{1,2}/g);
                 else if(argv[i].endsWith("%"))
                     acc_percent = parseFloat(argv[i]);
                 else if(argv[i].endsWith("x"))
