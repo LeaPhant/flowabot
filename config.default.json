@@ -1,0 +1,15 @@
+{
+    "credentials": {
+        "osu_api_key": "",
+        "bot_token": "",
+        "last_fm_key": "",
+        "pexels_key": "",
+        "twitch_client_id": "",
+        "discord_client_id": ""
+    },
+    "beatmap_api": "https://osu.lea.moe",
+    "osu_cache_path": "",
+    "pp_path": "",
+    "debug": true,
+    "prefix": "!"
+}

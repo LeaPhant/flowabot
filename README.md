@@ -34,6 +34,32 @@
 
 <h2 id="Installation" align="center">Installation</h2>
 
+## Docker
+
+### Prerequisites
+
+- Docker (https://docs.docker.com/install/)
+- Discord bot token and client ID (https://discordapp.com/developers/applications/)
+- osu!api key (https://osu.ppy.sh/p/api/)
+
+### Setup
+
+**Create a volume for the bot to store data**
+
+    docker volume create --name flowabot
+	
+**Install and run the Docker image from Docker Hub**
+
+    docker run --name flowabot --restart unless-stopped -it -v flowabot:/usr/src/app leaphant/flowabot
+	
+*This will lead you through the configuration wizard. Follow the on-screen instructions and just press enter without typing anything for features you don't need.*
+
+**Press Ctrl+C to exit the bot once it's up and then start it in the background**
+
+    docker start flowabot
+
+## Regular
+
 ### Prerequisites
 
 - **Using Linux or macOS is recommended** (No support for Windows, here's a guide to use Windows Subsystem for Linux if you wanna run it anyway: https://github.com/LeaPhant/flowabot/issues/9)
@@ -41,9 +67,9 @@
 - Node.js 10 LTS (other versions are untested) (https://nodejs.org/download/release/latest-dubnium/)
 - node-gyp (https://github.com/nodejs/node-gyp#installation)
 - Be sure to have gcc/g++ installed, e.g. `sudo apt install build-essential` on Ubuntu
+- node-canvas dependencies (https://github.com/Automattic/node-canvas#compiling)
 - Discord bot token and client ID (https://discordapp.com/developers/applications/)
 - osu!api key (https://osu.ppy.sh/p/api/)
-- node-canvas dependencies (https://github.com/Automattic/node-canvas#compiling)
 
 ### Setup
 
@@ -65,7 +91,7 @@
 
     npm run config
     
-*Follow the on-screen instructions, just press enter without typing anything for features you don't need.*
+*Follow the on-screen instructions and just press enter without typing anything for features you don't need.*
 
 ---
 

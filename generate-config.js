@@ -8,7 +8,10 @@
     const Discord = require('discord.js');
     const axios = require('axios');
 
-    let config = {}, default_value, value, valid_key;
+    let config = {}, config_default = {}, default_value, value, valid_key;
+
+    if(fs.existsSync('./config.default.json'))
+        config = require('./config.default.json');
 
     if(fs.existsSync('./config.json'))
         config = require('./config.json');
@@ -22,7 +25,9 @@
 
     default_value = '!';
 
-    if(config.prefix)
+    if('prefix' in config_default && config_default.prefix.length > 0)
+        default_value = config_default.prefix;
+    else if('prefix' in config && config.prefix.length > 0)
         default_value = config.prefix;
 
     console.log('');
@@ -36,7 +41,9 @@
 
     default_value = 'yes';
 
-    if(config.debug)
+    if('debug' in config_default && typeof config_default.debug === 'boolean')
+        default_value = config_default.debug;
+    else if('debug' in config)
         default_value = config.debug ? 'yes' : 'no';
 
     console.log('');
@@ -50,7 +57,9 @@
 
     default_value = path.resolve(os.tmpdir(), 'osumaps');
 
-    if(config.osu_cache_path)
+    if('osu_cache_path' in config_default && config_default.osu_cache_path.length > 0)
+        default_value = config_default.osu_cache_path;
+    else if('osu_cache_path' in config && config.osu_cache_path.length > 0)
         default_value = config.osu_cache_path;
 
     console.log('');
@@ -64,7 +73,9 @@
 
     default_value = 'none';
 
-    if(config.pp_path)
+    if('pp_path' in config_default && config_default.pp_path.length > 0)
+        default_value = config_default.pp_path;
+    else if('pp_path' in config && config.pp_path.length > 0)
         default_value = config.pp_path;
 
     console.log('');
@@ -80,7 +91,9 @@
 
     default_value = 'https://osu.lea.moe';
 
-    if(config.beatmap_api)
+    if('beatmap_api' in config_default && config_default.beatmap_api.length > 0)
+        default_value = config_default.beatmap_api;
+    else if('beatmap_api' in config && config.beatmap_api.length > 0)
         default_value = config.beatmap_api;
 
     console.log('');
@@ -96,10 +109,16 @@
     if(!('credentials' in config))
         config.credentials = {};
 
+    if(!('credentials' in config_default))
+        config_default.credentials = {};
+
 
     default_value = 'none';
 
-    if(config.credentials.bot_token)
+
+    if('bot_token' in config_default.credentials && config_default.credentials.bot_token.length > 0)
+        default_value = config_default.credentials.bot_token;
+    else if('bot_token' in config.credentials && config.credentials.bot_token.length > 0)
         default_value = config.credentials.bot_token;
 
     do{
@@ -131,7 +150,9 @@
 
     default_value = 'none';
 
-    if(config.credentials.discord_client_id)
+    if('discord_client_id' in config_default.credentials && config_default.credentials.discord_client_id.length > 0)
+        default_value = config_default.credentials.discord_client_id;
+    else if('discord_client_id' in config.credentials && config.credentials.discord_client_id.length > 0)
         default_value = config.credentials.discord_client_id;
 
     console.log('');
@@ -146,7 +167,9 @@
 
     default_value = 'none';
 
-    if(config.credentials.osu_api_key)
+    if('osu_api_key' in config_default.credentials && config_default.credentials.osu_api_key.length > 0)
+        default_value = config_default.credentials.osu_api_key;
+    else if('osu_api_key' in config.credentials && config.credentials.osu_api_key.length > 0)
         default_value = config.credentials.osu_api_key;
 
     do{
@@ -180,7 +203,9 @@
 
     default_value = 'none';
 
-    if(config.credentials.twitch_client_id)
+    if('twitch_client_id' in config_default.credentials && config_default.credentials.twitch_client_id.length > 0)
+        default_value = config_default.credentials.twitch_client_id;
+    else if('twitch_client_id' in config.credentials && config.credentials.twitch_client_id.length > 0)
         default_value = config.credentials.twitch_client_id;
 
     do{
@@ -212,7 +237,9 @@
 
     default_value = 'none';
 
-    if(config.credentials.pexels_key)
+    if('pexels_key' in config_default.credentials && config_default.credentials.pexels_key.length > 0)
+        default_value = config_default.credentials.pexels_key;
+    else if('pexels_key' in config.credentials && config.credentials.pexels_key.length > 0)
         default_value = config.credentials.pexels_key;
 
     do{
@@ -244,7 +271,9 @@
 
     default_value = 'none';
 
-    if(config.credentials.last_fm_key)
+    if('last_fm_key' in config_default.credentials && config_default.credentials.last_fm_key.length > 0)
+        default_value = config_default.credentials.last_fm_key;
+    else if('last_fm_key' in config.credentials && config.credentials.last_fm_key.length > 0)
         default_value = config.credentials.last_fm_key;
 
     do{
@@ -276,7 +305,7 @@
     console.log('');
 
     try{
-        fs.writeFileSync('./config.json', JSON.stringify(config, false, 2));
+        fs.writeFileSync('./config.json', JSON.stringify(config, false, 4));
         console.log(chalk.greenBright('Config file has been written successfully!'));
     }catch(e){
         console.error(e);
