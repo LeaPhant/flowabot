@@ -979,7 +979,12 @@ module.exports = {
         };
         let lines = ['', '', '', ''];
 
-        lines[0] += `${getRankEmoji(recent.rank)}${helper.sep}`;
+        lines[0] += `${getRankEmoji(recent.rank)}`;
+
+        if(recent.rank == 'F')
+            lines[0] += ` @${Math.round(recent.fail_percent * 100)}%`;
+
+        lines[0] += helper.sep;
 
         if(recent.mods.length > 0)
             lines[0] += `+${sanitizeMods(recent.mods).join(',')}${helper.sep}`;
