@@ -104,7 +104,7 @@
 
     do{
         console.log('');
-        console.log(`(Required) A Discord bot token is required. You can create a bot here to receive one: ${chalk.blueBright('https://discordapp.com/developers/applications/')}.`);
+        console.log(`(Required) A Discord bot token is required. You can create a bot here to receive one: ${chalk.blueBright('https://discord.com/developers/applications/')}.`);
         value = readline.question(`Discord bot token [${chalk.green(default_value)}]: `);
 
         if(!value)
