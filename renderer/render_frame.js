@@ -455,7 +455,7 @@ module.exports = {
                 console.timeEnd('process beatmap');
 
             if(time == 0 && options.percent){
-                time = beatmap.hitObjects[Math.floor(options.percent * beatmap.hitObjects.length)].startTime - 2000;
+                time = beatmap.hitObjects[Math.floor(options.percent * (beatmap.hitObjects.length - 1))].startTime - 2000;
             }else if(options.objects){
                 let objectIndex = 0;
 
