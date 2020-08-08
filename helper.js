@@ -275,7 +275,8 @@ module.exports = {
             beatmap_id: recent.beatmap_id,
             mods: recent.mods,
             acc: recent.acc,
-            fail_percent: recent.fail_percent
+            fail_percent: recent.fail_percent,
+            rank: recent.rank
         };
 
         if(recent.score_id)

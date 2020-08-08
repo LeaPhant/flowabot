@@ -50,7 +50,7 @@ module.exports = {
 
             if(argv[0].toLowerCase() == 'fail'){
                 if(msg.channel.id in last_beatmap){
-                    if(last_beatmap[msg.channel.id].fail_percent == 1){
+                    if(last_beatmap[msg.channel.id].rank != 'F'){
                         reject("Last play is not a failed score");
                         return false;
                     }
