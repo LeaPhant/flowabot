@@ -188,7 +188,7 @@ function difficultyRange(difficulty, min, mid, max){
 }
 
 function calculate_csarod(cs_raw, ar_raw, od_raw, mods_enabled){
-	var speed = 1, ar_multiplier = 1, ar, ar_ms;
+	let speed = 1, ar_multiplier = 1, ar, ar_ms;
 
 	if(mods_enabled.includes("DT")){
 		speed *= 1.5;
@@ -196,27 +196,26 @@ function calculate_csarod(cs_raw, ar_raw, od_raw, mods_enabled){
 		speed *= .75;
 	}
 
-    if(speed_override != 1)
-        speed = speed_override;
-
 	if(mods_enabled.includes("HR")){
 		ar_multiplier *= 1.4;
 	}else if(mods_enabled.includes("EZ")){
 		ar_multiplier *= 0.5;
-	}
+    }
 
 	ar = ar_raw * ar_multiplier;
 
 	if(ar <= 5) ar_ms = ar0_ms - ar_ms_step1 * ar;
-	else		ar_ms = ar5_ms - ar_ms_step2 * (ar - 5);
+    else		ar_ms = ar5_ms - ar_ms_step2 * (ar - 5);
 
 	if(ar_ms < ar10_ms) ar_ms = ar10_ms;
-	if(ar_ms > ar0_ms) ar_ms = ar0_ms;
+    if(ar_ms > ar0_ms) ar_ms = ar0_ms;
 
-	ar_ms /= speed;
+    ar_ms /= speed;
 
 	if(ar <= 5) ar = (ar0_ms - ar_ms) / ar_ms_step1;
-	else		ar = 5 + (ar5_ms - ar_ms) / ar_ms_step2;
+    else		ar = 5 + (ar5_ms - ar_ms) / ar_ms_step2;
+    
+    console.log(ar);
 
 	var cs, cs_multiplier = 1;
 
@@ -246,11 +245,7 @@ function calculate_csarod(cs_raw, ar_raw, od_raw, mods_enabled){
 
 	od = (od0_ms - odms) / od_ms_step;
 
-	return {
-		cs: cs,
-		ar: ar,
-		od: od
-	}
+	return { cs, ar, od };
 }
 
 function getTimingPoint(timingPoints, offset){
@@ -941,7 +936,9 @@ function prepareBeatmap(cb){
         let {cs, ar, od} = calculate_csarod(beatmap.CircleSize, beatmap.ApproachRate, beatmap.OverallDifficulty, enabled_mods);
 
         beatmap.CircleSize = cs;
+        beatmap.ApproachRate = ar;
         beatmap.ApproachRateRealtime = ar;
+        beatmap.OverallDifficulty = od;
         beatmap.OverallDifficultyRealtime = od;
 
         if(replay){
