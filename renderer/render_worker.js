@@ -196,7 +196,7 @@ process.on('message', async obj => {
 
                 // Draw slider
                 if(hitObject.objectName == "slider"){
-                    ctx.lineWidth = 6 * scale_multiplier;
+                    ctx.lineWidth = 5 * scale_multiplier;
                     ctx.strokeStyle = "rgba(255,255,255,0.7)";
 
                     let snakingStart = hitObject.startTime - beatmap.TimeFadein;
@@ -232,7 +232,7 @@ process.on('message', async obj => {
 
                     ctx.stroke();
 
-                    ctx.lineWidth = scale_multiplier * (beatmap.Radius * 2 - 12);
+                    ctx.lineWidth = scale_multiplier * (beatmap.Radius * 2 - 10);
                     ctx.strokeStyle = 'rgba(0,0,0,0.6)';
 
                     ctx.stroke();
@@ -336,7 +336,7 @@ process.on('message', async obj => {
 
                         position = [0, 0];
 
-                        ctx.lineWidth = 6 * scale_multiplier;
+                        ctx.lineWidth = 5 * scale_multiplier;
                         ctx.beginPath();
                         ctx.strokeStyle = "rgba(255,255,255,0.85)";
 
@@ -382,7 +382,7 @@ process.on('message', async obj => {
 
                 // Draw circles or slider heads
                 if(hitObject.objectName != "spinner"){
-                    ctx.lineWidth = 6 * scale_multiplier;
+                    ctx.lineWidth = 5 * scale_multiplier;
                     ctx.beginPath();
                     ctx.strokeStyle = "rgba(255,255,255,0.85)";
 
