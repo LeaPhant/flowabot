@@ -104,7 +104,7 @@ process.on('message', async obj => {
 
         const frametime = 4;
 
-        for(let timestamp = start_time; timestamp < end_time; timestamp += frametime){
+        for(let timestamp = 0; timestamp < end_time; timestamp += frametime){
             const replayPoint = getCursorAtInterpolated(timestamp, replay).current;
             replayPoint.offset = timestamp;
             interpolatedReplay.replay_data.push(replayPoint);
@@ -122,7 +122,7 @@ process.on('message', async obj => {
         let next = replay.replay_data[replay.lastCursor];
         let previous = [];
 
-        for(let i = 0; i < Math.min(replay.lastCursor - 2, 25); i++)
+        for(let i = 0; i < Math.min(replay.lastCursor - 2, 20); i++)
             previous.push(replay.replay_data[replay.lastCursor - i]);
 
         if(current === undefined || next === undefined){
@@ -611,33 +611,42 @@ process.on('message', async obj => {
         if(beatmap.Replay){
             let replay_point = getCursorAt(time, beatmap.ReplayInterpolated);
 
-            if(replay_point){
-                if(options.fill)
-                    ctx.fillStyle = '#fff4ab';
-                else
-                    ctx.fillStyle = 'white';
-                    
+            if(replay_point){                    
                 if(Array.isArray(replay_point.previous)){
-                    for(const [index, previousFrame] of replay_point.previous.entries()){
-                        ctx.globalAlpha = (1 - index / 25) * 0.4;
+                    ctx.globalAlpha = .35;
 
+                    ctx.beginPath();
+                    
+                    for(const [index, previousFrame] of replay_point.previous.entries()){
                         let position = playfieldPosition(previousFrame.x, previousFrame.y);
 
-                        ctx.beginPath();
-                        ctx.arc(...position, scale_multiplier * 13, 0, 2 * Math.PI, false);
-                        ctx.fill();
+                        if(index == 0)
+                            ctx.moveTo(...position);
+                        else
+                            ctx.lineTo(...position);
                     }
+
+                    ctx.lineWidth = 13 * scale_multiplier;
+                    ctx.lineCap = "round";
+
+                    if(options.fill)
+                        ctx.strokeStyle = '#fff4ab';
+                    else
+                        ctx.strokeStyle = 'white';
+
+                    ctx.stroke();
                 }
 
                 if(options.fill)
                     ctx.fillStyle = '#fff460';
+                else
+                    ctx.fillStyle = 'white';
 
                 let { current } = replay_point;
 
                 let position = playfieldPosition(current.x, current.y);
 
                 ctx.globalAlpha = 1;
-                
 
                 ctx.beginPath();
                 ctx.arc(...position, scale_multiplier * 13, 0, 2 * Math.PI, false);
