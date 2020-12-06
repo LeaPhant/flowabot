@@ -2,6 +2,7 @@ const { createCanvas, Image } = require('canvas');
 const path = require('path');
 const fs = require('fs-extra');
 const helper = require('../helper.js');
+const { isArray } = require('util');
 
 const PLAYFIELD_WIDTH = 512;
 const PLAYFIELD_HEIGHT = 384;
@@ -45,13 +46,13 @@ process.on('message', async obj => {
         resize();
     }
 
-    function getCursorAt(timestamp, replay){
+    function getCursorAtInterpolated(timestamp, replay){
         while(replay.lastCursor < replay.replay_data.length && replay.replay_data[replay.lastCursor].offset <= timestamp){
             replay.lastCursor++;
         }
 
-        let current = replay.replay_data[replay.lastCursor - 1];
-        let next = replay.replay_data[replay.lastCursor];
+        let current = {...replay.replay_data[replay.lastCursor - 1]};
+        let next = {...replay.replay_data[replay.lastCursor]}
 
         if(current === undefined || next === undefined){
             if(replay.replay_data.length > 0){
@@ -96,6 +97,55 @@ process.on('message', async obj => {
         }
 
         return {current: current, next: next};
+    }
+
+    function interpolateReplayData(replay){
+        const interpolatedReplay = {lastCursor: 0, replay_data: []};
+
+        const frametime = 4;
+
+        for(let timestamp = start_time; timestamp < end_time; timestamp += frametime){
+            const replayPoint = getCursorAtInterpolated(timestamp, replay).current;
+            replayPoint.offset = timestamp;
+            interpolatedReplay.replay_data.push(replayPoint);
+        }
+
+        return interpolatedReplay;
+    }
+
+    function getCursorAt(timestamp, replay){
+        while(replay.lastCursor < replay.replay_data.length && replay.replay_data[replay.lastCursor].offset <= timestamp){
+            replay.lastCursor++;
+        }
+
+        let current = replay.replay_data[replay.lastCursor - 1];
+        let next = replay.replay_data[replay.lastCursor];
+        let previous = [];
+
+        for(let i = 0; i < Math.min(replay.lastCursor - 2, 25); i++)
+            previous.push(replay.replay_data[replay.lastCursor - i]);
+
+        if(current === undefined || next === undefined){
+            if(replay.replay_data.length > 0){
+                return {
+                    current: replay.replay_data[replay.replay_data.length - 1],
+                    next: replay.replay_data[replay.replay_data.length - 1]
+                }
+            }else{
+                return {
+                    current: {
+                        x: 0,
+                        y: 0
+                    },
+                    next: {
+                        x: 0,
+                        y: 0
+                    }
+                }
+            }
+        }
+
+        return {previous, current, next};
     }
 
     function vectorDistance(hitObject1, hitObject2){
@@ -559,19 +609,35 @@ process.on('message', async obj => {
 
         // Draw replay cursor
         if(beatmap.Replay){
-            let replay_point = getCursorAt(time, beatmap.Replay);
+            let replay_point = getCursorAt(time, beatmap.ReplayInterpolated);
 
             if(replay_point){
+                if(options.fill)
+                    ctx.fillStyle = '#fff4ab';
+                else
+                    ctx.fillStyle = 'white';
+                    
+                if(Array.isArray(replay_point.previous)){
+                    for(const [index, previousFrame] of replay_point.previous.entries()){
+                        ctx.globalAlpha = (1 - index / 25) * 0.4;
+
+                        let position = playfieldPosition(previousFrame.x, previousFrame.y);
+
+                        ctx.beginPath();
+                        ctx.arc(...position, scale_multiplier * 13, 0, 2 * Math.PI, false);
+                        ctx.fill();
+                    }
+                }
+
+                if(options.fill)
+                    ctx.fillStyle = '#fff460';
+
                 let { current } = replay_point;
 
                 let position = playfieldPosition(current.x, current.y);
 
                 ctx.globalAlpha = 1;
-
-                if(options.fill)
-                    ctx.fillStyle = '#ed6161';
-                else
-                    ctx.fillStyle = 'white';
+                
 
                 ctx.beginPath();
                 ctx.arc(...position, scale_multiplier * 13, 0, 2 * Math.PI, false);
@@ -595,6 +661,8 @@ process.on('message', async obj => {
 
     prepareCanvas(size);
     //preprocessSliders();
+
+    beatmap.ReplayInterpolated = interpolateReplayData(beatmap.Replay);
 
     for(i in images){
         let image_path = images[i];
