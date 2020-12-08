@@ -81,7 +81,7 @@ function checkCommand(msg, command){
     if(command_match){
         let hasPermission = true;
 
-        if(command.permsRequired)
+        if(command.permsRequired && msg.member != null)
             hasPermission = command.permsRequired.length == 0 || command.permsRequired.some(perm => msg.member.hasPermission(perm));
 
         if(!hasPermission)
