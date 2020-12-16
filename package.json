@@ -27,6 +27,7 @@
         "fs-extra": "^8.1.0",
         "highcharts-export-server": "^2.0.24",
         "jimp": "^0.6.0",
+        "lodash": "^4.17.20",
         "lzma": "^2.3.2",
         "mathjs": "^6.0.2",
         "moment": "^2.24.0",

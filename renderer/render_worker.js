@@ -7,6 +7,9 @@ const { isArray } = require('util');
 const PLAYFIELD_WIDTH = 512;
 const PLAYFIELD_HEIGHT = 384;
 
+const KEY_OVERLAY_SIZE = 20;
+const KEY_OVERLAY_PADDING = 5;
+
 const resources = path.resolve(__dirname, "res");
 
 let images = {
@@ -111,6 +114,19 @@ process.on('message', async obj => {
         }
 
         return interpolatedReplay;
+    }
+
+    function getScoringFrames(timestamp, scoringFrames){
+        const output = [];
+
+        let i = scoringFrames.findIndex(a => a.offset > timestamp - 2000);
+
+        while(scoringFrames[i].offset <= timestamp){
+            output.push(scoringFrames[i]);
+            i++;
+        }
+
+        return output;
     }
 
     function getCursorAt(timestamp, replay){
@@ -566,7 +582,7 @@ process.on('message', async obj => {
                 // Draw fading out circles
                 if(hitObject.objectName != "spinner"){
                     // Increase circle size the further it's faded out
-                    let timeSince = Math.abs(hitObject.startTime - time) / 200;
+                    let timeSince = Math.min(1, Math.max(0, (time - (hitObject.startTime + (hitObject.hitOffset || beatmap.HitWindow50))) / 200));
                     let opacity = 1 - timeSince;
                     let sizeFactor = 1 + timeSince * 0.3;
 
@@ -607,11 +623,151 @@ process.on('message', async obj => {
             }
         });
 
+        if(beatmap.ScoringFrames && beatmap.Replay.auto !== true){
+            //const scoringFrames = getScoringFrames(time, beatmap.ScoringFrames);
+
+            let previousFramesIndex = beatmap.ScoringFrames.findIndex(a => a.offset >= time - 750);
+
+            let currentFrameIndex = beatmap.ScoringFrames.findIndex(a => a.offset >= time) - 1;
+
+            let currentFrame = beatmap.ScoringFrames[currentFrameIndex];
+
+            if(currentFrame == null)
+                currentFrame = beatmap.ScoringFrames[beatmap.ScoringFrames.length - 1];
+
+            const scoringFrames = [];
+
+            do{
+                const newFrame = beatmap.ScoringFrames[previousFramesIndex];
+
+                if(newFrame == null)
+                    break;
+
+                if(newFrame.offset > time)
+                    break;
+
+                currentFrame = newFrame;
+
+                scoringFrames.push(currentFrame);
+
+                previousFramesIndex++;
+            }while(currentFrame.offset < time)
+
+            if(currentFrame != null){
+                const comboPosition = [15, canvas.height - 35];
+                const accuracyPosition = [canvas.width - 15, 40];
+
+                ctx.fillStyle = "white";
+                ctx.globalAlpha = 1;
+                ctx.textAlign = "left";
+                ctx.textBaseline = "bottom";
+                ctx.font = `${32 * scale_multiplier}px monospace`;
+                ctx.fillText(`${currentFrame.combo}x`, ...comboPosition);
+                
+                let accuracy = 100;
+
+                const totalHits = currentFrame.count50 * 300 + currentFrame.count100 * 300 + currentFrame.count300 * 300 + currentFrame.countMiss * 300;
+
+                if(totalHits > 0)
+                    accuracy = (currentFrame.count50 * 50 + currentFrame.count100 * 100 + currentFrame.count300 * 300)
+                    / totalHits * 100;
+
+                ctx.textAlign = "right";
+                ctx.textBaseline = "top";
+                ctx.font = `${26 * scale_multiplier}px monospace`;
+                ctx.fillText(`${accuracy.toFixed(2)}%`, ...accuracyPosition);
+
+                const hitCountPosition = [canvas.width - 15, 45 + 26 * scale_multiplier];
+
+                ctx.font = `${21 * scale_multiplier}px monospace`;
+                ctx.fillText(`${currentFrame.count100}x100 ${currentFrame.count50}x50`, ...hitCountPosition);
+
+                hitCountPosition[1] += 2 + 21 * scale_multiplier;
+                ctx.fillText(`${currentFrame.countMiss}xMiss`, ...hitCountPosition);
+
+                const urPosition = [canvas.width - 15, canvas.height - 35];
+
+                ctx.textBaseline = "bottom";
+                ctx.font = `${26 * scale_multiplier}px monospace`;
+                ctx.fillText(`${currentFrame.ur.toFixed(2)} UR`, ...urPosition);
+
+                /*
+                ctx.textAlign = "right";
+                ctx.fillText(`${time}`, canvas.width - 15, canvas.height - 35);
+                ctx.fillText(`${currentFrame.offset}`, canvas.width - 15, canvas.height - 65);*/
+
+                ctx.textAlign = "left";
+                ctx.textBaseline = "bottom";
+                ctx.font = `${16 * scale_multiplier}px sans-serif`;
+
+                ctx.fillStyle = 'rgb(255,255,255,0.8)';
+
+                ctx.fillText('W.I.P. – scoring not accurate yet', 15, canvas.height - 10);
+            }
+
+            for(const scoringFrame of scoringFrames){
+                if(!(['miss', 50, 100].includes(scoringFrame.result)))
+                    continue;
+
+                ctx.globalAlpha = Math.min(1, 1.5 - (time - scoringFrame.offset) / 750);
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.font = `${30 * scale_multiplier}px sans-serif`;
+
+
+
+                const position = scoringFrame.position.slice();
+
+                if(scoringFrame.result == 'miss'){
+                    position[1] += (time - scoringFrame.offset) / 750 * 35;
+                    
+                    ctx.fillStyle = "#f56767";
+
+                    ctx.fillText('X', ...playfieldPosition(...position));
+                    continue;
+                }
+
+                if(scoringFrame.result == 50){
+                    ctx.fillStyle = "#67b5f5";
+
+                    ctx.fillText('50', ...playfieldPosition(...position));
+                    continue;
+                }
+
+                if(scoringFrame.result == 100){
+                    ctx.fillStyle = "#67f575";
+
+                    ctx.fillText('100', ...playfieldPosition(...position));
+                    continue;
+                }
+            }
+        }
+
         // Draw replay cursor
         if(beatmap.Replay){
             let replay_point = getCursorAt(time, beatmap.ReplayInterpolated);
 
-            if(replay_point){                    
+            if(replay_point){
+                if(beatmap.Replay.auto !== true){
+                    ctx.globalAlpha = 1;
+
+                    const { K1, K2, M1, M2 } = replay_point.current;
+
+                    const keyOverlayTop = canvas.height / 2 - (KEY_OVERLAY_SIZE * 4 + KEY_OVERLAY_PADDING * 4) / 2;
+
+                    ctx.fillStyle = K1 ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.3)';
+                    ctx.fillRect(canvas.width - 30, keyOverlayTop, KEY_OVERLAY_SIZE, KEY_OVERLAY_SIZE);
+
+                    ctx.fillStyle = K2 ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.3)';
+                    ctx.fillRect(canvas.width - 30, keyOverlayTop + KEY_OVERLAY_SIZE * 1 + KEY_OVERLAY_PADDING * 1, KEY_OVERLAY_SIZE, KEY_OVERLAY_SIZE);
+
+                    ctx.fillStyle = M1 ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.3)';
+                    ctx.fillRect(canvas.width - 30, keyOverlayTop + KEY_OVERLAY_SIZE * 2 + KEY_OVERLAY_PADDING * 2, KEY_OVERLAY_SIZE, KEY_OVERLAY_SIZE);
+
+                    ctx.fillStyle = M2 ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.3)';
+                    ctx.fillRect(canvas.width - 30, keyOverlayTop + KEY_OVERLAY_SIZE * 3 + KEY_OVERLAY_PADDING * 3, KEY_OVERLAY_SIZE, KEY_OVERLAY_SIZE);
+                }
+                
                 if(Array.isArray(replay_point.previous)){
                     ctx.globalAlpha = .35;
 

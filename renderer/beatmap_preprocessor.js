@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const lzma = require('lzma');
+const _ = require('lodash');
 const helper = require('../helper.js');
 
 let options, beatmap_path, enabled_mods, beatmap, speed_override, speed_multiplier = 1;
@@ -61,6 +62,58 @@ function parseKeysPressed(num){
     return output_keys;
 }
 
+function newScoringFrame(scoringFrames){
+    const defaultFrame = {ur: 0, offset: 0, count300: 0, count100: 0, count50: 0, countMiss: 0, combo: 0, previousCombo: 0, maxCombo: 0};
+
+    let scoringFrame = {...defaultFrame};
+
+    if(scoringFrames.length > 0)
+        scoringFrame = Object.assign(scoringFrame, scoringFrames[scoringFrames.length - 1]);
+
+    scoringFrame.previousCombo = scoringFrame.combo;
+
+    return scoringFrame;
+}
+
+function getCursorAt(timestamp, replay){
+    while(replay.lastCursor < replay.replay_data.length && replay.replay_data[replay.lastCursor].offset < timestamp)
+        replay.lastCursor++;
+
+    let current = replay.replay_data[replay.lastCursor];
+    let previous = replay.replay_data[replay.lastCursor - 1];
+
+    if(current === undefined || next === undefined){
+        if(replay.replay_data.length > 0){
+            return {
+                previous: replay.replay_data[replay.replay_data.length],
+                current: replay.replay_data[replay.replay_data.length]
+            }
+        }else{
+            return {
+                previous: {
+                    x: 0,
+                    y: 0
+                },
+                next: {
+                    x: 0,
+                    y: 0
+                }
+            }
+        }
+    }
+
+    return {previous, current};
+}
+
+function getCursor(replay){
+    replay.lastCursor++;
+
+    return { 
+        previous: replay.replay_data[replay.lastCursor - 1],
+        current: replay.replay_data[replay.lastCursor]
+    };
+}
+
 function parseReplay(buf){
     let replay_data = lzma.decompress(buf);
     let replay_frames = replay_data.split(",");
@@ -93,6 +146,10 @@ function parseReplay(buf){
     }
 
     return output_frames;
+}
+
+function withinCircle(x, y, centerX,  centerY, radius){
+    return Math.pow((x - centerX), 2) + Math.pow((y - centerY), 2) < Math.pow(radius, 2);
 }
 
 function catmullFindPoint(vec1, vec2, vec3, vec4, t){
@@ -214,8 +271,6 @@ function calculate_csarod(cs_raw, ar_raw, od_raw, mods_enabled){
 
 	if(ar <= 5) ar = (ar0_ms - ar_ms) / ar_ms_step1;
     else		ar = 5 + (ar5_ms - ar_ms) / ar_ms_step2;
-    
-    console.log(ar);
 
 	var cs, cs_multiplier = 1;
 
@@ -261,6 +316,25 @@ function getTimingPoint(timingPoints, offset){
     return timingPoint;
 }
 
+function variance(array){
+    let sum = 0;
+    array.forEach(a => sum += a);
+    
+	const avg = sum / array.length;
+    let _sum = 0;
+    let _array = array.map(function(a){ return Math.pow(a - avg, 2); });
+    
+    _array.forEach(a => _sum += a);
+
+	return Math.sqrt(_sum / _array.length);
+}
+
+function getCursorAtRaw(replay, time){
+    let lastIndex = replay.replay_data.findIndex(a => a.offset >= time) - 1;
+
+    return replay.replay_data[lastIndex] || replay.replay_data[replay.replay_data.length - 1];
+}
+
 function processBeatmap(cb){
 
     // AR
@@ -268,9 +342,9 @@ function processBeatmap(cb){
     beatmap.TimePreempt = difficultyRange(beatmap.ApproachRate, 1200, 800, 300);
 
     // OD
-    beatmap.HitWindow50 = difficultyRange(beatmap.OverallDifficulty, 200, 150, 100);
-    beatmap.HitWindow100 = difficultyRange(beatmap.OverallDifficulty, 140, 100, 60);
-    beatmap.HitWindow300 = difficultyRange(beatmap.OverallDifficulty, 80, 50, 20);
+    beatmap.HitWindow50 = difficultyRange(beatmap.OverallDifficulty, 200, 150, 100) - 0.5;
+    beatmap.HitWindow100 = difficultyRange(beatmap.OverallDifficulty, 140, 100, 60) - 0.5;
+    beatmap.HitWindow300 = difficultyRange(beatmap.OverallDifficulty, 80, 50, 20) - 0.5;
 
     // CS
     beatmap.Scale = (1.0 - 0.7 * (beatmap.CircleSize - 5) / 5) / 2;
@@ -457,11 +531,38 @@ function processBeatmap(cb){
             }
         }
 
+        const turnDuration = hitObject.duration / hitObject.repeatCount;
+
+        if(turnDuration < 72){
+            hitObject.actualEndPosition = slider_dots[Math.floor(slider_dots.length / 2 - 1)];
+            hitObject.actualEndTime = hitObject.startTime + (hitObject.repeatCount - 1) * turnDuration + turnDuration / 2;
+        }else{
+            const sliderDotDuration = turnDuration / slider_dots.length;
+
+            const turnSliderDots = hitObject.repeatCount % 2 == 0 ? slider_dots.slice().reverse() : slider_dots;
+
+            hitObject.actualEndTime = hitObject.endTime - 36;
+            hitObject.actualEndPosition = turnSliderDots[Math.floor(turnSliderDots.length - 1 - 36 / sliderDotDuration)];
+        }
+
         hitObject.SliderDots = slider_dots;
     });
 
     // Generate slider ticks and apply lazy end position
     beatmap.hitObjects.forEach((hitObject, i) => {
+        hitObject.StackHeight = 0;
+
+        if(hitObject.objectName == "circle")
+            hitObject.endTime = hitObject.startTime;
+
+        if(hitObject.objectName == "spinner")
+            hitObject.duration = hitObject.endTime - hitObject.startTime;
+
+        hitObject.latestHit = hitObject.startTime + beatmap.HitWindow50;
+
+        if(hitObject.objectName == "slider")
+            hitObject.latestHit = Math.min(hitObject.latestHit, hitObject.endTime);
+
         let timingPoint = getTimingPoint(beatmap.timingPoints, hitObject.startTime);
 
         if(hitObject.objectName == "circle")
@@ -482,9 +583,6 @@ function processBeatmap(cb){
                 hitObject.lazyEndPosition = hitObject.SliderDots[Math.floor((hitObject.SliderDots.length - 1) / 2)];
                 hitObject.lazyStay = true;
             }
-
-            if(hitObject.endPosition === undefined)
-                hitObject.endPosition = hitObject.points[hitObject.points.length - 1];
 
             let slider_ticks = [];
 
@@ -603,9 +701,9 @@ function processBeatmap(cb){
                 }
             });
         }
-
-        hitObject.StackHeight = 0;
     });
+
+    /*
 
     // Apply Stacking
     // Pretty much copied from osu-lazer https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Beatmaps/OsuBeatmapProcessor.cs#L41
@@ -713,7 +811,75 @@ function processBeatmap(cb){
                 }
             }
         }
+    }*/
+
+    // Apply Stacking 2: Electric Boogaloo
+    // Pretty much copied from osu-lazer https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Beatmaps/OsuBeatmapProcessor.cs#L193
+
+    for(let i = 0; i < beatmap.hitObjects.length; i++){
+        const currHitObject = beatmap.hitObjects[i];
+
+        if(currHitObject.StackHeight != 0 && currHitObject.objectName != 'slider')
+            continue;
+
+        let startTime = currHitObject.endTime;
+        let sliderStack = 0;
+
+        for(let j = i + 1; j < beatmap.hitObjects.length; j++){
+            const stackThreshold = (beatmap.hitObjects[i].startTime - beatmap.TimePreempt) * beatmap.StackLeniency;
+
+            if(beatmap.hitObjects[j].startTime - stackThreshold > startTime)
+                break;
+
+            const position2 = currHitObject.position;
+
+            if(vectorDistance(beatmap.hitObjects[j].position, currHitObject.position) < STACK_DISTANCE){
+                currHitObject.StackHeight++;
+                startTime = beatmap.hitObjects[j].endTime;
+            }else if(vectorDistance(beatmap.hitObjects[j].position, position2) < STACK_DISTANCE){
+                sliderStack++;
+                beatmap.hitObjects[j].StackHeight -= sliderStack;
+                startTime = beatmap.hitObjects[j].endTime;
+            }
+        }
     }
+
+    /*
+    for (int i = 0; i < beatmap.HitObjects.Count; i++){
+        OsuHitObject currHitObject = beatmap.HitObjects[i];
+
+        if (currHitObject.StackHeight != 0 && !(currHitObject is Slider))
+            continue;
+
+        double startTime = currHitObject.GetEndTime();
+        int sliderStack = 0;
+
+        for (int j = i + 1; j < beatmap.HitObjects.Count; j++)
+        {
+            double stackThreshold = beatmap.HitObjects[i].TimePreempt * beatmap.BeatmapInfo.StackLeniency;
+
+            if (beatmap.HitObjects[j].StartTime - stackThreshold > startTime)
+                break;
+
+            // The start position of the hitobject, or the position at the end of the path if the hitobject is a slider
+            Vector2 position2 = currHitObject is Slider currSlider
+                ? currSlider.Position + currSlider.Path.PositionAt(1)
+                : currHitObject.Position;
+
+            if (Vector2Extensions.Distance(beatmap.HitObjects[j].Position, currHitObject.Position) < stack_distance)
+            {
+                currHitObject.StackHeight++;
+                startTime = beatmap.HitObjects[j].GetEndTime();
+            }
+            else if (Vector2Extensions.Distance(beatmap.HitObjects[j].Position, position2) < stack_distance)
+            {
+                // Case for sliders - bump notes down and right, rather than up and left.
+                sliderStack++;
+                beatmap.HitObjects[j].StackHeight -= sliderStack;
+                startTime = beatmap.HitObjects[j].GetEndTime();
+            }
+        }
+    }*/
 
     let currentCombo = 1;
     let currentComboNumber = 0;
@@ -771,19 +937,11 @@ function processBeatmap(cb){
         }
     });
 
-    // Set end time for circles and duration for spinners too for easier handling
-    beatmap.hitObjects.forEach((hitObject, i) => {
-        if(hitObject.objectName == "circle")
-            hitObject.endTime = hitObject.startTime;
-
-        if(hitObject.objectName == "spinner")
-            hitObject.duration = hitObject.endTime - hitObject.startTime;
-    });
-
     // Generate auto replay
     if(!beatmap.Replay){
         let replay = {
             lastCursor: 0,
+            auto: true,
             replay_data: [{offset: 0, x: 0, y: 0}]
         };
 
@@ -799,6 +957,12 @@ function processBeatmap(cb){
 
                 replay.replay_data.push({
                     offset: hitObject.startTime,
+                    x: hitObject.position[0],
+                    y: hitObject.position[1]
+                });
+
+                replay.replay_data.push({
+                    offset: hitObject.startTime + 1,
                     x: hitObject.position[0],
                     y: hitObject.position[1]
                 });
@@ -902,6 +1066,438 @@ function processBeatmap(cb){
 
         beatmap.Replay = replay;
     }
+
+    
+    for(let i = 0; i < beatmap.hitObjects.length; i++){
+        const hitObject = beatmap.hitObjects[i];
+
+        if(hitObject.objectName == 'spinner')
+            continue; // process spinners later
+
+        let nextFrame, previous, current;
+
+        let currentPresses = 0;
+
+        do{
+            nextFrame = getCursor(beatmap.Replay);
+
+            ({ previous, current } = nextFrame);
+
+            /*if(current.offset > hitObject.latestHit){
+                beatmap.Replay.lastCursor--;
+                break;
+            }*/
+
+            if(current == null || current.offset < hitObject.startTime - beatmap.HitWindow50)
+                continue;
+
+            if((current.K1 || current.M1) 
+            && previous.K1 == false 
+            && previous.M1 == false)
+                currentPresses++;
+
+            if((current.K2 || current.M2) 
+            && previous.K2 == false 
+            && previous.M2 == false)
+                currentPresses++;
+
+            if(hitObject.objectName == 'circle' || hitObject.objectName == 'slider'){
+                while(currentPresses > 0){
+                    currentPresses--;
+
+                    let offsetRaw = current.offset - hitObject.startTime;
+                    let offset = Math.abs(offsetRaw);
+
+                    if(withinCircle(current.x, current.y, ...hitObject.position, beatmap.Radius)){
+                        let hitResult = 0;
+                        if(offset <= beatmap.HitWindow300)
+                            hitResult = 300;
+                        else if(offset <= beatmap.HitWindow100)
+                            hitResult = 100;
+                        else if(offset <= beatmap.HitWindow50)
+                            hitResult = 50;
+                        else
+                            hitResult = 0;
+
+                        hitObject.hitOffset = offsetRaw;
+
+                        if(hitObject.objectName == 'slider')
+                            hitResult = hitResult > 0 ? 50 : 0;
+
+                        hitObject.hitResult = hitResult;
+                    }
+                }
+
+                if(hitObject.hitResult != null)
+                    break;
+            }
+        }while(current != null && current.offset < hitObject.latestHit);
+    }
+
+    /*
+    for(let i = 0; i < beatmap.hitObjects.length; i++){
+        const hitObject = beatmap.hitObjects[i];
+
+        if(hitObject.objectName == 'spinner')
+            continue; // process spinners later
+
+        const prevHitObjects = [];
+        const firstPrevIndex = 0;
+
+        for(let j = firstPrevIndex; j < i; j++)
+            prevHitObjects.push(beatmap.hitObjects[j]);
+
+        const frames = [];
+        const firstFrameIndex = beatmap.Replay.replay_data.findIndex(a => a.offset >= hitObject.startTime - beatmap.HitWindow50) - 1;
+
+        for(let i = firstFrameIndex; i < beatmap.Replay.replay_data.length; i++){
+            const frame = beatmap.Replay.replay_data[i];
+
+            if(frame.offset > hitObject.latestHit)
+                break;
+
+            frames.push(frame);
+        }
+
+        for(let i = 1; i < frames.length; i++){
+            const previous = frames[i - 1];
+            const current = frames[i];
+
+            if(current == null)
+                continue;
+
+            let currentPresses = 0;
+
+            if((current.K1 || current.M1) 
+            && previous.K1 == false 
+            && previous.M1 == false)
+                currentPresses++;
+
+            if((current.K2 || current.M2) 
+            && previous.K2 == false 
+            && previous.M2 == false)
+                currentPresses++;
+
+            for(const prevHitObject of prevHitObjects){
+                const hitTime = prevHitObject.hitOffset ? prevHitObject.startTime + prevHitObject.hitOffset : prevHitObject.latestHit;
+
+                if(hitTime >= current.offset)
+                    continue;
+            }
+
+            if(hitObject.objectName == 'circle' || hitObject.objectName == 'slider'){
+                if(currentPresses > 0){
+                    currentPresses--;
+
+                    let offsetRaw = current.offset - hitObject.startTime;
+                    let offset = Math.abs(offsetRaw);
+
+                    
+                    if(prevHitObject != null
+                    && prevHitObject.hitOffset == null
+                    && prevHitObject.objectName == "circle"
+                    && current.offset < prevHitObject.latestHit
+                    && withinCircle(current.x, current.y, ...prevHitObject.position, beatmap.Radius))
+                        break;
+
+                    if(prevHitObject != null
+                    && prevHitObject.hitOffset != null
+                    && prevHitObject.objectName == "circle"
+                    && current.offset < prevHitObject.startTime + prevHitObject.hitOffset
+                    && withinCircle(current.x, current.y, ...prevHitObject.position, beatmap.Radius))
+                        break;
+
+                    if(withinCircle(current.x, current.y, ...hitObject.position, beatmap.Radius)){
+                        let hitResult = 0;
+
+                        if(offset <= beatmap.HitWindow300)
+                            hitResult = 300;
+                        else if(offset <= beatmap.HitWindow100)
+                            hitResult = 100;
+                        else if(offset <= beatmap.HitWindow50)
+                            hitResult = 50;
+
+                        hitObject.hitOffset = offsetRaw;
+
+                        if(hitObject.objectName == 'slider')
+                            hitResult = hitResult > 0 ? 50 : 0;
+
+                        hitObject.hitResult = hitResult;
+                    }
+                }
+
+                if(hitObject.hitResult != null)
+                    break;
+            }
+        }
+    }*/
+
+    beatmap.ScoringFrames = [];
+
+    const allhits = [];
+
+    for(const hitObject of beatmap.hitObjects){
+        if(hitObject.objectName == 'circle'){
+            const scoringFrame = newScoringFrame(beatmap.ScoringFrames);
+
+            if(hitObject.hitResult == null)
+                hitObject.hitResult = 0;
+
+            scoringFrame.offset = hitObject.startTime + (hitObject.hitOffset != null ? hitObject.hitOffset : beatmap.HitWindow50);
+            scoringFrame.position = hitObject.position;
+
+            scoringFrame.result = hitObject.hitResult;
+
+            if(hitObject.hitResult == 0){
+                scoringFrame.result = 'miss';
+                scoringFrame.combo = 0;
+            }
+
+            if(hitObject.hitResult > 0){
+                scoringFrame.combo++;
+
+                allhits.push(hitObject.hitOffset);
+                scoringFrame.ur = variance(allhits) * 10;
+            }
+
+            if(scoringFrame.combo > scoringFrame.maxCombo)
+                scoringFrame.maxCombo = scoringFrame.combo;
+
+            switch(scoringFrame.result){
+                case 300:
+                    scoringFrame.count300++;
+                    break;
+                case 100:
+                    scoringFrame.count100++;
+                    break;
+                case 50:
+                    scoringFrame.count50++;
+                    break;
+                case 'miss':
+                    scoringFrame.countMiss++;
+                    break;
+            }
+
+            beatmap.ScoringFrames.push(scoringFrame);
+            
+            continue;
+        }
+
+        if(hitObject.objectName == 'spinner'){
+            const scoringFrame = newScoringFrame(beatmap.ScoringFrames);
+
+            scoringFrame.result = 300;
+            scoringFrame.combo++;
+
+            scoringFrame.count300++;
+
+            if(scoringFrame.combo > scoringFrame.maxCombo)
+                scoringFrame.maxCombo = scoringFrame.combo;
+
+            scoringFrame.offset = hitObject.endTime;
+
+            scoringFrame.position = [PLAYFIELD_WIDTH / 2, PLAYFIELD_HEIGHT / 2];
+
+            beatmap.ScoringFrames.push(scoringFrame);
+        }
+
+        if(hitObject.objectName == 'slider'){
+            hitObject.hitResults = [];
+
+            hitObject.MissedSliderStart = 0;
+            hitObject.MissedSliderTick = 0;
+            hitObject.MissedSliderEnd = 0;
+
+            const scoringFrame = newScoringFrame(beatmap.ScoringFrames);
+            
+            scoringFrame.offset = hitObject.startTime + Math.min(
+                hitObject.hitOffset != null ? hitObject.hitOffset : beatmap.HitWindow50,
+                hitObject.endTime
+                );
+            
+            if(hitObject.hitResult > 0){
+                scoringFrame.result = 30;
+                scoringFrame.combo++;
+    
+                allhits.push(hitObject.hitOffset);
+                scoringFrame.ur = variance(allhits) * 10;
+
+                if(scoringFrame.combo > scoringFrame.maxCombo)
+                    scoringFrame.maxCombo = scoringFrame.combo;
+
+            }else{
+                hitObject.MissedSliderStart = 1;
+
+                /*console.log('missed slider start at', hitObject.startTime);
+                console.log('scoring frame offset', scoringFrame.offset);*/
+
+                scoringFrame.result = 'sliderbreak';
+                scoringFrame.combo = 0;
+            }
+
+            beatmap.ScoringFrames.push(scoringFrame);
+
+            for(let i = 0; i < hitObject.repeatCount; i++){
+                const repeatOffset = hitObject.startTime + i * (hitObject.duration / hitObject.repeatCount);
+                const sliderTicks = hitObject.SliderTicks.slice();
+
+                if(i % 2 == 1)
+                    sliderTicks.reverse();
+
+                if(i > 0){
+                    const scoringFrame = newScoringFrame(beatmap.ScoringFrames);
+                    const replayFrame = getCursorAtRaw(beatmap.Replay, repeatOffset);
+
+                    scoringFrame.offset = repeatOffset;
+
+                    const repeatPosition = i % 2 == 1 ? hitObject.endPosition : hitObject.position;
+
+                    scoringFrame.position = repeatPosition;
+
+                    const currentHolding = replayFrame.K1 || replayFrame.K2 || replayFrame.M1 || replayFrame.M2;
+
+                    if(currentHolding && withinCircle(replayFrame.x, replayFrame.y, ...repeatPosition, beatmap.ActualFollowpointRadius)){
+                        scoringFrame.result = 30;
+                        scoringFrame.combo++;
+
+                        if(scoringFrame.combo > scoringFrame.maxCombo)
+                            scoringFrame.maxCombo = scoringFrame.combo;
+
+                        beatmap.ScoringFrames.push(scoringFrame);
+                    }else{
+                        //console.log('missed repeat at', scoringFrame.offset);
+
+                        scoringFrame.result = 'sliderbreak';
+                        scoringFrame.combo = 0;
+
+                        beatmap.ScoringFrames.push(scoringFrame);
+                    }
+                }
+
+                for(const tick of sliderTicks){
+                    const scoringFrame = newScoringFrame(beatmap.ScoringFrames);
+                    const tickOffset = i % 2 == 1 ? tick.reverseOffset : tick.offset;
+
+                    const offset = repeatOffset + tickOffset;
+
+                    scoringFrame.offset = offset;
+                    scoringFrame.position = tick.position;
+
+                    const replayFrame = getCursorAtRaw(beatmap.Replay, offset);
+
+                    const currentHolding = replayFrame.K1 || replayFrame.K2 || replayFrame.M1 || replayFrame.M2;
+
+                    if(currentHolding && withinCircle(replayFrame.x, replayFrame.y, ...tick.position, beatmap.ActualFollowpointRadius)){
+                        scoringFrame.result = 10;
+                        scoringFrame.combo++;
+
+                        if(scoringFrame.combo > scoringFrame.maxCombo)
+                            scoringFrame.maxCombo = scoringFrame.combo;
+
+                        beatmap.ScoringFrames.push(scoringFrame);
+
+                        continue;
+                    }
+
+                    hitObject.MissedSliderTick = 1;
+
+                    //console.log('missed slider tick at', scoringFrame.offset);
+
+                    scoringFrame.result = 'sliderbreak';
+                    scoringFrame.combo = 0;
+
+                    beatmap.ScoringFrames.push(scoringFrame);
+                }
+
+                if(i + 1 == hitObject.repeatCount){
+                    const replayFrame = getCursorAtRaw(beatmap.Replay, hitObject.actualEndTime);
+
+                    const endPosition = i % 2 == 1 ? hitObject.position : hitObject.actualEndPosition;
+
+                    const currentHolding = replayFrame.K1 || replayFrame.K2 || replayFrame.M1 || replayFrame.M2;
+
+                    if(currentHolding && withinCircle(replayFrame.x, replayFrame.y, ...endPosition, beatmap.ActualFollowpointRadius)){
+                        const scoringFrame = newScoringFrame(beatmap.ScoringFrames);
+                        scoringFrame.offset = hitObject.endTime;
+                        scoringFrame.position = endPosition;
+
+                        scoringFrame.result = 30;
+                        scoringFrame.combo++;
+
+                        if(scoringFrame.combo > scoringFrame.maxCombo)
+                            scoringFrame.maxCombo = scoringFrame.combo;
+
+                        beatmap.ScoringFrames.push(scoringFrame);
+                    }else{
+                        /*
+                        console.log('missed slider end at', scoringFrame.offset, currentHolding);
+
+                        console.log('fake   end position', ...hitObject.endPosition, 'fake   end time', hitObject.endTime);
+                        console.log('actual end position', ...hitObject.actualEndPosition, 'actual end time', hitObject.actualEndTime);
+                        console.log('missed slider end at', scoringFrame.offset);
+                        console.log(`cursor:${replayFrame.x}+${replayFrame.y},${currentHolding}`);
+                        console.log(`position:${endPosition[0]}+${endPosition[1]}`);
+                        console.log(`startPosition:${hitObject.position[0]}+${hitObject.position[1]}`);
+                        console.log(`endPosition:${hitObject.endPosition[0]}+${hitObject.endPosition[1]}`);*/
+
+                        hitObject.MissedSliderEnd = 1;
+                    }
+
+                    const scoringFrameEnd = newScoringFrame(beatmap.ScoringFrames);
+
+                    scoringFrameEnd.offset = repeatOffset + hitObject.duration / hitObject.repeatCount;
+
+                    const totalPartsMissed = 
+                      hitObject.MissedSliderStart
+                    + hitObject.MissedSliderTick
+                    + hitObject.MissedSliderEnd;
+
+                    scoringFrameEnd.position = hitObject.repeatCount % 2 == 0 ? hitObject.position : hitObject.endPosition;
+
+                    /*if(totalPartsMissed > 0){
+                        console.log('---');
+                        console.log('slider start missed', hitObject.MissedSliderStart);
+                        console.log('slider tick missed', hitObject.MissedSliderTick);
+                        console.log('slider end missed', hitObject.MissedSliderEnd);
+                    }*/
+
+
+                    switch(totalPartsMissed){
+                        case 0:
+                            scoringFrameEnd.result = 300;
+                            scoringFrameEnd.count300++;
+                            break;
+                        case 1:
+                            scoringFrameEnd.result = 100;
+                            scoringFrameEnd.count100++;
+                            break;
+                        case 2:
+                            scoringFrameEnd.result = 50;
+                            scoringFrameEnd.count50++;
+                            break;
+                        default:
+                            scoringFrameEnd.result = 'miss';
+                            scoringFrameEnd.countMiss++;
+                    }
+
+                    beatmap.ScoringFrames.push(scoringFrameEnd);
+                }
+            }
+        }
+    }
+
+    beatmap.ScoringFrames = beatmap.ScoringFrames.sort((a, b) => a.offset - b.offset);
+
+    const hitResults = _.countBy(beatmap.ScoringFrames, 'result');
+
+    console.log(hitResults);
+
+    const count50 = hitResults['50'] || 0;
+    const count100 = hitResults['100'] || 0;
+    const count300 = hitResults['300'] || 0;
+    const countMiss = hitResults['0'] || 0;
+
+    beatmap.Replay.lastCursor = 0;
 
     cb();
 }

@@ -124,6 +124,22 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 	let hitObjects = beatmap.hitObjects.filter(a => a.startTime >= start_time && a.startTime < start_time + actual_length * time_scale);
 	let hitSounds = [];
 
+	const scoringFrames = beatmap.ScoringFrames.filter(a => a.offset >= start_time && a.offset < start_time + actual_length);
+
+	if(beatmap.Replay.auto !== true){
+		for(const scoringFrame of scoringFrames){
+			if(scoringFrame.combo >= scoringFrame.previousCombo || scoringFrame.previousCombo < 30)
+				continue;
+	
+			hitSounds.push({
+				offset: (scoringFrame.offset - start_time) / time_scale,
+				sound: 'combobreak',
+				path: hitSoundPaths['combobreak'],
+				volume: 2.5
+			});
+		}
+	}
+
 	hitObjects.forEach(hitObject => {
 		let timingPoint = getTimingPoint(beatmap.timingPoints, hitObject.startTime);
 
