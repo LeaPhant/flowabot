@@ -719,9 +719,9 @@ function processBeatmap(cb){
         }
     });
 
-    if(Number(beatmap.fileFormat.slice(1)) >= 6){
-        const stackThreshold = beatmap.TimePreempt * beatmap.StackLeniency;
+    const stackThreshold = beatmap.TimePreempt * beatmap.StackLeniency;
 
+    if(Number(beatmap.fileFormat.slice(1)) >= 6){
         let startIndex = 0;
         let endIndex = beatmap.hitObjects.length - 1;
 
