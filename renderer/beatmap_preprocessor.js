@@ -354,9 +354,9 @@ function processBeatmap(cb){
         
 
     // OD
-    beatmap.HitWindow300 = (50 + 30 * (5  - beatmap.OverallDifficulty) / 5);
-    beatmap.HitWindow100 = (100 + 40 * (5  - beatmap.OverallDifficulty) / 5);
-    beatmap.HitWindow50 = (150 + 50 * (5  - beatmap.OverallDifficulty) / 5);
+    beatmap.HitWindow300 = (50 + 30 * (5  - beatmap.OverallDifficultyRealtime) / 5) - 0.5;
+    beatmap.HitWindow100 = (100 + 40 * (5  - beatmap.OverallDifficultyRealtime) / 5) - 0.5;
+    beatmap.HitWindow50 = (150 + 50 * (5  - beatmap.OverallDifficultyRealtime) / 5) - 0.5;
 
     console.log('hit window 300', beatmap.HitWindow300);
     console.log('hit window 100', beatmap.HitWindow100);
@@ -721,7 +721,7 @@ function processBeatmap(cb){
 
     if(Number(beatmap.fileFormat.slice(1)) >= 6){
         const stackThreshold = beatmap.TimePreempt * beatmap.StackLeniency;
-        
+
         let startIndex = 0;
         let endIndex = beatmap.hitObjects.length - 1;
 
@@ -1129,10 +1129,10 @@ function processBeatmap(cb){
 
             ({ previous, current } = nextFrame);
 
-            /*if(current.offset > hitObject.latestHit){
+            if(current.offset > hitObject.latestHit){
                 beatmap.Replay.lastCursor--;
                 break;
-            }*/
+            }
 
             if(current == null || current.offset < hitObject.startTime - beatmap.HitWindow50)
                 continue;
@@ -1180,6 +1180,7 @@ function processBeatmap(cb){
         }while(current != null && current.offset < hitObject.latestHit);
     }
 
+    
     /*
     for(let i = 0; i < beatmap.hitObjects.length; i++){
         const hitObject = beatmap.hitObjects[i];
@@ -1187,11 +1188,8 @@ function processBeatmap(cb){
         if(hitObject.objectName == 'spinner')
             continue; // process spinners later
 
-        const prevHitObjects = [];
+        const prevHitObject = beatmap.hitObjects[i - 1];
         const firstPrevIndex = 0;
-
-        for(let j = firstPrevIndex; j < i; j++)
-            prevHitObjects.push(beatmap.hitObjects[j]);
 
         const frames = [];
         const firstFrameIndex = beatmap.Replay.replay_data.findIndex(a => a.offset >= hitObject.startTime - beatmap.HitWindow50) - 1;
@@ -1212,6 +1210,19 @@ function processBeatmap(cb){
             if(current == null)
                 continue;
 
+            if(prevHitObject != null
+            && prevHitObject.hitOffset == null
+            && prevHitObject.objectName == "circle"
+            && current.offset < prevHitObject.latestHit)
+                continue;
+
+            if(prevHitObject != null
+            && prevHitObject.hitOffset != null
+            && prevHitObject.objectName == "circle"
+            && current.offset < prevHitObject.startTime + prevHitObject.hitOffset
+            && withinCircle(current.x, current.y, ...prevHitObject.position, beatmap.Radius))
+                continue;
+
             let currentPresses = 0;
 
             if((current.K1 || current.M1) 
@@ -1224,34 +1235,12 @@ function processBeatmap(cb){
             && previous.M2 == false)
                 currentPresses++;
 
-            for(const prevHitObject of prevHitObjects){
-                const hitTime = prevHitObject.hitOffset ? prevHitObject.startTime + prevHitObject.hitOffset : prevHitObject.latestHit;
-
-                if(hitTime >= current.offset)
-                    continue;
-            }
-
             if(hitObject.objectName == 'circle' || hitObject.objectName == 'slider'){
                 if(currentPresses > 0){
                     currentPresses--;
 
                     let offsetRaw = current.offset - hitObject.startTime;
                     let offset = Math.abs(offsetRaw);
-
-                    
-                    if(prevHitObject != null
-                    && prevHitObject.hitOffset == null
-                    && prevHitObject.objectName == "circle"
-                    && current.offset < prevHitObject.latestHit
-                    && withinCircle(current.x, current.y, ...prevHitObject.position, beatmap.Radius))
-                        break;
-
-                    if(prevHitObject != null
-                    && prevHitObject.hitOffset != null
-                    && prevHitObject.objectName == "circle"
-                    && current.offset < prevHitObject.startTime + prevHitObject.hitOffset
-                    && withinCircle(current.x, current.y, ...prevHitObject.position, beatmap.Radius))
-                        break;
 
                     if(withinCircle(current.x, current.y, ...hitObject.position, beatmap.Radius)){
                         let hitResult = 0;
@@ -1475,7 +1464,7 @@ function processBeatmap(cb){
 
                         beatmap.ScoringFrames.push(scoringFrame);
                     }else{
-                        /*
+                        
                         console.log('missed slider end at', scoringFrame.offset, currentHolding);
 
                         console.log('fake   end position', ...hitObject.endPosition, 'fake   end time', hitObject.endTime);
@@ -1484,7 +1473,7 @@ function processBeatmap(cb){
                         console.log(`cursor:${replayFrame.x}+${replayFrame.y},${currentHolding}`);
                         console.log(`position:${endPosition[0]}+${endPosition[1]}`);
                         console.log(`startPosition:${hitObject.position[0]}+${hitObject.position[1]}`);
-                        console.log(`endPosition:${hitObject.endPosition[0]}+${hitObject.endPosition[1]}`);*/
+                        console.log(`endPosition:${hitObject.endPosition[0]}+${hitObject.endPosition[1]}`);
 
                         hitObject.MissedSliderEnd = 1;
                     }
@@ -1575,13 +1564,17 @@ function prepareBeatmap(cb){
         if(speed_override)
             speed_multiplier = speed_override;
 
-        let {cs, ar, od} = calculate_csarod(beatmap.CircleSize, beatmap.ApproachRate, beatmap.OverallDifficulty, enabled_mods);
+        const {cs, ar, od} = calculate_csarod(beatmap.CircleSize, beatmap.ApproachRate, beatmap.OverallDifficulty, enabled_mods);
+        const realtime = calculate_csarod(beatmap.CircleSize, beatmap.ApproachRate, beatmap.OverallDifficulty, 
+            enabled_mods.filter(a => !(['DT', 'HT'].includes(a))));
 
         beatmap.CircleSize = cs;
+
+        beatmap.ApproachRateRealtime = realtime.ar;
         beatmap.ApproachRate = ar;
-        beatmap.ApproachRateRealtime = ar;
+
+        beatmap.OverallDifficultyRealtime = realtime.od;
         beatmap.OverallDifficulty = od;
-        beatmap.OverallDifficultyRealtime = od;
 
         if(replay){
             beatmap.Replay = replay;
