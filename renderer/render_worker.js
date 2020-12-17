@@ -176,7 +176,7 @@ process.on('message', async obj => {
 
         // Generate array with all hit objects currently visible
         beatmap.hitObjects.forEach(hitObject => {
-            if(time >= hitObject.startTime - beatmap.TimeFadein && hitObject.endTime - time > -200)
+            if(time >= hitObject.startTime - beatmap.TimePreempt && hitObject.endTime - time > -200)
                 hitObjectsOnScreen.push(hitObject);
         });
 
@@ -203,16 +203,16 @@ process.on('message', async obj => {
 
                 let distance = vectorDistance(hitObject.endPosition, nextObject.position);
 
-                if(time >= (nextObject.startTime - beatmap.TimeFadein) && time < (nextObject.startTime + beatmap.HitWindow50) && distance > 80){
+                if(time >= (nextObject.startTime - beatmap.TimePreempt) && time < (nextObject.startTime + beatmap.HitWindow50) && distance > 80){
                     let start_position = playfieldPosition(...hitObject.endPosition);
                     let end_position = playfieldPosition(...nextObject.position);
 
-                    let progress_0 = nextObject.startTime - beatmap.TimeFadein
+                    let progress_0 = nextObject.startTime - beatmap.TimePreempt
 
                     let a = progress_0;
 
                     progress_0 += time - progress_0;
-                    let progress_1 = nextObject.startTime - beatmap.TimePreempt;
+                    let progress_1 = nextObject.startTime - beatmap.TimeFadein;
 
                     progress_1 -= a
                     progress_0 -= a;
@@ -242,13 +242,13 @@ process.on('message', async obj => {
             // Check if hit object could be visible at current timestamp
             if(time < hitObject.startTime || hitObject.objectName != "circle" && time < hitObject.endTime + 200){
                 // Apply approach rate
-                let opacity = (time - (hitObject.startTime - beatmap.TimeFadein)) / (beatmap.TimeFadein - beatmap.TimePreempt);
+                let opacity = (time - (hitObject.startTime - beatmap.TimePreempt)) / (beatmap.TimePreempt - beatmap.TimeFadein);
 
                 if(hitObject.objectName != 'circle')
                     opacity = 1 - (time - hitObject.endTime) / 200;
 
                 // Calculate relative approach circle size (number from 0 to 1)
-                let approachCircle = 1 - (time - (hitObject.startTime - beatmap.TimePreempt)) / beatmap.TimePreempt;
+                let approachCircle = 1 - (time - (hitObject.startTime - beatmap.TimeFadein)) / beatmap.TimeFadein;
 
                 if(approachCircle < 0) approachCircle = 0;
                 if(opacity > 1) opacity = 1;
@@ -265,8 +265,8 @@ process.on('message', async obj => {
                     ctx.lineWidth = 5 * scale_multiplier;
                     ctx.strokeStyle = "rgba(255,255,255,0.7)";
 
-                    let snakingStart = hitObject.startTime - beatmap.TimeFadein;
-                    let snakingFinish = hitObject.startTime - beatmap.TimePreempt;
+                    let snakingStart = hitObject.startTime - beatmap.TimePreempt;
+                    let snakingFinish = hitObject.startTime - beatmap.TimeFadein;
 
                     let snakingProgress = Math.max(0, Math.min(1, (time - snakingStart) / (snakingFinish - snakingStart)));
 

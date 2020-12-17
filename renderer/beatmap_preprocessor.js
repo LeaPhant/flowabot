@@ -338,13 +338,29 @@ function getCursorAtRaw(replay, time){
 function processBeatmap(cb){
 
     // AR
-    beatmap.TimeFadein = difficultyRange(beatmap.ApproachRate, 1800, 1200, 450);
-    beatmap.TimePreempt = difficultyRange(beatmap.ApproachRate, 1200, 800, 300);
+    //beatmap.TimeFadein = difficultyRange(beatmap.ApproachRate, 1800, 1200, 450);
+    //beatmap.TimePreempt = difficultyRange(beatmap.ApproachRate, 1200, 800, 300);
+
+    if(beatmap.ApproachRate < 5){
+        beatmap.TimeFadein = 1200 + 600 * (5 - beatmap.ApproachRate) / 5;
+        beatmap.TimePreempt = 1200 + 600 * (5 - beatmap.ApproachRate) / 5;
+    }else if(beatmap.ApproachRate == 5){
+        beatmap.TimeFadein = 800;
+        beatmap.TimePreempt = 1200;
+    }else{
+        beatmap.TimeFadein = 800 - 500 * (beatmap.ApproachRate - 5) / 5;
+        beatmap.TimePreempt = 1200 - 750 * (beatmap.ApproachRate - 5) / 5;
+    }
+        
 
     // OD
-    beatmap.HitWindow50 = difficultyRange(beatmap.OverallDifficulty, 200, 150, 100) - 0.5;
-    beatmap.HitWindow100 = difficultyRange(beatmap.OverallDifficulty, 140, 100, 60) - 0.5;
-    beatmap.HitWindow300 = difficultyRange(beatmap.OverallDifficulty, 80, 50, 20) - 0.5;
+    beatmap.HitWindow300 = (50 + 30 * (5  - beatmap.OverallDifficulty) / 5);
+    beatmap.HitWindow100 = (100 + 40 * (5  - beatmap.OverallDifficulty) / 5);
+    beatmap.HitWindow50 = (150 + 50 * (5  - beatmap.OverallDifficulty) / 5);
+
+    console.log('hit window 300', beatmap.HitWindow300);
+    console.log('hit window 100', beatmap.HitWindow100);
+    console.log('hit window 50', beatmap.HitWindow50);
 
     // CS
     beatmap.Scale = (1.0 - 0.7 * (beatmap.CircleSize - 5) / 5) / 2;
@@ -355,7 +371,7 @@ function processBeatmap(cb){
     beatmap.StackLeniency = parseFloat(beatmap.StackLeniency);
 
     if(beatmap.StackLeniency === undefined || beatmap.StackLeniency === NaN || beatmap.StackLeniency === null)
-            beatmap.StackLeniency = 0.7;
+        beatmap.StackLeniency = 0.7;
 
     // HR inversion
     beatmap.hitObjects.forEach((hitObject, i) => {
@@ -703,15 +719,112 @@ function processBeatmap(cb){
         }
     });
 
-    /*
+    if(Number(beatmap.fileFormat.slice(1)) >= 6){
+        const stackThreshold = beatmap.TimePreempt * beatmap.StackLeniency;
+        
+        let startIndex = 0;
+        let endIndex = beatmap.hitObjects.length - 1;
+
+        let extendedEndIndex = endIndex;
+        let extendedStartIndex = startIndex;
+
+        for(let i = extendedEndIndex; i > startIndex; i--){
+            let n = i;
+
+            let objectI = beatmap.hitObjects[i];
+            
+            if(objectI.StackHeight != 0 || objectI.objectName == 'spinner')
+                continue;
+
+            if(objectI.objectName == 'circle'){
+                while(--n >= 0){
+                    const objectN = beatmap.hitObjects[n];
+
+                    if(objectN.objectName == 'spinner')
+                        continue;
+
+                    const { endTime } = objectN;
+
+                    if(objectI.startTime - endTime > stackThreshold)
+                        break;
+
+                    if(n < extendedStartIndex){
+                        objectN.StackHeight = 0;
+                        extendedStartIndex = n;
+                    }
+
+                    if(objectN.objectName == 'slider' && vectorDistance(objectN.endPosition, objectI.position) < STACK_DISTANCE){
+                        const offset = objectI.StackHeight - objectN.StackHeight + 1;
+
+                        for(let j = n + 1; j <= i; j++){
+                            const objectJ = beatmap.hitObjects[j];
+
+                            if(vectorDistance(objectN.endPosition, objectJ.position) < STACK_DISTANCE)
+                                objectJ.StackHeight -= offset;
+                        }
+
+                        break;
+                    }
+
+                    if(vectorDistance(objectN.position, objectI.position) < STACK_DISTANCE){
+                        objectN.StackHeight = objectI.StackHeight + 1;
+                        objectI = objectN;
+                    }
+                }
+            }else if(objectI.objectName == 'slider'){
+                while(--n >= startIndex){
+                    const objectN = beatmap.hitObjects[n];
+
+                    if(objectN.objectName == 'spinner')
+                        continue;
+
+                    if(objectI.startTime - objectN.startTime > stackThreshold)
+                        break;
+
+                    if(vectorDistance(objectN.endPosition, objectI.position) < STACK_DISTANCE){
+                        objectN.StackHeight = objectI.StackHeight + 1;
+                        objectI = objectN;
+                    }
+                }
+            }
+        }
+    }else{
+        for(let i = 0; i < beatmap.hitObjects.length; i++){
+            const currHitObject = beatmap.hitObjects[i];
+
+            if(currHitObject.StackHeight != 0 && currHitObject.objectName != 'slider')
+                continue;
+
+            let startTime = currHitObject.endTime;
+            let sliderStack = 0;
+
+            for(let j = i + 1; j < beatmap.hitObjects.length; j++){
+                if(beatmap.hitObjects[j].startTime - stackThreshold > startTime)
+                    break;
+
+                const position2 = currHitObject.position;
+
+                if(vectorDistance(beatmap.hitObjects[j].position, currHitObject.position) < STACK_DISTANCE){
+                    currHitObject.StackHeight++;
+                    startTime = beatmap.hitObjects[j].endTime;
+                }else if(vectorDistance(beatmap.hitObjects[j].position, position2) < STACK_DISTANCE){
+                    sliderStack++;
+                    beatmap.hitObjects[j].StackHeight -= sliderStack;
+                    startTime = beatmap.hitObjects[j].endTime;
+                }
+            }
+        }
+    }
 
     // Apply Stacking
     // Pretty much copied from osu-lazer https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Beatmaps/OsuBeatmapProcessor.cs#L41
+
+    /*
     let startIndex = 0;
     let endIndex = beatmap.hitObjects.length - 1;
     let extendedEndIndex = endIndex;
 
-    let stackThreshold = beatmap.TimePreempt * beatmap.StackLeniency;
+    let stackThreshold = beatmap.TimePreempt * beatmap.StackLeniency * 10;
 
     if(endIndex < beatmap.hitObjects.length - 1){
         for(let i = endIndex; i >= startIndex; i--){
@@ -812,74 +925,7 @@ function processBeatmap(cb){
             }
         }
     }*/
-
-    // Apply Stacking 2: Electric Boogaloo
-    // Pretty much copied from osu-lazer https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Beatmaps/OsuBeatmapProcessor.cs#L193
-
-    for(let i = 0; i < beatmap.hitObjects.length; i++){
-        const currHitObject = beatmap.hitObjects[i];
-
-        if(currHitObject.StackHeight != 0 && currHitObject.objectName != 'slider')
-            continue;
-
-        let startTime = currHitObject.endTime;
-        let sliderStack = 0;
-
-        for(let j = i + 1; j < beatmap.hitObjects.length; j++){
-            const stackThreshold = (beatmap.hitObjects[i].startTime - beatmap.TimePreempt) * beatmap.StackLeniency;
-
-            if(beatmap.hitObjects[j].startTime - stackThreshold > startTime)
-                break;
-
-            const position2 = currHitObject.position;
-
-            if(vectorDistance(beatmap.hitObjects[j].position, currHitObject.position) < STACK_DISTANCE){
-                currHitObject.StackHeight++;
-                startTime = beatmap.hitObjects[j].endTime;
-            }else if(vectorDistance(beatmap.hitObjects[j].position, position2) < STACK_DISTANCE){
-                sliderStack++;
-                beatmap.hitObjects[j].StackHeight -= sliderStack;
-                startTime = beatmap.hitObjects[j].endTime;
-            }
-        }
-    }
-
-    /*
-    for (int i = 0; i < beatmap.HitObjects.Count; i++){
-        OsuHitObject currHitObject = beatmap.HitObjects[i];
-
-        if (currHitObject.StackHeight != 0 && !(currHitObject is Slider))
-            continue;
-
-        double startTime = currHitObject.GetEndTime();
-        int sliderStack = 0;
-
-        for (int j = i + 1; j < beatmap.HitObjects.Count; j++)
-        {
-            double stackThreshold = beatmap.HitObjects[i].TimePreempt * beatmap.BeatmapInfo.StackLeniency;
-
-            if (beatmap.HitObjects[j].StartTime - stackThreshold > startTime)
-                break;
-
-            // The start position of the hitobject, or the position at the end of the path if the hitobject is a slider
-            Vector2 position2 = currHitObject is Slider currSlider
-                ? currSlider.Position + currSlider.Path.PositionAt(1)
-                : currHitObject.Position;
-
-            if (Vector2Extensions.Distance(beatmap.HitObjects[j].Position, currHitObject.Position) < stack_distance)
-            {
-                currHitObject.StackHeight++;
-                startTime = beatmap.HitObjects[j].GetEndTime();
-            }
-            else if (Vector2Extensions.Distance(beatmap.HitObjects[j].Position, position2) < stack_distance)
-            {
-                // Case for sliders - bump notes down and right, rather than up and left.
-                sliderStack++;
-                beatmap.HitObjects[j].StackHeight -= sliderStack;
-                startTime = beatmap.HitObjects[j].GetEndTime();
-            }
-        }
-    }*/
+    
 
     let currentCombo = 1;
     let currentComboNumber = 0;
