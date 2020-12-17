@@ -1129,7 +1129,7 @@ function processBeatmap(cb){
 
             ({ previous, current } = nextFrame);
 
-            if(current.offset > hitObject.latestHit){
+            if(current != null && current.offset > hitObject.latestHit){
                 beatmap.Replay.lastCursor--;
                 break;
             }
