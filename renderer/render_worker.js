@@ -653,7 +653,7 @@ process.on('message', async obj => {
                 previousFramesIndex++;
             }while(currentFrame.offset < time)
 
-            const UR_BAR_WIDTH = 120;
+            const UR_BAR_WIDTH = 180;
             const UR_BAR_HEIGHT = 4;
 
             const UR_BAR_Y = canvas.height - 35 - (15 * scale_multiplier);
