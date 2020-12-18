@@ -143,7 +143,7 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 	for(const hitObject of hitObjects){
 		let timingPoint = getTimingPoint(beatmap.timingPoints, hitObject.startTime);
 
-		if(hitObject.objectName != 'spinner' && Array.isArray(hitObject.HitSounds)){
+		if(hitObject.objectName == 'circle' && Array.isArray(hitObject.HitSounds)){
 			let offset = hitObject.startTime;
 
 			if(beatmap.Replay.auto !== true){
@@ -170,11 +170,15 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 		
 		if(hitObject.objectName == 'slider'){
 			hitObject.EdgeHitSounds.forEach((edgeHitSounds, index) => {
-				if(index == 0)
-					return;
-					
 				edgeHitSounds.forEach(hitSound => {
 					let offset = hitObject.startTime + index * (hitObject.duration / hitObject.repeatCount);
+
+					if(index == 0 && beatmap.Replay.auto !== true){
+						if(hitObject.hitOffset == null)
+							return;
+						
+						offset += hitObject.hitOffset;
+					}
 
 					let edgeTimingPoint = getTimingPoint(beatmap.timingPoints, offset);
 
