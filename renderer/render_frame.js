@@ -65,7 +65,7 @@ function getTimingPoint(timingPoints, offset){
     let timingPoint = timingPoints[0];
 
     for(let x = timingPoints.length - 1; x >= 0; x--){
-        if(timingPoints[x].offset <= offset && !timingPoints[x].timingChange){
+        if(timingPoints[x].offset <= offset){
             timingPoint = timingPoints[x];
             break;
         }
@@ -153,9 +153,10 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 				offset += hitObject.hitOffset;
 			}
 
+			offset -= start_time;
+			offset /= time_scale;
+
 			for(const hitSound of hitObject.HitSounds){
-				offset -= start_time;
-				offset /= time_scale;
 
 				if(hitSound in hitSoundPaths){
 					hitSounds.push({

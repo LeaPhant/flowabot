@@ -307,7 +307,7 @@ function getTimingPoint(timingPoints, offset){
     let timingPoint = timingPoints[0];
 
     for(let x = timingPoints.length - 1; x >= 0; x--){
-        if(timingPoints[x].offset <= offset && !timingPoints[x].timingChange){
+        if(timingPoints[x].offset <= offset){
             timingPoint = timingPoints[x];
             break;
         }
