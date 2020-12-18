@@ -245,6 +245,8 @@ function difficultyRange(difficulty, min, mid, max){
 }
 
 function calculate_csarod(cs_raw, ar_raw, od_raw, mods_enabled){
+    console.log(mods_enabled);
+
 	let speed = 1, ar_multiplier = 1, ar, ar_ms;
 
 	if(mods_enabled.includes("DT") || mods_enabled.includes("NC")){
@@ -341,17 +343,27 @@ function processBeatmap(cb){
     //beatmap.TimeFadein = difficultyRange(beatmap.ApproachRate, 1800, 1200, 450);
     //beatmap.TimePreempt = difficultyRange(beatmap.ApproachRate, 1200, 800, 300);
 
-    if(beatmap.ApproachRate < 5){
-        beatmap.TimeFadein = 1200 + 600 * (5 - beatmap.ApproachRate) / 5;
-        beatmap.TimePreempt = 1200 + 600 * (5 - beatmap.ApproachRate) / 5;
-    }else if(beatmap.ApproachRate == 5){
+    if(beatmap.ApproachRateRealtime < 5){
+        beatmap.TimeFadein = 1200 + 600 * (5 - beatmap.ApproachRateRealtime) / 5;
+        beatmap.TimePreempt = 1200 + 600 * (5 - beatmap.ApproachRateRealtime) / 5;
+    }else if(beatmap.ApproachRateRealtime == 5){
         beatmap.TimeFadein = 800;
         beatmap.TimePreempt = 1200;
     }else{
-        beatmap.TimeFadein = 800 - 500 * (beatmap.ApproachRate - 5) / 5;
-        beatmap.TimePreempt = 1200 - 750 * (beatmap.ApproachRate - 5) / 5;
+        beatmap.TimeFadein = 800 - 500 * (beatmap.ApproachRateRealtime - 5) / 5;
+        beatmap.TimePreempt = 1200 - 750 * (beatmap.ApproachRateRealtime - 5) / 5;
     }
-        
+
+    console.log('ar realtime', beatmap.ApproachRateRealtime);
+    console.log('ar ms', beatmap.TimeFadein);
+
+    if(['DT', 'NC'].includes(enabled_mods)){
+        beatmap.TimeFadein /= 1.5;
+        beatmap.TimePreempt /= 1.5;
+    }else if(['HT', 'DC'].includes(enabled_mods)){
+        beatmap.TimeFadein /= 0.75;
+        beatmap.TimePreempt /= 0.75;
+    }
 
     // OD
     beatmap.HitWindow300 = (50 + 30 * (5  - beatmap.OverallDifficultyRealtime) / 5) - 0.5;
@@ -1547,6 +1559,10 @@ function prepareBeatmap(cb){
 
         beatmap = _beatmap;
 
+        beatmap.CircleSize = beatmap.CircleSize != null ? beatmap.CircleSize : 5;
+        beatmap.OverallDifficulty = beatmap.OverallDifficulty != null ? beatmap.OverallDifficulty : 5;
+        beatmap.ApproachRate = beatmap.ApproachRate != null ? beatmap.ApproachRate : beatmap.OverallDifficulty;
+
         let replay;
 
         if(options.score_id){
@@ -1569,7 +1585,7 @@ function prepareBeatmap(cb){
 
         const {cs, ar, od} = calculate_csarod(beatmap.CircleSize, beatmap.ApproachRate, beatmap.OverallDifficulty, enabled_mods);
         const realtime = calculate_csarod(beatmap.CircleSize, beatmap.ApproachRate, beatmap.OverallDifficulty, 
-            enabled_mods.filter(a => !(['DT', 'HT', 'NC', 'DC'].includes(a))));
+            enabled_mods.filter(a => ['DT', 'HT', 'NC', 'DC'].includes(a) == false));
 
         beatmap.CircleSize = cs;
 
