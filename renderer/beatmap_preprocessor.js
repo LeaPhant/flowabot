@@ -245,8 +245,6 @@ function difficultyRange(difficulty, min, mid, max){
 }
 
 function calculate_csarod(cs_raw, ar_raw, od_raw, mods_enabled){
-    console.log(mods_enabled);
-
 	let speed = 1, ar_multiplier = 1, ar, ar_ms;
 
 	if(mods_enabled.includes("DT") || mods_enabled.includes("NC")){
@@ -353,9 +351,6 @@ function processBeatmap(cb){
         beatmap.TimeFadein = 800 - 500 * (beatmap.ApproachRateRealtime - 5) / 5;
         beatmap.TimePreempt = 1200 - 750 * (beatmap.ApproachRateRealtime - 5) / 5;
     }
-
-    console.log('ar realtime', beatmap.ApproachRateRealtime);
-    console.log('ar ms', beatmap.TimeFadein);
 
     if(['DT', 'NC'].includes(enabled_mods)){
         beatmap.TimeFadein /= 1.5;
@@ -614,7 +609,7 @@ function processBeatmap(cb){
 
             let slider_ticks = [];
 
-            let scoringDistance = 100 * beatmap.SliderMultiplier * timingPoint.velocity;
+            let scoringDistance = 100 * beatmap.SliderMultiplier * hitObject.velocity;
 
             let tickDistance = scoringDistance / beatmap.SliderTickRate;
 
@@ -625,6 +620,7 @@ function processBeatmap(cb){
                     continue;
 
                 let turnDuration = hitObject.duration / hitObject.repeatCount;
+
                 let offset = (x / hitObject.pixelLength) * turnDuration;
 
                 // Don't render slider tick on slider end
@@ -1419,6 +1415,7 @@ function processBeatmap(cb){
 
                         scoringFrame.result = 'sliderbreak';
                         scoringFrame.combo = 0;
+                        hitObject.MissedSliderTick = true;
 
                         beatmap.ScoringFrames.push(scoringFrame);
                     }
@@ -1480,15 +1477,14 @@ function processBeatmap(cb){
                         beatmap.ScoringFrames.push(scoringFrame);
                     }else{
                         
-                        console.log('missed slider end at', scoringFrame.offset, currentHolding);
+                        /*console.log('missed slider end at', scoringFrame.offset, currentHolding);
 
                         console.log('fake   end position', ...hitObject.endPosition, 'fake   end time', hitObject.endTime);
-                        console.log('actual end position', ...hitObject.actualEndPosition, 'actual end time', hitObject.actualEndTime);
                         console.log('missed slider end at', scoringFrame.offset);
                         console.log(`cursor:${replayFrame.x}+${replayFrame.y},${currentHolding}`);
                         console.log(`position:${endPosition[0]}+${endPosition[1]}`);
                         console.log(`startPosition:${hitObject.position[0]}+${hitObject.position[1]}`);
-                        console.log(`endPosition:${hitObject.endPosition[0]}+${hitObject.endPosition[1]}`);
+                        console.log(`endPosition:${hitObject.endPosition[0]}+${hitObject.endPosition[1]}`);*/
 
                         hitObject.MissedSliderEnd = 1;
                     }
