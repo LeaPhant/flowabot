@@ -582,7 +582,9 @@ process.on('message', async obj => {
                 // Draw fading out circles
                 if(hitObject.objectName != "spinner"){
                     // Increase circle size the further it's faded out
-                    let timeSince = Math.min(1, Math.max(0, (time - (hitObject.startTime + (hitObject.hitOffset || beatmap.HitWindow50))) / 200));
+                    const hitOffset = beatmap.Replay.auto === true ? 0 : (hitObject.hitOffset !== null ? hitObject.hitOffset : beatmap.HitWindow50);
+
+                    let timeSince = Math.min(1, Math.max(0, (time - (hitObject.startTime + hitOffset)) / 200));
                     let opacity = 1 - timeSince;
                     let sizeFactor = 1 + timeSince * 0.3;
 
@@ -653,7 +655,7 @@ process.on('message', async obj => {
                 previousFramesIndex++;
             }while(currentFrame.offset < time)
 
-            const UR_BAR_WIDTH = 180;
+            const UR_BAR_WIDTH = 160;
             const UR_BAR_HEIGHT = 4;
 
             const UR_BAR_Y = canvas.height - 35 - (15 * scale_multiplier);
