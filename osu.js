@@ -583,8 +583,13 @@ function getScore(recent_raw, cb){
 	                            mods_enabled: recent_raw.enabled_mods,
 								score_id: recent.score_id,
 	                            mods: recent.mods
-	                        }, ur => {
-	                            recent.ur = ur;
+	                        }).then(response => {
+                                recent.ur = response.ur;
+
+                                if(recent.countmiss == (response.miss || 0) 
+                                && recent.count100 == (response['100'] || 0)
+                                && recent.count50 == (response['50'] || 0))
+                                    recent.countsb = response.sliderbreak;
 
 	                            if(recent.mods.includes("DT") || recent.mods.includes("NC"))
 	                                recent.cvur = ur / 1.5;
@@ -1022,6 +1027,11 @@ module.exports = {
         if(recent.countmiss > 0){
             if(recent.count100 > 0 || recent.count50 > 0) lines[1] += helper.sep;
             lines[1] += `${recent.countmiss}xMiss`;
+        }
+
+        if(recent.countsb > 0){
+            if(recent.count100 > 0 || recent.count50 > 0 || recent.countmiss > 0) lines[1] += helper.sep;
+            lines[1] += `${recent.countsb}xSB`;
         }
 
         if(recent.ur > 0){

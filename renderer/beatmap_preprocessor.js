@@ -1572,12 +1572,9 @@ function processBeatmap(osuContents){
 
     const hitResults = _.countBy(beatmap.ScoringFrames, 'result');
 
-    console.log(hitResults);
+    hitResults.ur = beatmap.ScoringFrames[beatmap.ScoringFrames.length - 1].ur;
 
-    const count50 = hitResults['50'] || 0;
-    const count100 = hitResults['100'] || 0;
-    const count300 = hitResults['300'] || 0;
-    const countMiss = hitResults['0'] || 0;
+    beatmap.HitResults = hitResults;
 
     beatmap.Replay.lastCursor = 0;
 }
