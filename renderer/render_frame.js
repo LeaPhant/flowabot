@@ -170,6 +170,9 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 		
 		if(hitObject.objectName == 'slider'){
 			hitObject.EdgeHitSounds.forEach((edgeHitSounds, index) => {
+				if(index == 0)
+					return;
+					
 				edgeHitSounds.forEach(hitSound => {
 					let offset = hitObject.startTime + index * (hitObject.duration / hitObject.repeatCount);
 
