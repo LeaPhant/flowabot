@@ -140,13 +140,20 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 		}
 	}
 
-	hitObjects.forEach(hitObject => {
+	for(const hitObject of hitObjects){
 		let timingPoint = getTimingPoint(beatmap.timingPoints, hitObject.startTime);
 
-		if(hitObject.objectName == 'circle'){
-			hitObject.HitSounds.forEach(hitSound => {
-				let offset = hitObject.startTime;
+		if(hitObject.objectName != 'spinner' && Array.isArray(hitObject.HitSounds)){
+			let offset = hitObject.startTime;
 
+			if(beatmap.Replay.auto !== true){
+				if(hitObject.hitOffset == null)
+					continue;
+	
+				offset += hitObject.hitOffset;
+			}
+
+			for(const hitSound of hitObject.HitSounds){
 				offset -= start_time;
 				offset /= time_scale;
 
@@ -158,8 +165,10 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 						volume: timingPoint.sampleVolume / 100
 					});
 				}
-			});
-		}else if(hitObject.objectName == 'slider'){
+			}
+		}
+		
+		if(hitObject.objectName == 'slider'){
 			hitObject.EdgeHitSounds.forEach((edgeHitSounds, index) => {
 				edgeHitSounds.forEach(hitSound => {
 					let offset = hitObject.startTime + index * (hitObject.duration / hitObject.repeatCount);
@@ -203,7 +212,7 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 				}
 			});
 		}
-	});
+	}
 
 	let ffmpegArgs = [];
 
