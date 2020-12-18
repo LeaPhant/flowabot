@@ -592,9 +592,9 @@ function getScore(recent_raw, cb){
                                     recent.countsb = response.sliderbreak;
 
 	                            if(recent.mods.includes("DT") || recent.mods.includes("NC"))
-	                                recent.cvur = ur / 1.5;
+	                                recent.cvur = response.ur / 1.5;
 	                            else if(recent.mods.includes("HT"))
-	                                recent.cvur = ur * 1.5;
+	                                recent.cvur = response.ur * 1.5;
 
 	                            resolve(recent);
 	                        });
