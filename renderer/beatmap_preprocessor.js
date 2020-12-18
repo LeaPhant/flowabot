@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const lzma = require('lzma');
+const ojsama = require('ojsama');
 const _ = require('lodash');
 const helper = require('../helper.js');
 
@@ -335,8 +336,7 @@ function getCursorAtRaw(replay, time){
     return replay.replay_data[lastIndex] || replay.replay_data[replay.replay_data.length - 1];
 }
 
-function processBeatmap(cb){
-
+function processBeatmap(osuContents){
     // AR
     //beatmap.TimeFadein = difficultyRange(beatmap.ApproachRate, 1800, 1200, 450);
     //beatmap.TimePreempt = difficultyRange(beatmap.ApproachRate, 1200, 800, 300);
@@ -1534,6 +1534,39 @@ function processBeatmap(cb){
 
     beatmap.ScoringFrames = beatmap.ScoringFrames.sort((a, b) => a.offset - b.offset);
 
+    const parser = new ojsama.parser().feed(osuContents);
+
+    const objects = parser.map.objects.slice();
+    const mods = ojsama.modbits.from_string(enabled_mods.join(""));
+    
+    for(const scoringFrame of beatmap.ScoringFrames.filter(a => ['miss', 50, 100, 300].includes(a.result))){
+        const hitCount = scoringFrame.countMiss + scoringFrame.count50 + scoringFrame.count100 + scoringFrame.count300;
+
+        parser.map.objects = objects.slice(0, hitCount);
+
+        const stars = new ojsama.diff().calc({map: parser.map, mods});
+
+        const pp = ojsama.ppv2({
+            stars,
+            combo: scoringFrame.maxCombo,
+            nmiss: scoringFrame.countMiss,
+            n300: scoringFrame.count300,
+            n100: scoringFrame.count100,
+            n50: scoringFrame.count50
+        });
+
+        scoringFrame.pp = pp.total;
+    }
+
+    let currentPP = 0;
+
+    for(const scoringFrame of beatmap.ScoringFrames){
+        if(scoringFrame.pp != null)
+            currentPP = scoringFrame.pp;
+
+        scoringFrame.pp = currentPP;
+    }
+
     const hitResults = _.countBy(beatmap.ScoringFrames, 'result');
 
     console.log(hitResults);
@@ -1544,81 +1577,76 @@ function processBeatmap(cb){
     const countMiss = hitResults['0'] || 0;
 
     beatmap.Replay.lastCursor = 0;
-
-    cb();
 }
 
-function prepareBeatmap(cb){
-    osuBeatmapParser.parseFile(beatmap_path, function(err, _beatmap){
-        if(err)
-            throw err;
+async function prepareBeatmap(){
+    const osuContents = await fs.promises.readFile(beatmap_path, 'utf8');
 
-        beatmap = _beatmap;
+    beatmap = osuBeatmapParser.parseContent(osuContents);
 
-        beatmap.CircleSize = beatmap.CircleSize != null ? beatmap.CircleSize : 5;
-        beatmap.OverallDifficulty = beatmap.OverallDifficulty != null ? beatmap.OverallDifficulty : 5;
-        beatmap.ApproachRate = beatmap.ApproachRate != null ? beatmap.ApproachRate : beatmap.OverallDifficulty;
+    beatmap.CircleSize = beatmap.CircleSize != null ? beatmap.CircleSize : 5;
+    beatmap.OverallDifficulty = beatmap.OverallDifficulty != null ? beatmap.OverallDifficulty : 5;
+    beatmap.ApproachRate = beatmap.ApproachRate != null ? beatmap.ApproachRate : beatmap.OverallDifficulty;
 
-        let replay;
+    let replay;
 
-        if(options.score_id){
-            let replay_path = path.resolve(os.tmpdir(), 'replays', `${options.score_id}`);
+    if(options.score_id){
+        let replay_path = path.resolve(os.tmpdir(), 'replays', `${options.score_id}`);
 
-            if(fs.existsSync(replay_path))
-                replay = {lastCursor: 0, replay_data: parseReplay(fs.readFileSync(replay_path))};
-        }
+        if(fs.existsSync(replay_path))
+            replay = {lastCursor: 0, replay_data: parseReplay(fs.readFileSync(replay_path))};
+    }
 
-        speed_multiplier = 1;
+    speed_multiplier = 1;
 
-        if(enabled_mods.includes("DT")){
-            speed_multiplier = 1.5;
-        }else if(enabled_mods.includes("HT")){
-            speed_multiplier = 0.75;
-        }
+    if(enabled_mods.includes("DT")){
+        speed_multiplier = 1.5;
+    }else if(enabled_mods.includes("HT")){
+        speed_multiplier = 0.75;
+    }
 
-        if(speed_override)
-            speed_multiplier = speed_override;
+    if(speed_override)
+        speed_multiplier = speed_override;
 
-        const {cs, ar, od} = calculate_csarod(beatmap.CircleSize, beatmap.ApproachRate, beatmap.OverallDifficulty, enabled_mods);
-        const realtime = calculate_csarod(beatmap.CircleSize, beatmap.ApproachRate, beatmap.OverallDifficulty, 
-            enabled_mods.filter(a => ['DT', 'HT', 'NC', 'DC'].includes(a) == false));
+    const {cs, ar, od} = calculate_csarod(beatmap.CircleSize, beatmap.ApproachRate, beatmap.OverallDifficulty, enabled_mods);
+    const realtime = calculate_csarod(beatmap.CircleSize, beatmap.ApproachRate, beatmap.OverallDifficulty, 
+        enabled_mods.filter(a => ['DT', 'HT', 'NC', 'DC'].includes(a) == false));
 
-        beatmap.CircleSize = cs;
+    beatmap.CircleSize = cs;
 
-        beatmap.ApproachRateRealtime = realtime.ar;
-        beatmap.ApproachRate = ar;
+    beatmap.ApproachRateRealtime = realtime.ar;
+    beatmap.ApproachRate = ar;
 
-        beatmap.OverallDifficultyRealtime = realtime.od;
-        beatmap.OverallDifficulty = od;
+    beatmap.OverallDifficultyRealtime = realtime.od;
+    beatmap.OverallDifficulty = od;
 
-        if(replay){
-            beatmap.Replay = replay;
-            helper.log('score has replay');
-        }else{
-            helper.log('score has no replay, will generate auto replay');
-        }
+    if(replay){
+        beatmap.Replay = replay;
+        helper.log('score has replay');
+    }else{
+        helper.log('score has no replay, will generate auto replay');
+    }
 
-        if(!isNaN(options.cs) && !(options.cs === undefined))
-            beatmap.CircleSize = options.cs;
+    if(!isNaN(options.cs) && !(options.cs === undefined))
+        beatmap.CircleSize = options.cs;
 
-        if(!isNaN(options.ar) && !(options.ar === undefined)){
-            beatmap.ApproachRateRealtime = options.ar;
-            beatmap.ApproachRate = options.ar;
-        }
+    if(!isNaN(options.ar) && !(options.ar === undefined)){
+        beatmap.ApproachRateRealtime = options.ar;
+        beatmap.ApproachRate = options.ar;
+    }
 
-        if(!isNaN(options.od) && !(options.od === undefined)){
-            beatmap.OverallDifficulty = options.od;
-            beatmap.OverallDifficultyRealtime = options.od;
-        }
+    if(!isNaN(options.od) && !(options.od === undefined)){
+        beatmap.OverallDifficulty = options.od;
+        beatmap.OverallDifficultyRealtime = options.od;
+    }
 
-        processBeatmap(cb);
-    });
+    processBeatmap(osuContents);
 }
 
 process.on('message', obj => {
     ({beatmap_path, options, speed, enabled_mods} = obj);
 
-    prepareBeatmap(() => {
+    prepareBeatmap().then(() => {
         process.send(beatmap, () => {
             process.exit();
         });

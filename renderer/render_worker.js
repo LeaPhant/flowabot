@@ -680,6 +680,28 @@ process.on('message', async obj => {
                 ctx.textBaseline = "bottom";
                 ctx.font = `${32 * scale_multiplier}px monospace`;
                 ctx.fillText(`${currentFrame.combo}x`, ...comboPosition);
+
+                let { pp } = currentFrame;
+
+                if(time - currentFrame.offset < 400 && scoringFrames.length > 1){
+                    let previousFrame;
+
+                    for(let i = scoringFrames.length - 1; i > 0; i--){
+                        previousFrame = scoringFrames[i];
+
+                        if(previousFrame.offset <= time - 400 || previousFrame.pp != currentFrame.pp)
+                            break;
+                    }
+
+                    const progress = (time - currentFrame.offset) / (time - previousFrame.offset);
+                    const diff = currentFrame.pp - previousFrame.pp;
+
+                    pp = previousFrame.pp + diff * progress;
+                }
+
+                ctx.textBaseline = "top";
+                ctx.font = `${26 * scale_multiplier}px monospace`;
+                ctx.fillText(`${pp.toFixed(2)}pp`, 15, 45);
                 
                 let accuracy = 100;
 
