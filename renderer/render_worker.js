@@ -626,7 +626,7 @@ process.on('message', async obj => {
         if(beatmap.ScoringFrames && beatmap.Replay.auto !== true){
             //const scoringFrames = getScoringFrames(time, beatmap.ScoringFrames);
 
-            let previousFramesIndex = beatmap.ScoringFrames.findIndex(a => a.offset >= time - 750);
+            let previousFramesIndex = beatmap.ScoringFrames.findIndex(a => a.offset >= time - 5000);
 
             let currentFrameIndex = beatmap.ScoringFrames.findIndex(a => a.offset >= time) - 1;
 
@@ -652,6 +652,14 @@ process.on('message', async obj => {
 
                 previousFramesIndex++;
             }while(currentFrame.offset < time)
+
+            const UR_BAR_WIDTH = 120;
+            const UR_BAR_HEIGHT = 4;
+
+            const UR_BAR_Y = canvas.height - 35 - (15 * scale_multiplier);
+
+            const UR_BAR_100 = beatmap.HitWindow100 / beatmap.HitWindow50 * UR_BAR_WIDTH;
+            const UR_BAR_300 = beatmap.HitWindow300 / beatmap.HitWindow50 * UR_BAR_WIDTH;
 
             if(currentFrame != null){
                 const comboPosition = [15, canvas.height - 35];
@@ -696,6 +704,19 @@ process.on('message', async obj => {
                 ctx.fillText(`${time}`, canvas.width - 15, canvas.height - 35);
                 ctx.fillText(`${currentFrame.offset}`, canvas.width - 15, canvas.height - 65);*/
 
+                ctx.globalAlpha = 0.5;
+
+                ctx.fillStyle = '#ff9100';
+                ctx.fillRect(canvas.width / 2 - UR_BAR_WIDTH / 2, UR_BAR_Y - UR_BAR_HEIGHT / 2, UR_BAR_WIDTH, UR_BAR_HEIGHT);
+
+                ctx.fillStyle = '#4dff00';
+                ctx.fillRect(canvas.width / 2 - UR_BAR_100 / 2, UR_BAR_Y - UR_BAR_HEIGHT / 2, UR_BAR_100, UR_BAR_HEIGHT);
+
+                ctx.fillStyle = '#00e5ff';
+                ctx.fillRect(canvas.width / 2 - UR_BAR_300 / 2, UR_BAR_Y - UR_BAR_HEIGHT / 2, UR_BAR_300, UR_BAR_HEIGHT);
+
+                ctx.globalAlpha = 1;
+
                 ctx.textAlign = "left";
                 ctx.textBaseline = "bottom";
                 ctx.font = `${16 * scale_multiplier}px sans-serif`;
@@ -706,15 +727,48 @@ process.on('message', async obj => {
             }
 
             for(const scoringFrame of scoringFrames){
+                if(scoringFrame.hitOffset != null){
+                    switch(scoringFrame.result){
+                        case 300:
+                            ctx.fillStyle = '#00e5ff';
+                            break;
+                        case 100:
+                            ctx.fillStyle = '#4dff00';
+                            break;
+                        case 50:
+                            ctx.fillStyle = '#ff9100';
+                            break;
+                        default:
+                            ctx.fillStyle = 'transparent';
+                    }
+
+                    ctx.globalAlpha = 0.35;
+
+                    if(time - scoringFrame.offset > 4000)
+                        ctx.globalAlpha *= Math.max(0, 1 - (time - (scoringFrame.offset + 4000)) / 1000);
+
+                    let posX = canvas.width / 2;
+
+                    const offsetX = Math.abs(scoringFrame.hitOffset) / beatmap.HitWindow50 * (UR_BAR_WIDTH / 2);
+
+                    if(scoringFrame.hitOffset > 0)
+                        posX += offsetX;
+                    else
+                        posX -= offsetX;
+
+                    ctx.fillRect(posX, UR_BAR_Y - 16 / 2, 2, 16);
+                }
+
                 if(!(['miss', 50, 100].includes(scoringFrame.result)))
+                    continue;
+
+                if(time - scoringFrame.offset > 750)
                     continue;
 
                 ctx.globalAlpha = Math.min(1, 1.5 - (time - scoringFrame.offset) / 750);
                 ctx.textAlign = "center";
                 ctx.textBaseline = "middle";
                 ctx.font = `${30 * scale_multiplier}px sans-serif`;
-
-
 
                 const position = scoringFrame.position.slice();
 
@@ -741,6 +795,30 @@ process.on('message', async obj => {
                     continue;
                 }
             }
+
+            let scoringFrameOffsets = scoringFrames.filter(a => a.hitOffset != null).map(a => a.hitOffset);
+
+            const avgOffset = scoringFrameOffsets.length > 0 ? scoringFrameOffsets.reduce((a, v, i) => (a * i + v) / (i + 1)) : 0;
+
+            let posX = canvas.width / 2;
+
+            const offsetX = Math.abs(avgOffset) / beatmap.HitWindow50 * (UR_BAR_WIDTH / 2);
+
+            if(avgOffset > 0)
+                posX += offsetX;
+            else
+                posX -= offsetX;
+
+            ctx.globalAlpha = 1;
+            ctx.fillStyle = 'white';
+
+            ctx.beginPath();
+            ctx.moveTo(posX - 5, UR_BAR_Y - 16 / 2);
+            ctx.lineTo(posX, UR_BAR_Y - 16 / 2 + 7);
+            ctx.lineTo(posX + 5, UR_BAR_Y - 16 / 2);
+            ctx.fill();
+
+            ctx.fillRect(canvas.width / 2 - 1, UR_BAR_Y - 16 / 2, 2, 16);
         }
 
         // Draw replay cursor

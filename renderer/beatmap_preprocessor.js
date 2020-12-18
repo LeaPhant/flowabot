@@ -247,9 +247,9 @@ function difficultyRange(difficulty, min, mid, max){
 function calculate_csarod(cs_raw, ar_raw, od_raw, mods_enabled){
 	let speed = 1, ar_multiplier = 1, ar, ar_ms;
 
-	if(mods_enabled.includes("DT")){
+	if(mods_enabled.includes("DT") || mods_enabled.includes("NC")){
 		speed *= 1.5;
-	}else if(mods_enabled.includes("HT")){
+	}else if(mods_enabled.includes("HT") || mods_enabled.includes("DC")){
 		speed *= .75;
 	}
 
@@ -1289,6 +1289,7 @@ function processBeatmap(cb){
             }
 
             if(hitObject.hitResult > 0){
+                scoringFrame.hitOffset = hitObject.hitOffset;
                 scoringFrame.combo++;
 
                 allhits.push(hitObject.hitOffset);
@@ -1353,6 +1354,8 @@ function processBeatmap(cb){
             if(hitObject.hitResult > 0){
                 scoringFrame.result = 30;
                 scoringFrame.combo++;
+
+                scoringFrame.hitOffset = hitObject.hitOffset;
     
                 allhits.push(hitObject.hitOffset);
                 scoringFrame.ur = variance(allhits) * 10;
@@ -1566,7 +1569,7 @@ function prepareBeatmap(cb){
 
         const {cs, ar, od} = calculate_csarod(beatmap.CircleSize, beatmap.ApproachRate, beatmap.OverallDifficulty, enabled_mods);
         const realtime = calculate_csarod(beatmap.CircleSize, beatmap.ApproachRate, beatmap.OverallDifficulty, 
-            enabled_mods.filter(a => !(['DT', 'HT'].includes(a))));
+            enabled_mods.filter(a => !(['DT', 'HT', 'NC', 'DC'].includes(a))));
 
         beatmap.CircleSize = cs;
 
@@ -1586,8 +1589,15 @@ function prepareBeatmap(cb){
         if(!isNaN(options.cs) && !(options.cs === undefined))
             beatmap.CircleSize = options.cs;
 
-        if(!isNaN(options.ar) && !(options.ar === undefined))
+        if(!isNaN(options.ar) && !(options.ar === undefined)){
+            beatmap.ApproachRateRealtime = options.ar;
             beatmap.ApproachRate = options.ar;
+        }
+
+        if(!isNaN(options.od) && !(options.od === undefined)){
+            beatmap.OverallDifficulty = options.od;
+            beatmap.OverallDifficultyRealtime = options.od;
+        }
 
         processBeatmap(cb);
     });
