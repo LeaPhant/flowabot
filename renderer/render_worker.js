@@ -681,7 +681,7 @@ process.on('message', async obj => {
                 ctx.font = `${32 * scale_multiplier}px monospace`;
                 ctx.fillText(`${currentFrame.combo}x`, ...comboPosition);
 
-                let { pp } = currentFrame;
+                let { pp, stars } = currentFrame;
 
                 if(time - currentFrame.offset < 400 && scoringFrames.length > 1){
                     let previousFrame;
@@ -694,14 +694,19 @@ process.on('message', async obj => {
                     }
 
                     const progress = (time - currentFrame.offset) / (time - previousFrame.offset);
-                    const diff = currentFrame.pp - previousFrame.pp;
+                    const diffPP = currentFrame.pp - previousFrame.pp;
+                    const diffStars = currentFrame.stars - previousFrame.stars;
 
-                    pp = previousFrame.pp + diff * progress;
+                    pp = previousFrame.pp + diffPP * progress;
+                    stars = previousFrame.stars + diffStars * progress;
                 }
 
                 ctx.textBaseline = "top";
                 ctx.font = `${26 * scale_multiplier}px monospace`;
                 ctx.fillText(`${pp.toFixed(2)}pp`, 15, 45);
+
+                ctx.font = `${21 * scale_multiplier}px monospace`;
+                ctx.fillText(`★${stars.toFixed(2)}`, 15, 47 + 26 * scale_multiplier);
                 
                 let accuracy = 100;
 

@@ -1556,15 +1556,18 @@ function processBeatmap(osuContents){
         });
 
         scoringFrame.pp = pp.total;
+        scoringFrame.stars = stars.total;
     }
 
-    let currentPP = 0;
+    let pp = 0, stars = 0;
 
     for(const scoringFrame of beatmap.ScoringFrames){
-        if(scoringFrame.pp != null)
-            currentPP = scoringFrame.pp;
+        if(scoringFrame.pp != null){
+            ({pp, stars} = scoringFrame)
+        }
 
-        scoringFrame.pp = currentPP;
+        scoringFrame.pp = pp;
+        scoringFrame.stars = stars;
     }
 
     const hitResults = _.countBy(beatmap.ScoringFrames, 'result');
