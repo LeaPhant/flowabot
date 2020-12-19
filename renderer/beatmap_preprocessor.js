@@ -1542,8 +1542,8 @@ function processBeatmap(osuContents){
     const mods = ojsama.modbits.from_string(enabled_mods.filter(a => ["HR", "EZ"].includes(a) == false).join(""));
 
     parser.map.cs = beatmap.CircleSize;
-    parser.map.od = beatmap.OverallDifficulty;
-    parser.map.ar = beatmap.ApproachRate;
+    parser.map.od = beatmap.OverallDifficultyRealtime;
+    parser.map.ar = beatmap.ApproachRateRealtime;
     
     for(const scoringFrame of beatmap.ScoringFrames.filter(a => ['miss', 50, 100, 300].includes(a.result))){
         const hitCount = scoringFrame.countMiss + scoringFrame.count50 + scoringFrame.count100 + scoringFrame.count300;
