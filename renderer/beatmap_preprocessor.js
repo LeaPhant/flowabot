@@ -352,12 +352,14 @@ function processBeatmap(osuContents){
         beatmap.TimePreempt = 1200 - 750 * (beatmap.ApproachRateRealtime - 5) / 5;
     }
 
-    if(['DT', 'NC'].includes(enabled_mods)){
-        beatmap.TimeFadein /= 1.5;
-        beatmap.TimePreempt /= 1.5;
-    }else if(['HT', 'DC'].includes(enabled_mods)){
-        beatmap.TimeFadein /= 0.75;
-        beatmap.TimePreempt /= 0.75;
+    if(options.ar == null){
+        if(['DT', 'NC'].includes(enabled_mods)){
+            beatmap.TimeFadein /= 1.5;
+            beatmap.TimePreempt /= 1.5;
+        }else if(['HT', 'DC'].includes(enabled_mods)){
+            beatmap.TimeFadein /= 0.75;
+            beatmap.TimePreempt /= 0.75;
+        }
     }
 
     // OD
