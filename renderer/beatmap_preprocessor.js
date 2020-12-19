@@ -1537,7 +1537,11 @@ function processBeatmap(osuContents){
     const parser = new ojsama.parser().feed(osuContents);
 
     const objects = parser.map.objects.slice();
-    const mods = ojsama.modbits.from_string(enabled_mods.join(""));
+    const mods = ojsama.modbits.from_string(enabled_mods.filter(a => ["HR", "EZ"].includes(a) == false).join(""));
+
+    parser.map.cs = beatmap.CircleSize;
+    parser.map.od = beatmap.OverallDifficulty;
+    parser.map.ar = beatmap.ApproachRate;
     
     for(const scoringFrame of beatmap.ScoringFrames.filter(a => ['miss', 50, 100, 300].includes(a.result))){
         const hitCount = scoringFrame.countMiss + scoringFrame.count50 + scoringFrame.count100 + scoringFrame.count300;
@@ -1575,6 +1579,8 @@ function processBeatmap(osuContents){
     hitResults.ur = beatmap.ScoringFrames[beatmap.ScoringFrames.length - 1].ur;
 
     beatmap.HitResults = hitResults;
+
+    console.log(hitResults);
 
     beatmap.Replay.lastCursor = 0;
 }
