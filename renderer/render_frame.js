@@ -727,8 +727,8 @@ module.exports = {
 						ffmpeg_args.push(
 							'-filter_complex', `"overlay=(W-w)/2:shortest=1"`,
 							'-pix_fmt', 'yuv420p', '-r', fps, '-c:v', 'libx264', '-b:v', `${bitrate}k`,
-							'-c:a', 'aac', '-b:a', '128k', '-shortest', '-preset', 'veryfast',
-							'-movflags', 'faststart', `${file_path}/video.mp4`
+							'-c:a', 'aac', '-b:a', '164k', '-shortest', '-preset', 'veryfast',
+							'-movflags', 'faststart', '-force_key_frames', '00:00:00.000', `${file_path}/video.mp4`
 						);
 
 						let ffmpegProcess = spawn(ffmpeg.path, ffmpeg_args, { shell: true });
