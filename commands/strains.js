@@ -31,13 +31,13 @@ module.exports = {
         return new Promise((resolve, reject) => {
             let { argv, msg, last_beatmap } = obj;
 
-            let beatmap_id, beatmap_url, beatmap_promise, download_promise, mods = "", ar = 2, cs, custom_url = false, type;
+            let beatmap_id, beatmap_url, beatmap_promise, download_promise, mods = [], ar = 2, cs, custom_url = false, type;
 
             argv.map(arg => arg.toLowerCase());
 
             argv.slice(1).forEach(arg => {
                 if(arg.startsWith('+')){
-                    mods = arg.toUpperCase().substr(1);
+                    mods = arg.toUpperCase().substr(1).match(/.{1,2}/g);
                 }else if(arg.startsWith('ar')){
                     ar = parseFloat(arg.substr(2));
                 }else if(arg.startsWith('cs')){
@@ -64,7 +64,7 @@ module.exports = {
                     beatmap_id = last_beatmap[msg.channel.id].beatmap_id;
                     download_promise = helper.downloadBeatmap(beatmap_id);
 
-                    mods = last_beatmap[msg.channel.id].mods.join('');
+                    mods = last_beatmap[msg.channel.id].mods;
                 }
 
                 let download_path = path.resolve(config.osu_cache_path, `${beatmap_id}.osu`);
@@ -79,7 +79,7 @@ module.exports = {
                 }
 
                 Promise.resolve(download_promise).then(() => {
-                    osu.get_strains_graph(download_path, mods, cs, ar, type, (err, buf) => {
+                    osu.get_strains_graph(download_path, mods.join(''), cs, ar, type, (err, buf) => {
                        if(err){
                             reject(err);
                             return false;

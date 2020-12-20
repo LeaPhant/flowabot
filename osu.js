@@ -529,6 +529,8 @@ function getScore(recent_raw, cb){
                     nmiss: Number(recent_raw.countmiss)
                 });
 
+                console.log(pp);
+
                 let pp_fc = ojsama.ppv2({
                     aim_stars: diff.aim,
                     speed_stars: diff.speed,
@@ -1951,7 +1953,7 @@ module.exports = {
                         else{
 							Jimp.read(Buffer.from(res.data, 'base64')).then(_graph => {
 	                            Jimp.read(output_frame).then(_frame => {
-	                                _graph.blit(_frame, 75, 20);
+	                                _graph.composite(_frame, 75, 20, { opacitySource: 0.6 });
 	                                _graph.getBufferAsync('image/png').then(buffer => {
 	                                    cb(null, buffer);
 	                                }).catch(helper.error);
