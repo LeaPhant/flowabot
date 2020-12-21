@@ -861,6 +861,45 @@ process.on('message', async obj => {
         if(beatmap.Replay){
             let replay_point = getCursorAt(time, beatmap.ReplayInterpolated);
 
+            let smokeActive = false;
+
+            ctx.globalAlpha = 1;
+            ctx.lineWidth = 6 * scale_multiplier;
+            ctx.strokeStyle = "rgba(255,255,255,0.4)";
+
+            for(let i = beatmap.Replay.lastCursor - 1; i > 0; i--){
+                const frame = beatmap.Replay.replay_data[i];
+
+                if(frame.offset > time)
+                    continue;
+
+                if(time - frame.offset > 5000)
+                    break;
+
+                if(frame.S == false && smokeActive){
+                    if(smokeActive){
+                        ctx.stroke();
+                        smokeActive = false;
+                    }
+                    
+                    continue;
+                }
+
+                if(frame.S){
+                    if(!smokeActive){
+                        smokeActive = true;
+                        ctx.beginPath();
+                        ctx.moveTo(...playfieldPosition(frame.x, frame.y));
+                    }else{
+                        ctx.lineTo(...playfieldPosition(frame.x, frame.y));
+                    }
+                }
+            }
+
+            if(smokeActive){
+                ctx.stroke();
+            }
+
             if(replay_point){
                 if(beatmap.Replay.auto !== true){
                     ctx.globalAlpha = 1;

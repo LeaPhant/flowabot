@@ -36,7 +36,8 @@ const keys_enum = {
     "M1": Math.pow(2,0),
     "M2": Math.pow(2,1),
     "K1": Math.pow(2,2),
-    "K2": Math.pow(2,3)
+    "K2": Math.pow(2,3),
+    "S": Math.pow(2,4)
 }
 
 function parseKeysPressed(num){
@@ -45,7 +46,8 @@ function parseKeysPressed(num){
         K1: false,
         K2: false,
         M1: false,
-        M2: false
+        M2: false,
+        S: false
     };
 
     for(key in keys_enum){
