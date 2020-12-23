@@ -13,7 +13,7 @@ const config = require('../config.json');
 module.exports = {
     command: ['render', 'frame', 'fail'],
     description: "Render picture or gif of a beatmap at a specific time. Videos 10 seconds or longer are automatically rendered as mp4 video with audio and beatmap background.",
-    usage: '[beatmap url] [+mods] [AR8] [CS6] [preview/strains/aim/speed/fail] [20%] [mp4] [plain] [120fps] [mm:ss] [353x] [4s]',
+    usage: '[beatmap url] [+mods] [AR8] [CS6] [preview/strains/aim/speed/fail] [HD] [20%] [mp4] [plain] [120fps] [mm:ss] [353x] [4s]',
     example: [
         {
             run: "render strains",
@@ -63,6 +63,7 @@ module.exports = {
             let fps = 60;
             let combo = 0;
             let speed = 1;
+            let hidden = false;
 
             argv.map(arg => arg.toLowerCase());
 
@@ -90,6 +91,8 @@ module.exports = {
                     length = 9;
                     video_type = 'mp4';
                     audio = true;
+                }else if(arg == 'hd'){
+                    hidden = true;
                 }else if(arg == 'mp4'){
                     video_type = 'mp4';
                 }else if(arg == 'audio'){
@@ -202,7 +205,7 @@ module.exports = {
 								replace_promise: new Promise((resolve, reject) => {
 									frame.get_frames(download_path, time, length * 1000, mods, size, {
                                         combo,
-										type: video_type, cs, ar, od, black: false, score_id, audio, fps, speed,
+										type: video_type, cs, ar, od, hidden, black: false, score_id, audio, fps, speed,
 										fill: video_type == 'mp4', noshadow: true, percent, border: false, objects
 									}, (err, send, remove_path) => {
 										if(err)
@@ -215,7 +218,7 @@ module.exports = {
 						}else{
 							frame.get_frame(download_path, time, mods, [800, 600], {
                                 combo,
-								cs: cs, ar: ar, score_id, black: true, fill: true, percent: percent
+								cs: cs, ar: ar, score_id, black: true, fill: true, hidden, percent: percent
 							}, (err, buf) => {
 								if(err)
 									reject(err);

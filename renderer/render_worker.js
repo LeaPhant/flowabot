@@ -263,7 +263,7 @@ process.on('message', async obj => {
                 if(hitObject.objectName == "slider"){
                     let sliderOpacity = opacity;
 
-                    if(beatmap.Replay && beatmap.Replay.Mods.includes("HD")){
+                    if(options.hidden){
                         const fadeOutStartTime = hitObject.startTime - beatmap.TimePreempt + beatmap.TimeFadein;
     
                         if(time >= fadeOutStartTime)
@@ -461,7 +461,7 @@ process.on('message', async obj => {
 
                 let circleOpacity = opacity;
 
-                if(circleOpacity >= 1 && beatmap.Replay && beatmap.Replay.Mods.includes("HD")){
+                if(options.hidden && circleOpacity >= 1){
                     const fadeOutStartTime = hitObject.startTime - beatmap.TimePreempt + beatmap.TimeFadein;
 
                     if(time >= fadeOutStartTime)
@@ -512,7 +512,7 @@ process.on('message', async obj => {
                         ctx.fillText(hitObject.ComboNumber, position[0], position[1]);
 
                         // Draw approach circle
-                        if(approachCircle > 0 && (beatmap.Replay && !beatmap.Replay.Mods.includes("HD"))){
+                        if(approachCircle > 0 && !options.hidden){
                             ctx.strokeStyle = 'white';
                             ctx.lineWidth = 2 * scale_multiplier;
                             ctx.beginPath();
@@ -605,8 +605,7 @@ process.on('message', async obj => {
                 }
             }
 
-            if((beatmap.Replay && !beatmap.Replay.Mods.includes("HD"))
-            && time >= hitObject.startTime && hitObject.startTime - time > -200){
+            if(!options.hidden && time >= hitObject.startTime && hitObject.startTime - time > -200){
                 // Draw fading out circles
                 if(hitObject.objectName != "spinner"){
                     // Increase circle size the further it's faded out

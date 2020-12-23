@@ -364,7 +364,7 @@ function processBeatmap(osuContents){
         }
     }
 
-    if(enabled_mods.includes("HD"))
+    if(enabled_mods.includes("HD") && options.hidden)
         beatmap.TimeFadein = beatmap.TimePreempt * 0.4;
 
     // OD
