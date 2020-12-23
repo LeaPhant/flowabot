@@ -364,6 +364,9 @@ function processBeatmap(osuContents){
         }
     }
 
+    if(enabled_mods.includes("HD"))
+        beatmap.TimeFadein = beatmap.TimePreempt * 0.4;
+
     // OD
     beatmap.HitWindow300 = (50 + 30 * (5  - beatmap.OverallDifficultyRealtime) / 5) - 0.5;
     beatmap.HitWindow100 = (100 + 40 * (5  - beatmap.OverallDifficultyRealtime) / 5) - 0.5;
@@ -1587,6 +1590,7 @@ function processBeatmap(osuContents){
     console.log(hitResults);
 
     beatmap.Replay.lastCursor = 0;
+    beatmap.Replay.Mods = enabled_mods;
 }
 
 async function prepareBeatmap(){
