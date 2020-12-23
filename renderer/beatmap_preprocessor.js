@@ -378,7 +378,7 @@ function processBeatmap(osuContents){
 
     // CS
     beatmap.Scale = (1.0 - 0.7 * (beatmap.CircleSize - 5) / 5) / 2;
-    beatmap.Radius = OBJECT_RADIUS * beatmap.Scale;
+    beatmap.Radius = 23.05 - (beatmap.CircleSize - 7) * 4.4825;
     beatmap.FollowpointRadius = beatmap.Radius * 2;
     beatmap.ActualFollowpointRadius = beatmap.Radius * 2.4;
 
