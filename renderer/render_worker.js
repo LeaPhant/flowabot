@@ -459,19 +459,17 @@ process.on('message', async obj => {
                     ctx.globalAlpha = opacity;
                 }
 
-                let circleOpacity = opacity;
-
-                if(circleOpacity >= 1 && beatmap.Replay && beatmap.Replay.Mods.includes("HD")){
+                if(opacity >= 1 && beatmap.Replay && beatmap.Replay.Mods.includes("HD")){
                     const fadeOutStartTime = hitObject.startTime - beatmap.TimePreempt + beatmap.TimeFadein;
 
                     if(time >= fadeOutStartTime)
-                        circleOpacity = 1 - (time - fadeOutStartTime) / (beatmap.TimePreempt * 0.3);
+                        opacity = 1 - (time - fadeOutStartTime) / (beatmap.TimePreempt * 0.3);
 
                     if(opacity < 0)
-                        circleOpacity = 0;
+                        opacity = 0;
                 }
 
-                ctx.globalAlpha = circleOpacity;
+                ctx.globalAlpha = opacity;
 
                 // Draw circles or slider heads
                 if(hitObject.objectName != "spinner"){
