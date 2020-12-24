@@ -64,6 +64,7 @@ module.exports = {
             let combo = 0;
             let speed = 1;
             let hidden = false;
+            let analyze = false;
 
             argv.map(arg => arg.toLowerCase());
 
@@ -108,6 +109,8 @@ module.exports = {
                         fps = Math.max(1, Math.min(240, _fps));
                         video_type = 'mp4';
                     }
+                }else if(arg == 'analyze'){
+                    analyze = true;
                 }else if(arg.endsWith('s')){
                     length = parseFloat(arg);
                 }else if(arg.endsWith('x')){
@@ -205,7 +208,7 @@ module.exports = {
 								replace_promise: new Promise((resolve, reject) => {
 									frame.get_frames(download_path, time, length * 1000, mods, size, {
                                         combo,
-										type: video_type, cs, ar, od, hidden, black: false, score_id, audio, fps, speed,
+										type: video_type, cs, ar, od, analyze, hidden, black: false, score_id, audio, fps, speed,
 										fill: video_type == 'mp4', noshadow: true, percent, border: false, objects
 									}, (err, send, remove_path) => {
 										if(err)
@@ -218,7 +221,7 @@ module.exports = {
 						}else{
 							frame.get_frame(download_path, time, mods, [800, 600], {
                                 combo,
-								cs: cs, ar: ar, score_id, black: true, fill: true, hidden, percent: percent
+								cs: cs, ar: ar, score_id, black: true, fill: true, analyze, hidden, percent: percent
 							}, (err, buf) => {
 								if(err)
 									reject(err);

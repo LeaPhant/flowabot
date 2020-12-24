@@ -605,7 +605,8 @@ process.on('message', async obj => {
                 }
             }
 
-            if(!options.hidden && time >= hitObject.startTime && hitObject.startTime - time > -200){
+            if(!options.hidden && time >= hitObject.startTime && hitObject.startTime - time > -200 
+                && hitObject.hitResult != 0 && !hitObject.MissedSliderStart){
                 // Draw fading out circles
                 if(hitObject.objectName != "spinner"){
                     // Increase circle size the further it's faded out
@@ -658,6 +659,32 @@ process.on('message', async obj => {
                 }
             }
         });
+
+        if(options.analyze){
+            for(const hitObject of beatmap.hitObjects){
+                if(hitObject.objectName == 'spinner')
+                    continue;
+
+                if(hitObject.hitResult > 0 && hitObject.objectName == 'circle'
+                || hitObject.MissedSliderStart < 1 && hitObject.objectName == 'slider')
+                    continue;
+
+                if(time < hitObject.startTime)
+                    continue;
+
+                if(time - hitObject.startTime > 500 / options.speed)
+                    continue;
+
+                const position = playfieldPosition(...hitObject.position);
+
+                ctx.globalAlpha = 1;
+                ctx.lineWidth = 3 * scale_multiplier;
+                ctx.strokeStyle = options.fill ? '#fa2f2f' : 'white';
+                ctx.beginPath();
+                ctx.arc(...position, scale_multiplier * beatmap.Radius - ctx.lineWidth / 2, 0, 2 * Math.PI, false);
+                ctx.stroke();
+            }
+        }
 
         if(beatmap.ScoringFrames && beatmap.Replay.auto !== true){
             //const scoringFrames = getScoringFrames(time, beatmap.ScoringFrames);
@@ -891,17 +918,37 @@ process.on('message', async obj => {
             let smokeActive = false;
 
             ctx.globalAlpha = 1;
-            ctx.lineWidth = 6 * scale_multiplier;
-            ctx.strokeStyle = "rgba(255,255,255,0.4)";
 
             for(let i = beatmap.Replay.lastCursor - 1; i > 0; i--){
                 const frame = beatmap.Replay.replay_data[i];
+                const previousFrame = beatmap.Replay.replay_data[i - 1];
 
                 if(frame.offset > time)
                     continue;
 
                 if(time - frame.offset > 5000)
                     break;
+
+                if(options.analyze && previousFrame != null && time - frame.offset < 750){
+                    if(((frame.K1 || frame.M1) && !previousFrame.K1 && !previousFrame.M1)
+                    ||((frame.K2 || frame.M2) && !previousFrame.K2 && !previousFrame.M2)){
+                        ctx.lineWidth = 1;
+                        ctx.strokeStyle = "white";
+
+                        const position = playfieldPosition(frame.x, frame.y);
+
+                        ctx.moveTo(position[0], position[1] - 5);
+                        ctx.lineTo(position[0], position[1] + 5);
+                        ctx.stroke();
+
+                        ctx.moveTo(position[0] - 5, position[1]);
+                        ctx.lineTo(position[0] + 5, position[1]);
+                        ctx.stroke();
+                    }
+                }
+
+                ctx.lineWidth = 6 * scale_multiplier;
+                ctx.strokeStyle = "rgba(255,255,255,0.4)";
 
                 if(frame.S == false && smokeActive){
                     if(smokeActive){
