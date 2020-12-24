@@ -605,8 +605,7 @@ process.on('message', async obj => {
                 }
             }
 
-            if(!options.hidden && time >= hitObject.startTime && hitObject.startTime - time > -200 
-                && hitObject.hitResult != 0 && !hitObject.MissedSliderStart){
+            if(!options.hidden && time >= hitObject.startTime && hitObject.startTime - time > -200){
                 // Draw fading out circles
                 if(hitObject.objectName != "spinner"){
                     // Increase circle size the further it's faded out
@@ -672,7 +671,7 @@ process.on('message', async obj => {
                 if(time < hitObject.startTime)
                     continue;
 
-                if(time - hitObject.startTime > 500 / options.speed)
+                if(time - hitObject.startTime > 750)
                     continue;
 
                 const position = playfieldPosition(...hitObject.position);
