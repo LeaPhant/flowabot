@@ -108,15 +108,19 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 	let media = await mediaPromise;
 	let execFilePromise = util.promisify(execFile);
 
+	let beatmapAudio = false;
+
 	try{
 		await execFilePromise(ffmpeg.path, [
 			'-ss', start_time / 1000, '-i', `"${media.audio_path}"`, '-t', actual_length * Math.max(1, time_scale) / 1000,
-			'-filter:a', `"afade=t=out:st=${actual_length * time_scale / 1000 - 0.5 / time_scale}:d=0.5,atempo=${time_scale},volume=0.7"`,
+			'-filter:a', `"afade=t=out:st=${Math.max(0, actual_length * time_scale / 1000 - 0.5 / time_scale)}:d=0.5,atempo=${time_scale},volume=0.7"`,
 			path.resolve(file_path, 'audio.wav')
 		], { shell: true });
+
+		beatmapAudio = true;
 	}catch(e){
 		console.error(e);
-		throw "Error trimming beatmap audio";
+		//throw "Error trimming beatmap audio";
 	}
 
 	let hitSoundPaths = await processHitsounds(media.beatmap_path);
@@ -285,11 +289,16 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 
 			await execFilePromise(ffmpeg.path, mergeHitSoundArgs, { shell: true });
 
-			let mergeArgs = [
-				'-guess_layout_max', '0', '-i', path.resolve(file_path, `audio.wav`),
+			const mergeArgs = [];
+			let mixInputs = beatmapAudio ? 2 : 1;
+
+			if(beatmapAudio)
+				mergeArgs.push('-guess_layout_max', '0', '-i', path.resolve(file_path, `audio.wav`));
+
+			mergeArgs.push(
 				'-guess_layout_max', '0', '-i', path.resolve(file_path, `hitsounds.wav`),
-				'-filter_complex', `amix=inputs=2:duration=first:dropout_transition=${actual_length},volume=2,dynaudnorm`, path.resolve(file_path, 'merged.wav')
-			];
+				'-filter_complex', `amix=inputs=${mixInputs}:duration=first:dropout_transition=${actual_length},volume=2,dynaudnorm`, path.resolve(file_path, 'merged.wav')
+			);
 
 			await execFilePromise(ffmpeg.path, mergeArgs, { shell: true });
 
