@@ -786,7 +786,21 @@ process.on('message', async obj => {
 
                 ctx.textBaseline = "bottom";
                 ctx.font = `${26 * scale_multiplier}px monospace`;
-                ctx.fillText(`${currentFrame.ur.toFixed(2)} UR`, ...urPosition);
+
+                let urText = 'UR';
+                let { ur } = currentFrame;
+
+                if(beatmap.Replay && (beatmap.Replay.Mods.includes('DT') || beatmap.Replay.Mods.includes('NC') || beatmap.Replay.Mods.includes("HT"))){
+                    urText = 'cvUR';
+
+                    if(beatmap.Replay.Mods.includes('DT') || beatmap.Replay.Mods.includes('NC'))
+                        ur /= 1.5;
+
+                    if(beatmap.Replay.Mods.includes('HT'))
+                        ur /= 0.75;
+                }
+
+                ctx.fillText(`${ur.toFixed(2)} ${urText}`, ...urPosition);
 
                 /*
                 ctx.textAlign = "right";
