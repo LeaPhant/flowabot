@@ -2,8 +2,10 @@ const osuBeatmapParser = require('osu-parser');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
+const osr = require('node-osr');
 const lzma = require('lzma');
 const ojsama = require('ojsama');
+const axios = require('axios');
 const _ = require('lodash');
 const helper = require('../helper.js');
 
@@ -117,8 +119,12 @@ function getCursor(replay){
     };
 }
 
-function parseReplay(buf){
-    let replay_data = lzma.decompress(buf);
+function parseReplay(buf, decompress = true){
+    let replay_data = buf;
+
+    if(decompress)
+        replay_data = lzma.decompress(replay_data);
+        
     let replay_frames = replay_data.split(",");
 
     let output_frames = [];
@@ -1609,6 +1615,20 @@ async function prepareBeatmap(){
 
         if(fs.existsSync(replay_path))
             replay = {lastCursor: 0, replay_data: parseReplay(fs.readFileSync(replay_path))};
+    }
+
+    if(options.osr){
+        try{
+            const response = await axios.get(options.osr, { timeout: 5000, responseType: 'arraybuffer' });
+
+            const parsedOsr = await osr.read(response.data);
+
+            replay = {lastCursor: 0, replay_data: parseReplay(parsedOsr.replay_data, false)};
+        }catch(e){
+            console.error(e);
+
+            throw "Couldn't download replay";
+        }
     }
 
     speed_multiplier = 1;

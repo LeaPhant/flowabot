@@ -44,7 +44,7 @@ module.exports = {
             let beatmap_id, beatmap_url, beatmap_promise, mods = [], time = 0,
             ar, cs, od, length = 0, percent = 0, custom_url = false,
             size = [400, 300], type, objects,
-            video_type = 'gif', audio = true, download_promise;
+            video_type = 'gif', audio = true, download_promise, osr;
 
             let score_id;
 
@@ -84,6 +84,8 @@ module.exports = {
                         time += parseInt(parts[1]) * 1000;
                         time += parseInt(parts[0]) * 1000 * 60;
                     }
+                }else if(arg.endsWith('.osr')){
+                    osr = arg;
                 }else if(arg == 'strains' || arg == 'aim' || arg == 'speed'){
                     type = arg;
                     length = 4;
@@ -208,7 +210,7 @@ module.exports = {
 								replace_promise: new Promise((resolve, reject) => {
 									frame.get_frames(download_path, time, length * 1000, mods, size, {
                                         combo,
-										type: video_type, cs, ar, od, analyze, hidden, black: false, score_id, audio, fps, speed,
+										type: video_type, cs, ar, od, analyze, hidden, black: false, osr, score_id, audio, fps, speed,
 										fill: video_type == 'mp4', noshadow: true, percent, border: false, objects
 									}, (err, send, remove_path) => {
 										if(err)
