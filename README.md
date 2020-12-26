@@ -36,7 +36,7 @@
 
 ### Prerequisites
 
-- **Using Linux or macOS is recommended** (No support for Windows, here's a guide to use Windows Subsystem for Linux if you wanna run it anyway: https://github.com/LeaPhant/flowabot/issues/9)
+- **Using Linux or macOS is recommended** (No support for Windows, here's two unofficial guides to run it on Windows if you wanna try anyway: https://github.com/LeaPhant/flowabot/issues/9, https://pastebin.com/g6yuxCCf)
 - Git (https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
 - Node.js 10 LTS (other versions are untested) (https://nodejs.org/download/release/latest-dubnium/)
 - node-gyp (https://github.com/nodejs/node-gyp#installation)
