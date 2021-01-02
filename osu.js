@@ -163,8 +163,8 @@ var settings = {
 };
 
 function accuracy(count300, count100, count50, countmiss){
-	return (count300 * 300 + count100 * 100 + count50 * 50)
-		/  (count300 * 300 + count100 * 300 + count50 * 300 + countmiss * 300);
+	return (Number(count300) * 300 + Number(count100) * 100 + Number(count50) * 50)
+		/  (Number(count300) * 300 + Number(count100) * 300 + Number(count50) * 300 + Number(countmiss) * 300);
 }
 
 function compare(a,b){
@@ -1216,6 +1216,59 @@ module.exports = {
         });
 
     },
+
+	get_tops: async function(options, cb){
+		let requests = [
+	        api.get('/get_user_best', { params: { u: options.user, limit: options.count } }),
+	        api.get('/get_user', { params: { u: options.user } })
+        ];
+        
+        const results = await Promise.all(requests);
+
+        let user_best = results[0].data;
+        let user = results[1].data[0];
+
+        if(user_best.length < 1){
+            cb(`No top plays found for ${options.user}`);
+            return;
+        }
+
+        const tops = user_best.slice(0, options.count || 5);
+
+        const { data } = await axios(`${config.beatmap_api}/b/${tops.map(a => a.beatmap_id).join(",")}`);
+
+        for(const top of tops){
+            const { beatmap, difficulty } = data.find(a => a.beatmap.beatmap_id == top.beatmap_id);
+
+            top.accuracy = (accuracy(top.count300, top.count100, top.count50, top.countmiss) * 100).toFixed(2);
+            top.mods = getMods(top.enabled_mods);
+
+            const diff = difficulty[getModsEnum(top.mods.filter(mod => DIFF_MODS.includes(mod)))];
+
+            const pp_fc = ojsama.ppv2({
+                aim_stars: diff.aim,
+                speed_stars: diff.speed,
+                base_ar: beatmap.ar,
+                base_od: beatmap.od,
+                n300: Number(top.count300 + top.countmiss),
+                n100: Number(top.count100),
+                n50: Number(top.count50),
+                mods: Number(top.enabled_mods),
+                ncircles: beatmap.num_circles,
+                nsliders: beatmap.num_sliders,
+                nobjects: beatmap.hit_objects,
+                max_combo: beatmap.max_combo,
+            });
+
+            top.pp_fc = pp_fc.total;
+            top.acc_fc = (pp_fc.computed_accuracy.value() * 100).toFixed(2);
+            top.rank_emoji = getRankEmoji(top.rank);
+
+            top.beatmap = beatmap;
+        }
+
+        return { user, tops };
+	},
 
     get_top: function(options, cb){
         let params = {
