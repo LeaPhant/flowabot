@@ -24,25 +24,35 @@ module.exports = {
         return new Promise((resolve, reject) => {
             let { argv, msg, user_ign, last_beatmap } = obj;
 
+            let modsSet = false, accSet = false, beatmapSet = false;
+
             let options = {
                 mods: [],
                 custom_acc: 100
             };
 
-            if(msg.channel.id in last_beatmap){
-                options.beatmap_id = last_beatmap[msg.channel.id].beatmap_id;
-                options.mods = last_beatmap[msg.channel.id].mods;
-                options.custom_acc = last_beatmap[msg.channel.id].acc;
-            }
-
             argv.slice(1).forEach(arg => {
-                if(arg.startsWith('+'))
+                if(arg.startsWith('+')){
                     options.mods = arg.toUpperCase().substr(1).match(/.{1,2}/g);
-                else if(arg.endsWith('%'))
+                    modsSet = true;
+                }else if(arg.endsWith('%')){
                     options.custom_acc = parseFloat(arg);
-                else
+                    accSet = true;
+                }else{
                     options.beatmap_id = osu.parse_beatmap_url_sync(arg, false);
+                    beatmapSet = true;
+                }
             });
+
+            if(msg.channel.id in last_beatmap && beatmapSet == false){
+                options.beatmap_id = last_beatmap[msg.channel.id].beatmap_id;
+
+                if(!modsSet)
+                    options.mods = last_beatmap[msg.channel.id].mods;
+
+                if(!accSet)
+                    options.custom_acc = last_beatmap[msg.channel.id].acc;
+            }
 
             if(!(msg.channel.id in last_beatmap) && options.beatmap_id == null){
                 reject('No recent score to get the beatmap from');
