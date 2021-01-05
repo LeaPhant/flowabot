@@ -24,16 +24,16 @@ module.exports = {
         return new Promise((resolve, reject) => {
             let { argv, msg, user_ign, last_beatmap } = obj;
 
-            if(!(msg.channel.id in last_beatmap)){
-                reject('No recent score to get the beatmap from');
-                return false;
-            }
-
             let options = {
-                beatmap_id: last_beatmap[msg.channel.id].beatmap_id,
-                mods: last_beatmap[msg.channel.id].mods,
-                custom_acc: last_beatmap[msg.channel.id].acc
+                mods: [],
+                custom_acc: 100
             };
+
+            if(msg.channel.id in last_beatmap){
+                options.beatmap_id = last_beatmap[msg.channel.id].beatmap_id;
+                options.mods = last_beatmap[msg.channel.id].mods;
+                options.custom_acc = last_beatmap[msg.channel.id].acc;
+            }
 
             argv.slice(1).forEach(arg => {
                 if(arg.startsWith('+'))
@@ -43,6 +43,11 @@ module.exports = {
                 else
                     options.beatmap_id = osu.parse_beatmap_url_sync(arg, false);
             });
+
+            if(!(msg.channel.id in last_beatmap) && options.beatmap_id == null){
+                reject('No recent score to get the beatmap from');
+                return false;
+            }
 
             osu.get_pp(options, (err, embed) => {
                 if(err){
