@@ -4,7 +4,7 @@ const helper = require('../helper.js');
 module.exports = {
     command: 'with',
     description: "Show pp values of a beatmap with several accuracies or a specified accuracy.",
-    usage: '[+mods] [98.34%]',
+    usage: '[beatmap url] [+mods] [98.34%]',
     example: [
         {
             run: "with",
@@ -41,7 +41,7 @@ module.exports = {
                 else if(arg.endsWith('%'))
                     options.custom_acc = parseFloat(arg);
                 else
-                    options.mods = arg.toUpperCase().match(/.{1,2}/g);
+                    options.beatmap_id = osu.parse_beatmap_url_sync(arg, false);
             });
 
             osu.get_pp(options, (err, embed) => {

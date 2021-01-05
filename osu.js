@@ -1360,9 +1360,6 @@ module.exports = {
 
             if(!accuracies.includes(custom_acc))
                 accuracies.push(custom_acc);
-
-            helper.log(custom_acc, '%');
-
             accuracies = accuracies.sort((a, b) => a - b);
 
             let pps = [];
@@ -1428,6 +1425,10 @@ module.exports = {
                 {
                     name: lines[2],
                     value: lines[3]
+                },
+                {
+                    name: 'Score Nomod SS',
+                    value: beatmap.max_score.toLocaleString()
                 }
             ];
 
