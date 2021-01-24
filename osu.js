@@ -1757,7 +1757,7 @@ module.exports = {
 				let previewTime = Number(beatmap.PreviewTime);
 
 				if(previewTime < 0 || isNaN(previewTime))
-					previewTime = 0.4 * totalTime * 1000;
+					previewTime = 0.4 * Number(beatmap.totalTime) * 1000;
 
 				resolve(previewTime);
 			});
