@@ -961,6 +961,7 @@ module.exports = {
 		}
 
         let ranked_text = 'Submitted';
+        let ranked_date = recent.approved_date;
 
         switch(recent.approved){
             case 1:
@@ -975,11 +976,13 @@ module.exports = {
             case 4:
                 ranked_text = 'Loved';
                 break;
+            default:
+                ranked_date = recent.submitted_date;
         }
 
         embed.footer = {
             icon_url: `https://a.ppy.sh/${recent.creator_id}?${+new Date()}`,
-            text: `Mapped by ${recent.creator}${helper.sep}${ranked_text} on ${moment(recent.approved_date).format('D MMMM YYYY')}`
+            text: `Mapped by ${recent.creator}${helper.sep}${ranked_text} on ${moment(ranked_date).format('D MMMM YYYY')}`
         };
         embed.thumbnail = {
             url: `https://b.ppy.sh/thumb/${recent.beatmapset_id}l.jpg`
