@@ -30,8 +30,7 @@ module.exports = {
             for(const presence of activities){
                 if(presence.name !== null
                 && ['Spotify', 'osu!'].includes(presence.name)){
-                    if(presence.name == 'osu!'
-                    && (presence.type == 'PLAYING' || presence.state.startsWith('Spectating'))){
+                    if(presence.name == 'osu!' && presence.details != null){
                         let artist_title = presence.details;
                         let username = presence.assets.largeText;
                         let profile_link;
