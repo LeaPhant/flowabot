@@ -1591,8 +1591,8 @@ module.exports = {
         }
     },
 
-    get_user: function(user, cb){
-        api.get('/get_user', {params: {u: user}}).then(response => {
+    get_user: function(options, cb){
+        api.get('/get_user', {params: {u: options.u}}).then(response => {
             response = response.data;
 
 			helper.log(response);
@@ -1658,13 +1658,37 @@ module.exports = {
                         name: 'Hit Accuracy',
                         value: `${Number(data.accuracy).toFixed(2)}%`,
                         inline: true
-                    },
-                    {
-                        name: 'Grades',
-                        value: grades
                     }
                 ]
             };
+
+            if(options.extended){
+                const hitCount = Number(data.count300) + Number(data.count100) + Number(data.count50);
+
+                embed.fields.push({
+                    name: 'SS Count',
+                    value: (Number(data.count_rank_ssh) + Number(data.count_rank_ss)).toLocaleString(),
+                    inline: true
+                },
+                {
+                    name: 'Hit Count',
+                    value: hitCount.toLocaleString(),
+                    inline: true
+                },
+                {
+                    name: 'Hits per Play',
+                    value: (hitCount / Number(data.playcount)).toFixed(1),
+                    inline: true
+                });
+            }
+
+            embed.fields.push(
+                {
+                    name: 'Grades',
+                    value: grades,
+                    inline: false
+                }
+            );
 
             helper.log(embed);
 
