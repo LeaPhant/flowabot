@@ -307,10 +307,6 @@ function onMessage(msg){
 
 client.on('message', onMessage);
 
-client.on('presenceUpdate', (oldPresence, newPresence) => {
-    console.log(newPresence);
-});
-
 client.on('ready', () => {
 	helper.log('flowabot is ready');
 	if(config.credentials.discord_client_id)
