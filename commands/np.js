@@ -21,73 +21,75 @@ module.exports = {
         return new Promise((resolve, reject) => {
             let { argv, msg } = obj;
 
-            let presence = msg.author.presence;
+            let activities = msg.author.presence.activities;
+
+            console.log(msg.author.presence);
 
             let embed;
 
-            if(presence.game !== null
-            && typeof presence.game === 'object'
-            && 'name' in presence.game
-            && ['Spotify', 'osu!'].includes(presence.game.name)){
-                if(presence.game.name == 'osu!'
-                && (presence.game.state == 'Clicking circles' || presence.game.state.startsWith('Spectating'))){
-                    let artist_title = presence.game.details;
-                    let username = presence.game.assets.largeText;
-                    let profile_link;
-
-                    if(username.includes('('))
-                        profile_link = `https://osu.ppy.sh/u/${username.split('(')[0].trim()}`;
-
-                    let playing_text = presence.game.state.startsWith('Spectating') ?
-                        presence.game.state : 'Playing';
-
-
-                    embed = {
-                        color: 12277111,
-                        author: {
-                            name: msg.member.nickname || msg.member.username,
-                            icon_url: msg.author.avatarURL
-                        },
-                        title: artist_title,
-                        footer: {
-                            icon_url: "https://osu.ppy.sh/favicon-32x32.png",
-                            text: `osu!${helper.sep}${playing_text} right now`
-                        }
-                    };
-
-                    if(profile_link)
-                        embed.author.url = profile_link;
-                }else{
-                    let title = presence.game.details;
-                    let artist = presence.game.state;
-                    let album = presence.game.assets;
-                    let album_name = album.largeText;
-                    let album_cover = album.largeImage.split(':');
-                    let track_url = `https://open.spotify.com/track/${presence.game.syncID}`;
-                    let username = msg.author.username;
-
-                    if(msg.member !== null && msg.member.nickname !== null)
-                      username = msg.member.nickname;
-
-                    if(album_cover.length > 1){
-                        album_cover = `https://i.scdn.co/image/${album_cover[1]}`;
-
+            for(const presence of activities){
+                if(presence.name !== null
+                && ['Spotify', 'osu!'].includes(presence.name)){
+                    if(presence.name == 'osu!'
+                    && (presence.type == 'PLAYING' || presence.state.startsWith('Spectating'))){
+                        let artist_title = presence.details;
+                        let username = presence.assets.largeText;
+                        let profile_link;
+    
+                        if(username.includes('('))
+                            profile_link = `https://osu.ppy.sh/u/${username.split('(')[0].trim()}`;
+    
+                        let playing_text = presence.state.startsWith('Spectating') ?
+                            presence.state : 'Playing';
+    
+    
                         embed = {
-                            color: 1947988,
+                            color: 12277111,
                             author: {
-                                name: username,
-                                icon_url: msg.author.avatarURL
+                                name: msg.member.nickname || msg.member.username,
+                                icon_url: msg.author.avatarURL()
                             },
+                            title: artist_title,
                             footer: {
-                                icon_url: "https://open.spotify.com/favicon.ico",
-                                text: `Spotify${helper.sep}Listening right now`
-                            },
-                            thumbnail: {
-                                url: album_cover
-                            },
-                            title: `**${artist}** – ${title}`,
-                            description: `⠀\nAlbum: **${album_name}**`,
-                            url: track_url
+                                icon_url: "https://osu.ppy.sh/favicon-32x32.png",
+                                text: `osu!${helper.sep}${playing_text} right now`
+                            }
+                        };
+    
+                        if(profile_link)
+                            embed.author.url = profile_link;
+                    }else{
+                        let title = presence.details;
+                        let artist = presence.state;
+                        let album = presence.assets;
+                        let album_name = album.largeText;
+                        let album_cover = album.largeImage.split(':');
+                        let track_url = `https://open.spotify.com/track/${presence.syncID}`;
+                        let username = msg.author.username;
+    
+                        if(msg.member !== null && msg.member.nickname !== null)
+                            username = msg.member.nickname;
+    
+                        if(album_cover.length > 1){
+                            album_cover = `https://i.scdn.co/image/${album_cover[1]}`;
+    
+                            embed = {
+                                color: 1947988,
+                                author: {
+                                    name: username,
+                                    icon_url: msg.author.avatarURL()
+                                },
+                                footer: {
+                                    icon_url: "https://cdn.discordapp.com/attachments/572429763700981780/807009451173216277/favicon-1.png",
+                                    text: `Spotify${helper.sep}Listening right now`
+                                },
+                                thumbnail: {
+                                    url: album_cover
+                                },
+                                title: `**${artist}** – ${title}`,
+                                description: `Album: **${album_name}**`,
+                                url: track_url
+                            }
                         }
                     }
                 }
