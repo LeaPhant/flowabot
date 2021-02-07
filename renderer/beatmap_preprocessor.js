@@ -390,7 +390,7 @@ function processBeatmap(osuContents){
 
     beatmap.StackLeniency = parseFloat(beatmap.StackLeniency);
 
-    if(beatmap.StackLeniency === undefined || beatmap.StackLeniency === NaN || beatmap.StackLeniency === null)
+    if(isNaN(beatmap.StackLeniency))
         beatmap.StackLeniency = 0.7;
 
     // HR inversion
@@ -591,8 +591,18 @@ function processBeatmap(osuContents){
         if(hitObject.objectName == "circle")
             hitObject.endTime = hitObject.startTime;
 
-        if(hitObject.objectName == "spinner")
+        if(hitObject.objectName == "spinner"){
             hitObject.duration = hitObject.endTime - hitObject.startTime;
+
+            let spinsPerSecond = 5;
+
+            if(beatmap.OverallDifficultyRealtime > 5)
+                spinsPerSecond = 5 + 2.5 * (beatmap.OverallDifficultyRealtime - 5) / 5;
+            else
+                spinsPerSecond = 5 - 2 * (5 - beatmap.OverallDifficultyRealtime) / 5;
+
+            beatmap.spinsRequired = spinsPerSecond * hitObject.duration;
+        }
 
         hitObject.latestHit = hitObject.startTime + beatmap.HitWindow50;
 
@@ -835,118 +845,7 @@ function processBeatmap(osuContents){
                 }
             }
         }
-    }
-
-    // Apply Stacking
-    // Pretty much copied from osu-lazer https://github.com/ppy/osu/blob/master/osu.Game.Rulesets.Osu/Beatmaps/OsuBeatmapProcessor.cs#L41
-
-    /*
-    let startIndex = 0;
-    let endIndex = beatmap.hitObjects.length - 1;
-    let extendedEndIndex = endIndex;
-
-    let stackThreshold = beatmap.TimePreempt * beatmap.StackLeniency * 10;
-
-    if(endIndex < beatmap.hitObjects.length - 1){
-        for(let i = endIndex; i >= startIndex; i--){
-            let stackBaseIndex = i;
-
-            for(let n = stackBaseIndex + 1; n < beatmap.hitObjects.length; n++){
-                let stackBaseObject = beatmap.hitObjects[stackBaseIndex];
-
-                if(stackBaseObject.objectName == 'spinner')
-                    break;
-
-                let objectN = beatmap.hitObjects[n];
-
-                if(objectN.objectName == 'spinner')
-                    continue;
-
-                let endTime = stackBaseObject.endTime;
-
-                if(objectN.startTime - endTime > stackThreshold)
-                    break;
-
-                if(vectorDistance(...stackBaseObject.position, ...objectN.position) < STACK_DISTANCE
-                || (stackBaseObject.objectName == 'slider' && vectorDistance(...stackBaseObject.endPosition, ...objectN.position) < STACK_DISTANCE)){
-                    stackBaseIndex = n;
-
-                    objectN.StackHeight = 0;
-                }
-            }
-
-            if(stackBaseIndex > extendedEndIndex){
-                extendedEndIndex = stackBaseIndex;
-
-                if(extendedEndIndex == beatmap.hitObjects.length - 1)
-                    break;
-            }
-        }
-    }
-
-    let extendedStartIndex = startIndex;
-
-    for(let i = extendedEndIndex; i > startIndex; i--){
-        let n = 1;
-
-        let objectI = beatmap.hitObjects[i];
-
-        if(objectI.StackHeight != 0 || objectI.objectName == 'spinner')
-            continue;
-
-        if(objectI.objectName == 'circle'){
-            while(--n >= 0){
-                let objectN = beatmap.hitObjects[n];
-
-                if(objectN.objectName == 'spinner')
-                    continue;
-
-                let endTime = objectN.endTime;
-
-                if(objectI.startTime - endTime > stackThreshold)
-                    break;
-
-                if(n < extendedStartIndex){
-                    objectN.StackHeight = 0;
-                    extendedStartIndex = n;
-                }
-
-                if(objectN.objectName == 'slider' && vectorDistance(...objectN.position, ...objectI.position) < STACK_DISTANCE){
-                    let offset = objectI.StackHeight - objectN.StackHeight + 1;
-
-                    for(let j = n + 1; j <= i; j++){
-                        let objectJ = beatmap.hitObjects[j];
-
-                        if(vectorDistance(...objectN.endPosition, ...objectJ.position) < STACK_DISTANCE)
-                            objectJ.StackHeight -= offset;
-                    }
-
-                    break;
-                }
-
-                if(vectorDistance(...objectN.position, ...objectI.position) < STACK_DISTANCE){
-                    objectN.StackHeight = objectI.StackHeight + 1;
-                    objectI = objectN;
-                }
-            }
-        }else if(objectI.objectName == 'slider'){
-            while(--n >= startIndex){
-                let objectN = beatmap.hitObjects[n];
-
-                if(objectN.objectName == 'spinner')
-                    continue;
-
-                if(objectI.startTime - objectN.startTime > stackThreshold)
-                    break;
-
-                if(vectorDistance(...objectN.endPosition, ...objectI.position) < STACK_DISTANCE){
-                    objectN.StackHeight = objectI.StackHeight + 1;
-                    objectI = objectN;
-                }
-            }
-        }
-    }*/
-    
+    }    
 
     let currentCombo = 1;
     let currentComboNumber = 0;
@@ -1200,93 +1099,6 @@ function processBeatmap(osuContents){
             }
         }while(current != null && current.offset < hitObject.latestHit);
     }
-
-    
-    /*
-    for(let i = 0; i < beatmap.hitObjects.length; i++){
-        const hitObject = beatmap.hitObjects[i];
-
-        if(hitObject.objectName == 'spinner')
-            continue; // process spinners later
-
-        const prevHitObject = beatmap.hitObjects[i - 1];
-        const firstPrevIndex = 0;
-
-        const frames = [];
-        const firstFrameIndex = beatmap.Replay.replay_data.findIndex(a => a.offset >= hitObject.startTime - beatmap.HitWindow50) - 1;
-
-        for(let i = firstFrameIndex; i < beatmap.Replay.replay_data.length; i++){
-            const frame = beatmap.Replay.replay_data[i];
-
-            if(frame.offset > hitObject.latestHit)
-                break;
-
-            frames.push(frame);
-        }
-
-        for(let i = 1; i < frames.length; i++){
-            const previous = frames[i - 1];
-            const current = frames[i];
-
-            if(current == null)
-                continue;
-
-            if(prevHitObject != null
-            && prevHitObject.hitOffset == null
-            && prevHitObject.objectName == "circle"
-            && current.offset < prevHitObject.latestHit)
-                continue;
-
-            if(prevHitObject != null
-            && prevHitObject.hitOffset != null
-            && prevHitObject.objectName == "circle"
-            && current.offset < prevHitObject.startTime + prevHitObject.hitOffset
-            && withinCircle(current.x, current.y, ...prevHitObject.position, beatmap.Radius))
-                continue;
-
-            let currentPresses = 0;
-
-            if((current.K1 || current.M1) 
-            && previous.K1 == false 
-            && previous.M1 == false)
-                currentPresses++;
-
-            if((current.K2 || current.M2) 
-            && previous.K2 == false 
-            && previous.M2 == false)
-                currentPresses++;
-
-            if(hitObject.objectName == 'circle' || hitObject.objectName == 'slider'){
-                if(currentPresses > 0){
-                    currentPresses--;
-
-                    let offsetRaw = current.offset - hitObject.startTime;
-                    let offset = Math.abs(offsetRaw);
-
-                    if(withinCircle(current.x, current.y, ...hitObject.position, beatmap.Radius)){
-                        let hitResult = 0;
-
-                        if(offset <= beatmap.HitWindow300)
-                            hitResult = 300;
-                        else if(offset <= beatmap.HitWindow100)
-                            hitResult = 100;
-                        else if(offset <= beatmap.HitWindow50)
-                            hitResult = 50;
-
-                        hitObject.hitOffset = offsetRaw;
-
-                        if(hitObject.objectName == 'slider')
-                            hitResult = hitResult > 0 ? 50 : 0;
-
-                        hitObject.hitResult = hitResult;
-                    }
-                }
-
-                if(hitObject.hitResult != null)
-                    break;
-            }
-        }
-    }*/
 
     beatmap.ScoringFrames = [];
 
