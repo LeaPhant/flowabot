@@ -942,13 +942,30 @@ process.on('message', async obj => {
                 if(time - frame.offset > 5000)
                     break;
 
+                ctx.lineWidth = 1;
+                ctx.strokeStyle = "rgba(255,255,255,0.7)";
+
+                if(options.analyze && previousFrame != null && time - frame.offset < 750){
+                    const position0 = playfieldPosition(previousFrame.x, previousFrame.y);
+                    const position1 = playfieldPosition(frame.x, frame.y);
+
+                    ctx.beginPath();
+
+                    ctx.moveTo(...position0);
+                    ctx.lineTo(...position1);
+
+                    ctx.stroke();
+                }
+
                 if(options.analyze && previousFrame != null && time - frame.offset < 750){
                     if(((frame.K1 || frame.M1) && !previousFrame.K1 && !previousFrame.M1)
                     ||((frame.K2 || frame.M2) && !previousFrame.K2 && !previousFrame.M2)){
-                        ctx.lineWidth = 1;
+
                         ctx.strokeStyle = "white";
 
                         const position = playfieldPosition(frame.x, frame.y);
+
+                        ctx.beginPath();
 
                         ctx.moveTo(position[0], position[1] - 5);
                         ctx.lineTo(position[0], position[1] + 5);
@@ -964,7 +981,7 @@ process.on('message', async obj => {
                 ctx.strokeStyle = "rgba(255,255,255,0.4)";
 
                 if(frame.S == false && smokeActive){
-                    if(smokeActive){
+                    if(smokeActive && !options.analyze){
                         ctx.stroke();
                         smokeActive = false;
                     }
@@ -983,7 +1000,7 @@ process.on('message', async obj => {
                 }
             }
 
-            if(smokeActive){
+            if(smokeActive && !options.analyze){
                 ctx.stroke();
             }
 
@@ -1008,7 +1025,7 @@ process.on('message', async obj => {
                     ctx.fillRect(canvas.width - 30, keyOverlayTop + KEY_OVERLAY_SIZE * 3 + KEY_OVERLAY_PADDING * 3, KEY_OVERLAY_SIZE, KEY_OVERLAY_SIZE);
                 }
                 
-                if(Array.isArray(replay_point.previous)){
+                if(Array.isArray(replay_point.previous) && !options.analyze){
                     ctx.globalAlpha = .35;
 
                     ctx.beginPath();
