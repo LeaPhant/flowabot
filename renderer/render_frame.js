@@ -599,7 +599,7 @@ module.exports = {
                 max_time = time + actual_length;
             }
 
-            file_path = path.resolve(os.tmpdir(), 'frames', `${rnd}`);
+            file_path = path.resolve(config.frame_path != null ? config.frame_path : os.tmpdir(), 'frames', `${rnd}`);
             fs.ensureDirSync(file_path);
 
 			let threads = require('os').cpus().length;
