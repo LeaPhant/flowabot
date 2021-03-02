@@ -568,10 +568,10 @@ module.exports = {
 
             let time_scale = 1;
 
-            if(enabled_mods.includes('DT'))
+            if(enabled_mods.includes('DT') || enabled_mods.includes('NC'))
                 time_scale *= 1.5;
 
-            if(enabled_mods.includes('HT'))
+            if(enabled_mods.includes('HT') || enabled_mods.includes('DC'))
                 time_scale *= 0.75;
 
 			if(options.speed != 1)
@@ -737,7 +737,7 @@ module.exports = {
 							'-filter_complex', `"overlay=(W-w)/2:shortest=1"`,
 							'-pix_fmt', 'yuv420p', '-r', fps, '-c:v', 'libx264', '-b:v', `${bitrate}k`,
 							'-c:a', 'aac', '-b:a', '164k', '-shortest', '-preset', 'veryfast',
-							'-movflags', 'faststart', '-force_key_frames', '00:00:00.000', `${file_path}/video.mp4`
+							'-movflags', 'faststart', '-g', fps, '-force_key_frames', '00:00:00.000', `${file_path}/video.mp4`
 						);
 
 						let ffmpegProcess = spawn(ffmpeg.path, ffmpeg_args, { shell: true });
