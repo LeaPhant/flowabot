@@ -205,21 +205,13 @@ module.exports = {
 							time = previewTime;
 
 						if(length > 0 || objects){
-							resolve({
-								content: 'Rendering...',
-								replace_promise: new Promise((resolve, reject) => {
-									frame.get_frames(download_path, time, length * 1000, mods, size, {
-                                        combo,
-										type: video_type, cs, ar, od, analyze, hidden, black: false, osr, score_id, audio, fps, speed,
-										fill: video_type == 'mp4', noshadow: true, percent, border: false, objects
-									}, (err, send, remove_path) => {
-										if(err)
-											reject(err);
+                            resolve(null);
 
-										resolve({file: send, name: 'render.gif', remove_path});
-									});
-								})
-							});
+                            frame.get_frames(download_path, time, length * 1000, mods, size, {
+                                combo,
+                                type: video_type, cs, ar, od, analyze, hidden, black: false, osr, score_id, audio, fps, speed,
+                                fill: video_type == 'mp4', noshadow: true, percent, border: false, objects, msg
+                            });
 						}else{
 							frame.get_frame(download_path, time, mods, [800, 600], {
                                 combo,

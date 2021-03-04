@@ -468,9 +468,39 @@ module.exports = {
         });
     },
 
-    get_frames: function(beatmap_path, time, length, enabled_mods, size, options, cb){
+    get_frames: async function(beatmap_path, time, length, enabled_mods, size, options, cb){
         if(config.debug)
             console.time('process beatmap');
+
+		const { msg } = options;
+
+		options.msg = null;
+
+		const renderStatus = ['– processing beatmap', '– rendering frames', '– encoding video'];
+
+		const renderMessage = await msg.channel.send({embed: {description: renderStatus.join("\n")}});
+
+		const updateRenderStatus = async () => {
+			await renderMessage.edit({
+				embed: {
+					description: renderStatus.join("\n")
+				}
+			});
+		};
+
+		const updateInterval = setInterval(() => { updateRenderStatus().catch(console.error) }, 1000);
+
+		updateRenderStatus().catch(console.error);
+
+		const resolveRender = async opts => {
+			updateRenderStatus();
+			clearInterval(updateInterval);
+
+			await msg.channel.send(opts);
+			await renderMessage.delete();
+		};
+
+		const beatmapProcessStart = Date.now();
 
         let worker = fork(path.resolve(__dirname, 'beatmap_preprocessor.js'));
 
@@ -485,9 +515,12 @@ module.exports = {
 
 		worker.on('close', code => {
 			if(code > 0){
-				cb("Error processing beatmap");
+				resolveRender("Error processing beatmap").catch(console.error);
+
 				return false;
 			}
+
+			renderStatus[0] = `✓ processing beatmap (${((Date.now() - beatmapProcessStart) / 1000).toFixed(3)}s)`;
 		});
 
         worker.on('message', _beatmap => {
@@ -615,7 +648,8 @@ module.exports = {
 					let frame_path = path.resolve(file_path, `${current_frame}.rgba`);
 					fs.readFile(frame_path, (err, buf) => {
 						if(err){
-							cb('Error encoding video');
+							resolveRender("Error encoding video").catch(console.error);
+
 							return;
 						}
 
@@ -655,7 +689,8 @@ module.exports = {
                 }
 
                 if(info.available * 0.9 < frames_size){
-                    cb("Not enough disk space");
+					resolveRender("Not enough disk space").catch(console.error);
+
                     return false;
                 }
 
@@ -690,25 +725,40 @@ module.exports = {
 
 					ffmpeg_args.push(`${file_path}/video.gif`);
 
+					const encodingProcessStart = Date.now();
+
 					let ffmpegProcess = spawn(ffmpeg.path, ffmpeg_args, { shell: true });
 
-					ffmpegProcess.on('close', code => {
+					ffmpegProcess.on('close', async code => {
 						if(code > 0){
-							cb("Error encoding video");
-							fs.remove(file_path);
+							resolveRender("Error encoding video")
+							.then(() => {
+								fs.remove(file_path);
+							}).catch(console.error);
+
 							return false;
 						}
 
 						if(config.debug)
 							console.timeEnd('encode video');
 
-						cb(null, `${file_path}/video.${options.type}`, file_path);
+						renderStatus[1] = `✓ encoding video (${((Date.now() - encodingProcessStart) / 1000).toFixed(3)}s)`;
+
+						resolveRender({files: [{
+							attachment: `${file_path}/video.${options.type}`,
+							name: `video.${options.type}`
+						}]}).then(() => {
+							fs.remove(file_path);
+						}).catch(console.error);
 					});
 
 					pipeFrameLoop(ffmpegProcess, err => {
 						if(err){
-							cb("Error encoding video");
-							fs.remove(file_path);
+							resolveRender("Error encoding video")
+							.then(() => {
+								fs.remove(file_path);
+							}).catch(console.error);
+
 							return false;
 						}
 					});
@@ -740,30 +790,58 @@ module.exports = {
 							'-movflags', 'faststart', '-g', fps, '-force_key_frames', '00:00:00.000', `${file_path}/video.mp4`
 						);
 
+						const encodingProcessStart = Date.now();
+
 						let ffmpegProcess = spawn(ffmpeg.path, ffmpeg_args, { shell: true });
 
 						ffmpegProcess.on('close', code => {
 							if(code > 0){
-								cb("Error encoding video");
-								fs.remove(file_path);
+								resolveRender("Error encoding video")
+								.then(() => {
+									fs.remove(file_path);
+								}).catch(console.error);
+
 								return false;
 							}
 
 							if(config.debug)
 								console.timeEnd('encode video');
 
-							cb(null, `${file_path}/video.${options.type}`, file_path);
+							renderStatus[2] = `✓ encoding video (${((Date.now() - encodingProcessStart) / 1000).toFixed(3)}s)`;
+
+							resolveRender({files: [{
+								attachment: `${file_path}/video.${options.type}`,
+								name: `video.${options.type}`
+							}]}).then(() => {
+								fs.remove(file_path);
+							}).catch(console.error);					 
+						});
+
+						ffmpegProcess.stderr.on('data', data => {
+							const line = data.toString();
+
+							if(!line.startsWith('frame='))
+								return;
+
+							const frame = parseInt(line.substring(6).trim());
+
+							renderStatus[2] = `– encoding video (${Math.round(frame/amount_frames*100)}%)`;
 						});
 
 						pipeFrameLoop(ffmpegProcess, err => {
 							if(err){
-								cb("Error encoding video");
-								fs.remove(file_path);
+								resolveRender("Error encoding video")
+								.then(() => {
+									fs.remove(file_path);
+								}).catch(console.error);
+
 								return false;
 							}
 						});
 					});
 				}
+
+				const framesProcessStart = Date.now();
 
                 workers.forEach((worker, index) => {
                     worker.send({
@@ -780,6 +858,8 @@ module.exports = {
 
 					worker.on('message', frame => {
 						frames_rendered.push(frame);
+
+						renderStatus[1] = `– rendering frames (${Math.round(frames_rendered.length/amount_frames*100)}%)`;
 					});
 
                     worker.on('close', code => {
@@ -791,6 +871,8 @@ module.exports = {
                         done++;
 
                         if(done == threads){
+							renderStatus[1] = `✓ rendering frames (${((Date.now() - framesProcessStart) / 1000).toFixed(3)}s)`;
+
 							if(config.debug)
 								console.timeEnd('render beatmap');
                         }
