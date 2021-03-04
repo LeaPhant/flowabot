@@ -488,7 +488,7 @@ module.exports = {
 			});
 		};
 
-		const updateInterval = setInterval(() => { updateRenderStatus().catch(console.error) }, 1000);
+		const updateInterval = setInterval(() => { updateRenderStatus().catch(console.error) }, 3000);
 
 		updateRenderStatus().catch(console.error);
 
