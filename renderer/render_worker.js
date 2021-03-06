@@ -10,6 +10,8 @@ const PLAYFIELD_HEIGHT = 384;
 const KEY_OVERLAY_SIZE = 20;
 const KEY_OVERLAY_PADDING = 5;
 
+const FL_SIZES = [0.75, 0.6, 0.45]; // flashlight size relative to playfield height
+
 const resources = path.resolve(__dirname, "res");
 
 let images = {
@@ -43,10 +45,43 @@ process.on('message', async obj => {
         ];
     }
 
+    const flImages = [];
+
     function prepareCanvas(size){
         canvas = createCanvas(...size);
         ctx = canvas.getContext("2d");
         resize();
+
+        if(options.flashlight){
+            for(const sizeRelative of FL_SIZES){
+                const flCanvas = createCanvas(size[0] * 2, size[0] * 2);
+                const flCtx = flCanvas.getContext("2d");
+
+                flCtx.fillStyle = 'black';
+                flCtx.fillRect(0, 0, flCanvas.width, flCanvas.height);
+
+                const flSize = sizeRelative * PLAYFIELD_HEIGHT * scale_multiplier / 2;
+
+                const gradient = 
+                    flCtx.createRadialGradient(
+                        flCanvas.width / 2, flCanvas.height / 2, 
+                        flSize * 0.9, 
+                        flCanvas.width / 2, flCanvas.height / 2, 
+                        flSize);
+
+                gradient.addColorStop(0, 'rgba(0,0,0,1)');
+                gradient.addColorStop(1, 'rgba(0,0,0,0)');
+
+                flCtx.fillStyle = gradient;
+                flCtx.globalCompositeOperation = 'destination-out';
+
+                flCtx.beginPath();
+                flCtx.arc(flCanvas.width / 2, flCanvas.height / 2, flSize, 0, 2 * Math.PI);
+                flCtx.fill();
+
+                flImages.push(flCanvas);
+            }
+        }
     }
 
     function getCursorAtInterpolated(timestamp, replay){
@@ -546,6 +581,8 @@ process.on('message', async obj => {
                             }
                         }
 
+                        ctx.globalAlpha = 1;
+
                         let position;
 
                         // Draw follow point in circle
@@ -698,6 +735,35 @@ process.on('message', async obj => {
                 currentFrame = beatmap.ScoringFrames[beatmap.ScoringFrames.length - 1];
 
             const scoringFrames = [];
+
+            if(options.flashlight){
+                ctx.globalAlpha = 1;
+
+                let { current } = getCursorAt(time, beatmap.ReplayInterpolated);
+
+                const { combo } = currentFrame;
+
+                let flIndex = 0;
+
+                if(combo >= 100)
+                    flIndex = 1;
+                else if(combo >= 200)
+                    flIndex = 2;
+
+                const flImage = flImages[flIndex];
+
+                const cursorPos = playfieldPosition(current.x, current.y);
+
+                ctx.drawImage(flImage, cursorPos[0] - flImage.width / 2, cursorPos[1] - flImage.height / 2);
+
+                const currentSlider = beatmap.hitObjects.find(a => time >= a.startTime && time < a.endTime && a.objectName == 'slider')
+
+                if(currentSlider){
+                    ctx.globalAlpha = 0.8;
+                    ctx.fillStyle = 'black';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                }
+            }
 
             do{
                 const newFrame = beatmap.ScoringFrames[previousFramesIndex];

@@ -64,6 +64,7 @@ module.exports = {
             let combo = 0;
             let speed = 1;
             let hidden = false;
+            let flashlight = false;
             let analyze = false;
 
             argv.map(arg => arg.toLowerCase());
@@ -94,8 +95,10 @@ module.exports = {
                     length = 9;
                     video_type = 'mp4';
                     audio = true;
-                }else if(arg == 'hd'){
+                }else if(arg == 'hd' || arg == 'hidden'){
                     hidden = true;
+                }else if(arg == 'fl' || arg == 'flashlight'){
+                    flashlight = true;
                 }else if(arg == 'mp4'){
                     video_type = 'mp4';
                 }else if(arg == 'audio'){
@@ -209,7 +212,7 @@ module.exports = {
 
                             frame.get_frames(download_path, time, length * 1000, mods, size, {
                                 combo,
-                                type: video_type, cs, ar, od, analyze, hidden, black: false, osr, score_id, audio, fps, speed,
+                                type: video_type, cs, ar, od, analyze, hidden, flashlight, black: false, osr, score_id, audio, fps, speed,
                                 fill: video_type == 'mp4', noshadow: true, percent, border: false, objects, msg
                             });
 						}else{
