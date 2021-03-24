@@ -1248,6 +1248,8 @@ module.exports = {
 
             const diff = difficulty[getModsEnum(top.mods.filter(mod => DIFF_MODS.includes(mod)))];
 
+            top.stars = diff.total;
+
             const pp_fc = ojsama.ppv2({
                 aim_stars: diff.aim,
                 speed_stars: diff.speed,
