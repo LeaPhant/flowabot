@@ -644,10 +644,6 @@ function calculateStrains(type, diffobjs, speed_multiplier){
     }
 
     strains.push(max_strain);
-    strains.forEach((strain, index) => {
-        strain *= 9.999
-        strains[index] = Math.sqrt(strain) * STAR_SCALING_FACTOR;
-    });
 
     return strains;
 }
@@ -1706,6 +1702,8 @@ module.exports = {
         });
     },
 
+    calculate_strains: calculateStrains,
+
 	get_strains_bar: function(osu_file_path, mods_string, progress){
 		let map_strains = module.exports.get_strains(osu_file_path, mods_string);
 
@@ -1826,8 +1824,8 @@ module.exports = {
             if(type == 'speed')
                 total = stars.speed;
 
-            let aim_strains = calculateStrains(1, stars.objects, speed_multiplier);
-            let speed_strains = calculateStrains(0, stars.objects, speed_multiplier);
+            let aim_strains = calculateStrains(1, stars.objects, speed_multiplier).map(a => a = Math.sqrt(a * 9.9999) * STAR_SCALING_FACTOR);
+            let speed_strains = calculateStrains(0, stars.objects, speed_multiplier).map(a => a = Math.sqrt(a * 9.9999) * STAR_SCALING_FACTOR);
 
             let star_strains = [];
 

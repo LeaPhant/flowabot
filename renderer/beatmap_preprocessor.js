@@ -2,6 +2,7 @@ const osuBeatmapParser = require('osu-parser');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
+const osu = require('../osu');
 const osr = require('node-osr');
 const lzma = require('lzma');
 const ojsama = require('ojsama');
@@ -15,6 +16,8 @@ const PLAYFIELD_WIDTH = 512;
 const PLAYFIELD_HEIGHT = 384;
 
 const MAX_RADIAN = 360 * (Math.PI / 180);
+
+const STAR_SCALING_FACTOR = 0.0675;
 
 const CATMULL_DETAIL = 50;
 const CIRCULAR_ARC_TOLERANCE = 0.1;
@@ -1361,31 +1364,109 @@ function processBeatmap(osuContents){
 
     const parser = new ojsama.parser().feed(osuContents);
 
-    const objects = parser.map.objects.slice();
+    let diff = new ojsama.diff().calc({map: parser.map, mods: ojsama.modbits.from_string(enabled_mods.join(""))});
+
+    let aim_strains = osu.calculate_strains(1, diff.objects, speed_multiplier);
+    let speed_strains = osu.calculate_strains(0, diff.objects, speed_multiplier);
+
     const mods = ojsama.modbits.from_string(enabled_mods.filter(a => ["HR", "EZ"].includes(a) == false).join(""));
 
     parser.map.cs = beatmap.CircleSize;
     parser.map.od = beatmap.OverallDifficultyRealtime;
     parser.map.ar = beatmap.ApproachRateRealtime;
+
+    let current_aim_strains = [];
+    let current_speed_strains = [];
+
+    let aim_stars = 0, aim_total = 0;
+    let speed_stars = 0, speed_total = 0;
+    let total_stars = 0;
+
+    let hit_objects = [...beatmap.hitObjects].sort((a, b) => a.startTime - b.startTime);
+    let current_hit_objects = [];
+    let max_combo = 0;
+
+    let ncircles = 0;
+    let nsliders = 0;
+    let nobjects = 0;
+
+    console.time("realtime pp");
     
     for(const scoringFrame of beatmap.ScoringFrames.filter(a => ['miss', 50, 100, 300].includes(a.result))){
         const hitCount = scoringFrame.countMiss + scoringFrame.count50 + scoringFrame.count100 + scoringFrame.count300;
 
-        parser.map.objects = objects.slice(0, hitCount);
+        while(hit_objects.length > 0 && scoringFrame.offset >= hit_objects[0].endTime){
+            const newHitObject = hit_objects.splice(0, 1)[0];
 
-        const stars = new ojsama.diff().calc({map: parser.map, mods});
+            if(newHitObject == null)
+                break;
+
+            max_combo++;
+            nobjects++;
+
+            if(newHitObject.objectName == "slider"){
+                max_combo += newHitObject.repeatCount;
+                max_combo += newHitObject.SliderTicks.length * newHitObject.repeatCount;
+                nsliders++;
+            }else if(newHitObject.objectName == "circle"){
+                ncircles++;
+            }
+
+            current_hit_objects.push(newHitObject);
+        }
+
+        if(scoringFrame.offset / 400 > current_aim_strains.length){
+            current_aim_strains.push(...aim_strains.splice(0, 1));
+            current_aim_strains = current_aim_strains.sort((a, b) => b - a);
+
+            let weight = 1;
+            aim_stars = 0;
+            aim_total = 0;
+
+            for(const strain of current_aim_strains){
+                aim_stars += strain * weight;
+                weight *= 0.9;
+                aim_total += Math.pow(strain, 1.2);
+            }
+
+            aim_stars = Math.sqrt(aim_stars) * STAR_SCALING_FACTOR;
+        }
+
+        if(scoringFrame.offset / 400 > current_speed_strains.length){
+            current_speed_strains.push(...speed_strains.splice(0, 1));
+            current_speed_strains = current_speed_strains.sort((a, b) => b - a);
+
+            let weight = 1;
+            speed_stars = 0;
+            speed_total = 0;
+
+            for(const strain of current_speed_strains){
+                speed_stars += strain * weight;
+                weight *= 0.9;
+                speed_total += Math.pow(strain, 1.2);
+            }
+
+            speed_stars = Math.sqrt(speed_stars) * STAR_SCALING_FACTOR;
+        }
+
+        total_stars = aim_stars + speed_stars + Math.abs(speed_stars - aim_stars) * 0.5;
+
+        parser.map.max_combo = () => { return max_combo };
+        parser.map.ncircles = ncircles;
+        parser.map.nsliders = nsliders;
+        parser.map.nobjects = nobjects;
 
         const pp = ojsama.ppv2({
-            stars,
+            stars: { map: parser.map, aim: aim_stars, speed: speed_stars, mods: ojsama.modbits.from_string(enabled_mods.join("")) },
             combo: scoringFrame.maxCombo,
             nmiss: scoringFrame.countMiss,
             n300: scoringFrame.count300,
             n100: scoringFrame.count100,
-            n50: scoringFrame.count50
+            n50: scoringFrame.count50,
         });
 
         scoringFrame.pp = pp.total;
-        scoringFrame.stars = stars.total;
+        scoringFrame.stars = total_stars;
     }
 
     let pp = 0, stars = 0;
@@ -1395,9 +1476,11 @@ function processBeatmap(osuContents){
             ({pp, stars} = scoringFrame)
         }
 
-        scoringFrame.pp = pp;
-        scoringFrame.stars = stars;
+        scoringFrame.pp = pp || 0;
+        scoringFrame.stars = stars || 0;
     }
+
+    console.timeEnd("realtime pp");
 
     const hitResults = _.countBy(beatmap.ScoringFrames, 'result');
 
