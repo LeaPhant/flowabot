@@ -338,7 +338,8 @@ async function downloadMedia(options, beatmap, beatmap_path, size, download_path
 		if(chimuCheckMapExists.status != 200)
 			throw "Map not found";
 
-		const chimuMap = await axios.get(`https://api.chimu.moe/v1/set/${beatmapset_id}`, { responseType: 'stream' });
+		const chimuMap = await axios.get(`https://api.chimu.moe/v1/download/${beatmapset_id}?n=0`, { responseType: 'stream' });
+
 		mapStream = chimuMap.data;
 	}catch(e){
 		const beatconnectMap = await axios.get(`https://beatconnect.io/b/${beatmapset_id}`, { responseType: 'stream' });
