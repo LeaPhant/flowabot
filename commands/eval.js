@@ -1,11 +1,11 @@
 const {VM} = require('vm2');
-const fs = require('fs-extra');
+const fs = require('fs').promises;
 
 const helper = require('../helper.js');
 
 let VMs = {};
 
-function initVM(user){
+async function initVM(user){
     if(!(user in VMs)){
         VMs[user] = new VM({
            timeout: 100
@@ -19,7 +19,7 @@ function initVM(user){
             return 416.6667 * (1 - Math.pow(0.9994, n));
         }`);
 
-        VMs[user].run(fs.readFileSync('underscore-min.js', 'utf8'));
+        VMs[user].run(await fs.readFile('underscore-min.js', 'utf8'));
     }
     return VMs[user];
 }
@@ -39,7 +39,7 @@ module.exports = {
         }
     ],
     call: obj => {
-        return new Promise((resolve, reject) => {
+        return new Promise(async (resolve, reject) => {
             let { argv, msg } = obj;
 
             let eval_code = msg.content.split(" ").slice(1).join(" ");
@@ -53,7 +53,7 @@ module.exports = {
             }
 
             try{
-                let vm = initVM(user_id);
+                let vm = await initVM(user_id);
 
                 let _msg = {
                     content: msg.content,

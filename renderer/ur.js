@@ -1,6 +1,6 @@
 const axios = require('axios');
 
-const fs = require('fs-extra');
+const fs = require('fs').promises;
 const path = require('path');
 const os = require('os');
 const { fork } = require('child_process');
@@ -19,7 +19,7 @@ function calculateUr(options){
 
 		const replay_raw = Buffer.from(response.data.content, "base64");
 
-		await fs.ensureDir(path.resolve(os.tmpdir(), 'replays'));
+		await fs.mkdir(path.resolve(os.tmpdir(), 'replays'), { recursive: true });
 		await fs.writeFile(path.resolve(os.tmpdir(), 'replays', `${options.score_id}`), replay_raw);
 
 		const worker = fork(path.resolve(__dirname, 'beatmap_preprocessor.js'), ['--max-old-space-size=512']);

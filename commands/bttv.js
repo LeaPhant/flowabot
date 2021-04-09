@@ -1,5 +1,5 @@
 const axios = require('axios');
-const fs = require('fs-extra');
+const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
@@ -50,7 +50,6 @@ module.exports = {
                         let stream = response.data.pipe(fs.createWriteStream(file));
 
                         stream.on('finish', () => {
-                            let attachment = new Discord.Attachment(file, `emote.${emote.imageType}`);
                             resolve({embed: {
                                 title: emote.code,
                                 url: `https://betterttv.com/emotes/${emote.id}`,
@@ -60,7 +59,7 @@ module.exports = {
                                 footer: {
                                     text: `Submitted by ${emote.user.displayName}`
                                 }
-                            }, file: attachment, remove_path: file});
+                            }, files: [{ attachment: file, name: `emote.${emote.imageType}` }], remove_path: file });
                         });
                     });
                 }else{

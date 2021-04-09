@@ -1,5 +1,4 @@
 const path = require('path');
-const fs = require('fs-extra');
 const os = require('os');
 const { execFileSync } = require('child_process');
 const URL = require('url');
@@ -48,9 +47,10 @@ module.exports = {
                     return;
                 }else if(!beatmap_id && !custom_url){
                     beatmap_id = last_beatmap[msg.channel.id].beatmap_id;
-                    download_promise = helper.downloadBeatmap(beatmap_id);
+                    download_promise = helper.downloadBeatmap(beatmap_id).catch(helper.error);
 
-                    mods = last_beatmap[msg.channel.id].mods.join('');
+                    mods = Array.isArray(last_beatmap[msg.channel.id].mods) 
+                    ? last_beatmap[msg.channel.id].mods.join('') : '';
                 }
 
                 let download_path = path.resolve(config.osu_cache_path, `${beatmap_id}.osu`);
@@ -65,12 +65,7 @@ module.exports = {
                 }
 
                 Promise.resolve(download_promise).then(() => {
-                    osu.get_bpm_graph(download_path, mods, (err, res) => {
-                        if(err){
-                            reject(err);
-                            return false;
-                        }
-
+                    osu.get_bpm_graph(download_path, mods).then(res => {
                         if(beatmap_id){
                             helper.updateLastBeatmap({
                                 beatmap_id,
@@ -80,8 +75,11 @@ module.exports = {
                             }, msg.channel.id, last_beatmap);
                         }
 
-                        resolve({file: Buffer.from(res, 'base64'), name: 'bpm.png'});
-                    });
+                        resolve({files: [{ attachment: Buffer.from(res, 'base64'), name: 'bpm.png' }]});
+                    }).catch(err => {
+                        reject(err);
+                        return false;
+                    })
                 });
             });
         });

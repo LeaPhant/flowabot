@@ -1,4 +1,4 @@
-const fs = require('fs-extra');
+const fs = require('fs');
 const path = require('path');
 const config = require('./config.json');
 
@@ -9,7 +9,6 @@ let output = `# Commands
 ### Table of contents`;
 
 fs.readdir(commands_path, (err, items) => {
-
     if(err)
         throw "Unable to read commands folder";
 

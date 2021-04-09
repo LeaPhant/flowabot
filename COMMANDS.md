@@ -27,8 +27,10 @@
 - [!render](#render)
 - [!score](#score)
 - [!strains](#strains)
+- [!tap](#tap)
 - [!time](#time)
 - [!top](#top)
+- [!tops](#tops)
 - [!uptime](#uptime)
 - [!viewers](#viewers)
 - [!with](#with)
@@ -269,6 +271,8 @@ Stop tracking nathan on osu's top plays.
 ## !osu
 Show osu! stats.
 
+**Variations**: `!osu`, `!osu2`
+
 **Usage**: `!osu [username]`
 ### Example:
 
@@ -316,7 +320,7 @@ Render picture or gif of a beatmap at a specific time. Videos 10 seconds or long
 
 **Variations**: `!render`, `!frame`, `!fail`
 
-**Usage**: `!render [beatmap url] [+mods] [AR8] [CS6] [preview/strains/aim/speed/fail] [mp4] [plain] [120fps] [mm:ss] [353x] [4s]`
+**Usage**: `!render [beatmap url] [+mods] [AR8] [CS6] [preview/strains/aim/speed/fail] [HD] [20%] [mp4] [plain] [120fps] [mm:ss] [353x] [4s]`
 ### Examples:
 
 ```
@@ -335,9 +339,9 @@ Returns a gif of the part where the player failed on the last beatmap.
 Returns an image of the last beatmap at 1 minute and 5 seconds.
 
 ```
-!render speed 10s
+!render speed 10s 50%
 ```
-Returns a 10 second video of the streamiest part on the last beatmap.
+Returns a 10 second video of the streamiest part on the last beatmap at half speed.
 
 ```
 !render 120fps 353x plain
@@ -383,6 +387,21 @@ Returns strain graph with HR applied and CS set to 5 for the last beatmap.
 !strains https://osu.ppy.sh/b/75 aim
 ```
 Returns aim strain graph for this beatmap.
+## !tap
+Calculate BPM values for different beat snap divisors
+
+**Usage**: `!tap <BPM> <Beat Snap Divisor>`
+### Examples:
+
+```
+!tap 200 1/4
+```
+Return equivalent tapping values for 200 BPM at 1/4
+
+```
+!tap 150 1/3
+```
+Return equivalent tapping values for 150 BPM at 1/3
 ## !time
 Get the current time at a place.
 
@@ -420,6 +439,21 @@ Returns your most recent top play.
 !ob
 ```
 Returns your oldest top play (from your top 100).
+## !tops
+Show a list of top plays
+
+**Usage**: `!tops [username]`
+### Examples:
+
+```
+!tops
+```
+Returns your top 5 plays.
+
+```
+!tops7 vaxei
+```
+Returns Vaxei's top 7 plays.
 ## !uptime
 See how for long a Twitch channel has been live or for how long it hasn't been streaming.
 
@@ -450,7 +484,7 @@ Returns how many viewers distortion2 currently has (if they're live).
 ## !with
 Show pp values of a beatmap with several accuracies or a specified accuracy.
 
-**Usage**: `!with [+mods] [98.34%]`
+**Usage**: `!with [beatmap url] [+mods] [98.34%]`
 ### Examples:
 
 ```

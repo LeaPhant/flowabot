@@ -1,6 +1,4 @@
-
-const osuBeatmapParser = require('osu-parser');
-const fs = require('fs-extra');
+const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const util = require('util');
@@ -9,7 +7,8 @@ const axios = require('axios');
 const Jimp = require('jimp');
 const crypto = require('crypto');
 const ffmpeg = require('ffmpeg-static');
-const unzip = require('unzip');
+
+const unzip = require('unzipper');
 const disk = require('diskusage');
 
 const { execFile, fork, spawn } = require('child_process');
@@ -89,7 +88,7 @@ async function processHitsounds(beatmap_path){
 			hitSoundPath[hitSoundName] = absolutePath;
 	};
 
-	let defaultFiles = await fs.readdir(path.resolve(resources, 'hitsounds'));
+	let defaultFiles = await fs.promises.readdir(path.resolve(resources, 'hitsounds'));
 
 	defaultFiles.forEach(file => setHitSound(file, path.resolve(resources, 'hitsounds')));
 
@@ -97,7 +96,7 @@ async function processHitsounds(beatmap_path){
 	defaultFiles.forEach(file => setHitSound(file, path.resolve(resources, 'hitsounds'), true));
 
 	// overwrite default hitsounds with beatmap hitsounds
-	let beatmapFiles = await fs.readdir(beatmap_path);
+	let beatmapFiles = await fs.promises.readdir(beatmap_path);
 
 	beatmapFiles.forEach(file => setHitSound(file, beatmap_path, true));
 
@@ -111,7 +110,7 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 	let beatmapAudio = false;
 
 	try{
-		await execFilePromise(ffmpeg.path, [
+		await execFilePromise(ffmpeg, [
 			'-ss', start_time / 1000, '-i', `"${media.audio_path}"`, '-t', actual_length * Math.max(1, time_scale) / 1000,
 			'-filter:a', `"afade=t=out:st=${Math.max(0, actual_length * time_scale / 1000 - 0.5 / time_scale)}:d=0.5,atempo=${time_scale},volume=0.7"`,
 			path.resolve(file_path, 'audio.wav')
@@ -275,7 +274,7 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 		ffmpegArgsChunk.push(`"${filterComplex}"`, '-ac', '2', path.resolve(file_path, `hitsounds${i}.wav`));
 		mergeHitSoundArgs.push('-guess_layout_max', '0', '-i', path.resolve(file_path, `hitsounds${i}.wav`));
 
-		hitSoundPromises.push(execFilePromise(ffmpeg.path, ffmpegArgsChunk, { shell: true }));
+		hitSoundPromises.push(execFilePromise(ffmpeg, ffmpegArgsChunk, { shell: true }));
 	}
 
 	return new Promise((resolve, reject) => {
@@ -287,7 +286,7 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 		Promise.all(hitSoundPromises).then(async () => {
 			mergeHitSoundArgs.push('-filter_complex', `amix=inputs=${chunksToMerge}:dropout_transition=${actual_length},volume=${chunksToMerge},dynaudnorm`, path.resolve(file_path, `hitsounds.wav`));
 
-			await execFilePromise(ffmpeg.path, mergeHitSoundArgs, { shell: true });
+			await execFilePromise(ffmpeg, mergeHitSoundArgs, { shell: true });
 
 			const mergeArgs = [];
 			let mixInputs = beatmapAudio ? 2 : 1;
@@ -300,7 +299,7 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 				'-filter_complex', `amix=inputs=${mixInputs}:duration=first:dropout_transition=${actual_length},volume=2,dynaudnorm`, path.resolve(file_path, 'merged.wav')
 			);
 
-			await execFilePromise(ffmpeg.path, mergeArgs, { shell: true });
+			await execFilePromise(ffmpeg, mergeArgs, { shell: true });
 
 			resolve(path.resolve(file_path, 'merged.wav'));
 		});
@@ -316,12 +315,7 @@ function downloadMedia(options, beatmap, beatmap_path, size, download_path){
             return false;
         }
 
-        fs.readFile(beatmap_path, 'utf8', (err, content) => {
-            if(err){
-                reject();
-                return false;
-            }
-
+        fs.promises.readFile(beatmap_path, 'utf8').then(content => {
             let params = {
                 k: config.credentials.osu_api_key
             };
@@ -344,7 +338,7 @@ function downloadMedia(options, beatmap, beatmap_path, size, download_path){
 
                 helper.log('downloading from', `https://osu.gatari.pw/d/${beatmapset_id}`);
 
-                axios.get(`https://osu.gatari.pw/d/${beatmapset_id}`, {responseType: 'stream'}).then(response => {
+                axios.get(`https://beatconnect.io/b/${beatmapset_id}`, {responseType: 'stream'}).then(response => {
                     if(Number(response.data.headers['content-length']) < 500){
                         reject();
                         return false;
@@ -356,13 +350,13 @@ function downloadMedia(options, beatmap, beatmap_path, size, download_path){
                         let extraction_path = path.resolve(download_path, 'map');
                         let extraction = fs.createReadStream(path.resolve(download_path, 'map.zip')).pipe(unzip.Extract({ path: extraction_path }));
 
-                        extraction.on('close', () => {
+                        extraction.on('close', async () => {
 							output.beatmap_path = extraction_path;
 
-                            if(beatmap.AudioFilename && fs.existsSync(path.resolve(extraction_path, beatmap.AudioFilename)))
+                            if(beatmap.AudioFilename && await helper.fileExists(path.resolve(extraction_path, beatmap.AudioFilename)))
                                 output.audio_path = path.resolve(extraction_path, beatmap.AudioFilename);
 
-                            if(beatmap.bgFilename && fs.existsSync(path.resolve(extraction_path, beatmap.bgFilename)))
+                            if(beatmap.bgFilename && await helper.fileExists(path.resolve(extraction_path, beatmap.bgFilename)))
                                 output.background_path = path.resolve(extraction_path, beatmap.bgFilename);
 
                             if(beatmap.bgFilename && output.background_path){
@@ -410,7 +404,10 @@ function downloadMedia(options, beatmap, beatmap_path, size, download_path){
                     reject();
                 });
             }).catch(reject);
-        });
+        }).catch(err => {
+			reject();
+			return false;
+		});
 
         if(config.debug)
             helper.log('downloading beatmap osz');
@@ -523,7 +520,7 @@ module.exports = {
 			renderStatus[0] = `✓ processing beatmap (${((Date.now() - beatmapProcessStart) / 1000).toFixed(3)}s)`;
 		});
 
-        worker.on('message', _beatmap => {
+        worker.on('message', async _beatmap => {
             beatmap = _beatmap;
 
             if(config.debug)
@@ -633,7 +630,8 @@ module.exports = {
             }
 
             file_path = path.resolve(config.frame_path != null ? config.frame_path : os.tmpdir(), 'frames', `${rnd}`);
-            fs.ensureDirSync(file_path);
+
+            await fs.promises.mkdir(file_path, { recursive: true });
 
 			let threads = require('os').cpus().length;
 
@@ -646,20 +644,14 @@ module.exports = {
 			let pipeFrameLoop = (ffmpegProcess, cb) => {
 				if(frames_rendered.includes(current_frame)){
 					let frame_path = path.resolve(file_path, `${current_frame}.rgba`);
-					fs.readFile(frame_path, (err, buf) => {
-						if(err){
-							resolveRender("Error encoding video").catch(console.error);
-
-							return;
-						}
-
+					fs.promises.readFile(frame_path).then(buf => {
 						ffmpegProcess.stdin.write(buf, err => {
 							if(err){
 								cb(null);
 								return;
 							}
 
-							fs.remove(frame_path);
+							fs.promises.rm(frame_path, { recursive: true }).catch(helper.error);
 
 							frames_piped.push(current_frame);
 							frames_rendered.slice(frames_rendered.indexOf(current_frame), 1);
@@ -673,6 +665,11 @@ module.exports = {
 							current_frame++;
 							pipeFrameLoop(ffmpegProcess, cb);
 						});
+					}).catch(err => {
+						resolveRender("Error encoding video").catch(console.error);
+						helper.error(err);
+
+						return;
 					});
 				}else{
 					setTimeout(() => {
@@ -727,13 +724,13 @@ module.exports = {
 
 					const encodingProcessStart = Date.now();
 
-					let ffmpegProcess = spawn(ffmpeg.path, ffmpeg_args, { shell: true });
+					let ffmpegProcess = spawn(ffmpeg, ffmpeg_args, { shell: true });
 
 					ffmpegProcess.on('close', async code => {
 						if(code > 0){
 							resolveRender("Error encoding video")
 							.then(() => {
-								fs.remove(file_path);
+								fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
 							}).catch(console.error);
 
 							return false;
@@ -748,7 +745,7 @@ module.exports = {
 							attachment: `${file_path}/video.${options.type}`,
 							name: `video.${options.type}`
 						}]}).then(() => {
-							fs.remove(file_path);
+							fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
 						}).catch(console.error);
 					});
 
@@ -756,7 +753,7 @@ module.exports = {
 						if(err){
 							resolveRender("Error encoding video")
 							.then(() => {
-								fs.remove(file_path);
+								fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
 							}).catch(console.error);
 
 							return false;
@@ -792,13 +789,13 @@ module.exports = {
 
 						const encodingProcessStart = Date.now();
 
-						let ffmpegProcess = spawn(ffmpeg.path, ffmpeg_args, { shell: true });
+						let ffmpegProcess = spawn(ffmpeg, ffmpeg_args, { shell: true });
 
 						ffmpegProcess.on('close', code => {
 							if(code > 0){
 								resolveRender("Error encoding video")
 								.then(() => {
-									fs.remove(file_path);
+									fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
 								}).catch(console.error);
 
 								return false;
@@ -813,7 +810,7 @@ module.exports = {
 								attachment: `${file_path}/video.${options.type}`,
 								name: `video.${options.type}`
 							}]}).then(() => {
-								fs.remove(file_path);
+								fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
 							}).catch(console.error);					 
 						});
 
@@ -832,7 +829,7 @@ module.exports = {
 							if(err){
 								resolveRender("Error encoding video")
 								.then(() => {
-									fs.remove(file_path);
+									fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
 								}).catch(console.error);
 
 								return false;

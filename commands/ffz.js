@@ -1,5 +1,5 @@
 const axios = require('axios');
-const fs = require('fs-extra');
+const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
@@ -59,7 +59,6 @@ module.exports = {
                         let stream = response.data.pipe(fs.createWriteStream(file));
 
                         stream.on('finish', () => {
-                            let attachment = new Discord.Attachment(file, "emote.png");
                             resolve({embed: {
                                 title: emote.name,
                                 url: `https://www.frankerfacez.com/emoticon/${emote.id}`,
@@ -69,7 +68,7 @@ module.exports = {
                                 footer: {
                                     text: `Submitted by ${emote.owner.display_name}`
                                 }
-                            }, file: attachment, remove_path: file});
+                            }, files: [{ attachment: file, name: 'emote.png' }], remove_path: file});
                         });
                     });
                 }else{
