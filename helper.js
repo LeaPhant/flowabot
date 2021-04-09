@@ -237,7 +237,7 @@ module.exports = {
         });
 
          if(message.guild && user_ign){
-             let members = message.guild.members.array();
+            let members = message.guild.members.cache.array();
 
             args.forEach(function(arg){
                 let matching_members = [];
