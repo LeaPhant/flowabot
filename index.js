@@ -175,23 +175,23 @@ fs.readdir(commands_path).then(items => {
 
     helper.init(commands);
 }).catch(err => {
-    throw "Unable to read commands folder";
     helper.error(err);
+    throw "Unable to read commands folder";
 });
 
 let handlers = [];
 let handlers_path = path.resolve(__dirname, 'handlers');
 
-fs.readdir(handlers_path, (err, items) => {
-    if(err)
-        throw "Unable to read handlers folder";
-
+fs.readdir(handlers_path).then(items => {
     items.forEach(item => {
         if(path.extname(item) == '.js'){
             let handler = require(path.resolve(handlers_path, item));
             handlers.push(handler);
         }
     });
+}).catch(err => {
+    helper.error(err);
+    throw "Unable to read handlers folder";
 });
 
 function onMessage(msg){
