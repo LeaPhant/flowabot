@@ -190,12 +190,12 @@ module.exports = {
 
                 let preview_promise;
 
-                Promise.resolve(download_promise).then(() => {
+                Promise.resolve(download_promise).then(async () => {
                     if(type == 'strains' || type == 'aim' || type == 'speed'){
                         if(config.debug)
                             helper.log('getting strains for mods', mods);
 
-                        time = osu.get_strains(download_path, mods.join(''), type).max_strain_time_real - 2000;
+                        time = (await osu.get_strains(download_path, mods.join(''), type)).max_strain_time_real - 2000;
                     }else if(type == 'preview'){
 						preview_promise = osu.get_preview_point(download_path);
 					}
