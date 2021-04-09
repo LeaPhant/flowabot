@@ -1,7 +1,7 @@
 const LocalStorage = require('node-localstorage').LocalStorage;
 localStorage = new LocalStorage('./scratch');
 
-const moment = require('moment');
+const { DateTime } = require('luxon');
 const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
@@ -27,11 +27,11 @@ module.exports = {
     cmd_escape: cmd_escape,
 
     log: (...params) => {
-        console.log(`[${moment().toISOString()}]`, ...params);
+        console.log(`[${DateTime.now().toString()}]`, ...params);
     },
 
     error: (...params) => {
-        console.error(`[${moment().toISOString()}]`, ...params);
+        console.error(`[${DateTime.now().toString()}]`, ...params);
     },
 
     setItem: (item, data) => {

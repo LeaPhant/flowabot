@@ -1,6 +1,8 @@
 const tzlookup = require('tz-lookup');
-const moment = require('moment-timezone');
 const axios = require('axios');
+
+const { DateTime, IANAZone } = require('luxon');
+const helper = require('../helper');
 
 const Nominatim = axios.create({
     baseURL: 'https://nominatim.openstreetmap.org/',
@@ -22,15 +24,10 @@ module.exports = {
     call: obj => {
         return new Promise((resolve, reject) => {
             let { argv } = obj;
+            let zoneName = 'utc';
 
-            if(argv.length == 1){
-                let timezones = moment.tz.names();
-                let timezone = timezones[Math.floor(Math.random() * timezones.length)];
-
-                resolve(`${moment().tz(timezone).format('HH:mm, MMM DD')} (${timezone})`);
-
-                return;
-            }
+            if(argv.length == 1)
+                resolve(`${DateTime.now().toUTC().toFormat('HH:mm, MMM dd')} (UTC)`);
 
             let q = argv.slice(1).join(" ");
 
@@ -39,7 +36,12 @@ module.exports = {
                     let place = response.data[0];
                     let timezone = tzlookup(Number(place.lat), Number(place.lon));
 
-                    resolve(`${moment().tz(timezone).format('HH:mm, MMM DD')} (${timezone})`);
+                    const zone = IANAZone.create(timezone);
+
+                    if(zone.isValid)
+                        zoneName = timezone;
+
+                    resolve(`${DateTime.now().setZone(zoneName).toFormat('HH:mm, MMM dd')} (${timezone})`);
                 }else{
                     reject("Couldn't find this place");
                 }

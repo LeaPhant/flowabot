@@ -1,9 +1,8 @@
 const axios = require('axios');
-const moment = require('moment');
-require("moment-duration-format");
 
 const helper = require('../helper.js');
 const config = require('../config.json');
+const { DateTime } = require('luxon');
 
 const lastFm = axios.create({
     baseURL: 'http://ws.audioscrobbler.com/2.0/',
@@ -69,7 +68,7 @@ module.exports = {
                 lastFm.get('', { params: { method: 'user.getinfo', user: argv[1] }}),
                 lastFm.get('', { params: { method: 'user.gettopartists', limit: 4, user: argv[1], period: period }}),
                 lastFm.get('', { params: { method: 'user.gettoptracks', limit: 4, user: argv[1], period: period }}),
-                lastFm.get('', { params: { method: 'user.getrecenttracks', limit: 2, user: argv[1], from: moment().unix() - periods[period].time }})
+                lastFm.get('', { params: { method: 'user.getrecenttracks', limit: 2, user: argv[1], from: Math.floor(DateTime.now().toSeconds()) - periods[period].time }})
             ];
 
             Promise.all(requests).then(response => {
@@ -89,7 +88,7 @@ module.exports = {
                     if(track["@attr"] != undefined && track["@attr"].nowplaying == 'true')
                         track_date = "now playing";
                     else
-                        track_date = moment.unix(track.date.uts).fromNow();
+                        track_date = DateTime.fromSeconds(track.date.uts).toRelative();
                     recent_tracks_string += `**${track.artist["#text"]}** – ${track.name} *(${track_date})*`;
                 });
 
@@ -116,7 +115,7 @@ module.exports = {
                     description: periods[period].name,
                     footer: {
                         icon_url: "https://cdn.discordapp.com/attachments/532034792804581379/591679254656319556/lastfm-1.png",
-                        text: `Last.fm${helper.sep}Scrobbling since ${moment.unix(user.registered.unixtime).format('D MMMM YYYY')}`
+                        text: `Last.fm${helper.sep}Scrobbling since ${DateTime.fromSeconds(user.registered.unixtime).toFormat('dd MMMM yyyy')}`
                     },
                     thumbnail: {
                         url: user.image["2"]["#text"]

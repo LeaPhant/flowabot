@@ -1,6 +1,6 @@
 const osu = require('../osu.js');
 const helper = require('../helper.js');
-const moment = require('moment');
+const { DateTime } = require('luxon');
 const config = require('../config.json');
 
 module.exports = {
@@ -95,7 +95,7 @@ module.exports = {
                             value += `${top.countmiss}xMiss`;
                         }
 
-                        value += `${helper.sep}${moment(top.date).fromNow()}`
+                        value += `${helper.sep}${DateTime.fromSQL(top.date).toRelative()}`
 
                         embed.fields.push({ name, value })
                     }

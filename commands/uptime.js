@@ -1,6 +1,5 @@
 const axios = require('axios');
-const moment = require('moment');
-require("moment-duration-format");
+const { DateTime, Duration } = require('luxon');
 
 const helper = require('../helper.js');
 const config = require('../config.json');
@@ -58,27 +57,38 @@ module.exports = {
                     }
                 }).then(response => {
                     let videos = response.data.videos;
+
                     if(videos.length >= 1){
                         var vod = videos[0];
                         var name = vod.channel.display_name;
-                        if(vod.status == 'recording'){
-                            resolve(
-                                `${name} has been live for ${moment.duration(moment().unix() - moment(vod.created_at).unix(), "seconds").format("h [hour and] m [minute]")}
-                            `);
-                        }else{
-                            let duration = moment().unix() - (moment(vod.created_at).unix() + vod.length);
 
-                            if(duration < 60){
+                        if(vod.status == 'recording'){
+                            const uptimeMs = DateTime.now().toMillis() - DateTime.fromISO(vod.created_at).toMillis();
+                            const duration = Duration.fromMillis(uptimeMs);
+
+                            if(uptimeMs > 60 * 60 * 1000)
+                            resolve(`${name} has been live for ${duration.toFormat("h'h 'm'm'")}`);
+                            else
+                                resolve(`${name} has been live for ${duration.toFormat("m'm'")}`);
+                        }else{
+                            const downtimeMs = DateTime.now().toMillis() - DateTime.fromISO(vod.created_at).toMillis() - vod.length * 1000;
+                            const duration = Duration.fromMillis(downtimeMs);
+
+                            if(downtimeMs < 60 * 1000){
                                 resolve(
-                                    `${name} hasn't streamed in ${moment.duration(duration, 'seconds').format('s [second]')}
+                                    `${name} hasn't streamed in ${duration.toFormat("s's'")}
                                 `);
-                            }else if(duration < 60 * 60){
+                            }else if(downtimeMs < 60 * 60 * 1000){
                                 resolve(
-                                    `${name} hasn't streamed in ${moment.duration(duration, 'seconds').format('m [minute]')}
+                                    `${name} hasn't streamed in ${duration.toFormat("m'm'")}
+                                `);
+                            }else if(downtimeMs < 24 * 60 * 60 * 1000){
+                                resolve(
+                                    `${name} hasn't streamed in ${duration.toFormat("h'h'")}
                                 `);
                             }else{
                                 resolve(
-                                    `${name} hasn't streamed in ${moment.duration(duration, 'seconds').format('d [day and] h [hour]')}
+                                    `${name} hasn't streamed in ${duration.toFormat("d'd' h'h'")}
                                 `);
                             }
                         }

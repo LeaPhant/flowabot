@@ -1,10 +1,11 @@
 const axios = require('axios');
-const moment = require('moment');
 const ojsama = require('ojsama');
 const osuBeatmapParser = require('osu-parser');
 const path = require('path');
 const util = require('util');
 const fs = require('fs').promises;
+
+const { DateTime, Duration } = require('luxon');
 
 const { createCanvas } = require('canvas');
 
@@ -592,8 +593,6 @@ function getScore(recent_raw, cb){
                     nmiss: Number(recent_raw.countmiss)
                 });
 
-                console.log(pp);
-
                 let pp_fc = ojsama.ppv2({
                     aim_stars: diff.aim,
                     speed_stars: diff.speed,
@@ -1041,7 +1040,7 @@ module.exports = {
 
         embed.footer = {
             icon_url: `https://a.ppy.sh/${recent.creator_id}?${+new Date()}`,
-            text: `Mapped by ${recent.creator}${helper.sep}${ranked_text} on ${moment(ranked_date).format('D MMMM YYYY')}`
+            text: `Mapped by ${recent.creator}${helper.sep}${ranked_text} on ${DateTime.fromISO(ranked_date).toFormat('dd MMMM yyyy')}`
         };
         embed.thumbnail = {
             url: `https://b.ppy.sh/thumb/${recent.beatmapset_id}l.jpg`
@@ -1063,7 +1062,7 @@ module.exports = {
 
         lines[0] += `${recent.score.toLocaleString()}${helper.sep}`;
         lines[0] += `${+recent.acc.toFixed(2)}%${helper.sep}`;
-        lines[0] += `${moment(recent.date).fromNow()}`;
+        lines[0] += `${DateTime.fromSQL(recent.date).toRelative()}`;
 
         if(recent.pp_fc > recent.pp)
             lines[1] += `**${recent.unsubmitted ? '*' : ''}${+recent.pp.toFixed(2)}pp**${recent.unsubmitted ? '*' : ''} ➔ ${+recent.pp_fc.toFixed(2)}pp for ${+recent.acc_fc.toFixed(2)}% FC${helper.sep}`;
@@ -1112,7 +1111,7 @@ module.exports = {
 
         lines[2] = 'Beatmap Information';
 
-        lines[3] += `${moment("2015-01-01").startOf('day').seconds(recent.duration).format('mm:ss')} ~ `;
+        lines[3] += `${Duration.fromMillis(recent.duration * 1000).toFormat('mm:ss')} ~ `;
         lines[3] += `CS**${+recent.cs.toFixed(1)}** AR**${+recent.ar.toFixed(1)}** OD**${+recent.od.toFixed(1)}** HP**${+recent.hp.toFixed(1)}** ~ `;
 
         if(recent.bpm_min != recent.bpm_max)
@@ -1352,7 +1351,7 @@ module.exports = {
 
             if(options.rb || options.ob){
                 response.forEach((recent, index) => {
-                   response[index].unix = moment(recent.date + 'Z').unix();
+                    response[index].unix = Math.floor(DateTime.fromSQL(recent.date).toSeconds());
                 });
             }
 
@@ -1598,8 +1597,6 @@ module.exports = {
 
             bpms.push({ t: map.objects[map.objects.length - 1].time, y: bpms[bpms.length - 1]['y'] });
 
-            console.log(bpms);
-
             const chartOptions = Object.assign({}, CHART_OPTIONS);
 
             chartOptions.title.text = [`${map.artist} - ${map.title}`, `Version: ${map.version}, Mapped by ${map.creator}`];
@@ -1638,8 +1635,6 @@ module.exports = {
         api.get('/get_user', {params: {u: options.u}}).then(response => {
             response = response.data;
 
-			helper.log(response);
-
 			if(response.length == 0){
 				cb("Couldn't find user");
 				return false;
@@ -1669,7 +1664,7 @@ module.exports = {
                     url: `https://osu.ppy.sh/u/${data.user_id}`
                 },
                 footer: {
-                    text: `Playing for ${moment(data.join_date).fromNow(true)}${helper.sep}Joined on ${moment(data.join_date).format('D MMMM YYYY')}`
+                    text: `Playing for ${DateTime.fromSQL(data.join_date).toRelative().slice(0, -4)}${helper.sep}Joined on ${DateTime.fromSQL(data.join_date).toFormat('dd MMMM yyyy')}`
                 },
                 fields: [
                     {
@@ -1732,8 +1727,6 @@ module.exports = {
                     inline: false
                 }
             );
-
-            helper.log(embed);
 
             cb(null, embed);
         }).catch(err => {

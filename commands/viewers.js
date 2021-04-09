@@ -1,8 +1,8 @@
 const helper = require('../helper.js');
 const axios = require('axios');
 const config = require('../config.json');
-const moment = require('moment');
-require("moment-duration-format");
+
+const { DateTime, Duration } = require('luxon');
 
 const twitchKraken = axios.create({
     baseURL: 'https://api.twitch.tv/kraken',
@@ -54,6 +54,12 @@ module.exports = {
                         let status = channel.status;
                         let quality = Math.round(stream.video_height) + "p" + Math.round(stream.average_fps);
 
+                        const uptimeMs = DateTime.now().toMillis() - DateTime.fromISO(stream.created_at).toMillis();
+                        const duration = Duration.fromMillis(uptimeMs);
+
+                        const footerText = `Live for ${uptimeMs > 60 * 60 * 1000 
+                            ? duration.toFormat("h'h' m'm'") : duration.toFormat("m'm'")}`;
+
                         resolve({
                             embed: {
                                 color: 6570404,
@@ -69,7 +75,7 @@ module.exports = {
                                     url: channel.logo
                                 },
                                 footer: {
-                                    text: `Live for ${moment.duration(Math.max(0, moment().unix() - moment(stream.created_at).unix()), "seconds").format("h [hour and] m [minute]")}`
+                                    text: footerText
                                 }
                             }
                         });

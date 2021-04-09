@@ -1,6 +1,5 @@
 const axios = require('axios');
-const moment = require('moment');
-require("moment-duration-format");
+const { DateTime } = require('luxon');
 
 const helper = require('../helper.js');
 const config = require('../config.json');
@@ -123,7 +122,7 @@ module.exports = {
                     if(track["@attr"] != undefined && track["@attr"].nowplaying == 'true'){
                         listening_text = 'Listening right now';
                     }else{
-                        listening_text = `Listened ${moment.unix(track.date.uts).fromNow()}`;
+                        listening_text = `Listened ${DateTime.fromSeconds(track.date.uts).toRelative()}`;
                     }
 
                     embed = {
