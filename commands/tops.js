@@ -31,8 +31,6 @@ module.exports = {
             if(match != null && !isNaN(match[0]))
                 count = Math.max(1, Math.min(match[0], 25));
 
-            console.log('count', count);
-
             if(!top_user){
                 if(user_ign[msg.author.id] == undefined){
                     reject(helper.commandHelp('ign-set'));

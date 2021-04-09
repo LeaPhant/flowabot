@@ -201,8 +201,6 @@ module.exports = {
 					}
 
 					Promise.resolve(preview_promise).then(previewTime => {
-						console.log('previewTime', previewTime);
-
 						if(previewTime)
 							time = previewTime;
 

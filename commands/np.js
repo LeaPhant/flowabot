@@ -22,8 +22,6 @@ module.exports = {
 
             let activities = msg.author.presence.activities;
 
-            console.log(msg.author.presence);
-
             let embed;
 
             for(const presence of activities){

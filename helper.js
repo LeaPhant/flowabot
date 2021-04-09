@@ -171,8 +171,6 @@ module.exports = {
             if(await fileExists(beatmap_path) == false
             || (await fileExists(beatmap_path) && await module.exports.validateBeatmap(beatmap_path) == false)){
                 await module.exports.downloadFile(beatmap_path, `https://osu.ppy.sh/osu/${beatmap_id}`);
-                
-                console.log('downloaded file');
             }
         }catch(err){
             helper.error(err);

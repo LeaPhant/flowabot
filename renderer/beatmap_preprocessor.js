@@ -381,10 +381,6 @@ function processBeatmap(osuContents){
     beatmap.HitWindow100 = (100 + 40 * (5  - beatmap.OverallDifficultyRealtime) / 5) - 0.5;
     beatmap.HitWindow50 = (150 + 50 * (5  - beatmap.OverallDifficultyRealtime) / 5) - 0.5;
 
-    console.log('hit window 300', beatmap.HitWindow300);
-    console.log('hit window 100', beatmap.HitWindow100);
-    console.log('hit window 50', beatmap.HitWindow50);
-
     // CS
     beatmap.Scale = (1.0 - 0.7 * (beatmap.CircleSize - 5) / 5) / 2;
     beatmap.Radius = 23.05 - (beatmap.CircleSize - 7) * 4.4825;
@@ -1487,8 +1483,6 @@ function processBeatmap(osuContents){
     hitResults.ur = beatmap.ScoringFrames[beatmap.ScoringFrames.length - 1].ur;
 
     beatmap.HitResults = hitResults;
-
-    console.log(hitResults);
 
     beatmap.Replay.lastCursor = 0;
     beatmap.Replay.Mods = enabled_mods;

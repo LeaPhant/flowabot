@@ -48,8 +48,6 @@ module.exports = {
 
                 let user_id = users[0]._id;
 
-                console.log('USER ID', user_id);
-
                 twitchKraken.get(`/channels/${user_id}/videos`, {
                     params: {
                         broadcast_type: 'archive',

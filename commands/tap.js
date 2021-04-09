@@ -33,8 +33,6 @@ module.exports = {
 
             let divisor_parts = divisor.split("/");
 
-            console.log(bpm, '/', 1, '/', divisor_parts[1]);
-
             let bpm_raw = bpm / (1 / Number(divisor_parts[1]));
 
             let embed = {
