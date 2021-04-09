@@ -306,112 +306,83 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 	});
 }
 
-function downloadMedia(options, beatmap, beatmap_path, size, download_path){
-    return new Promise((resolve, reject) => {
-        let output = {};
+async function downloadMedia(options, beatmap, beatmap_path, size, download_path){
+	if(options.type != 'mp4' || !options.audio || !config.credentials.osu_api_key)
+		return false;
 
-        if(options.type != 'mp4' || !options.audio || !config.credentials.osu_api_key){
-            reject();
-            return false;
-        }
+	let output = {};
 
-        fs.promises.readFile(beatmap_path, 'utf8').then(content => {
-            let params = {
-                k: config.credentials.osu_api_key
-            };
+	let beatmapset_id = beatmap.BeatmapSetID;
 
-            if(beatmap.BeatmapID){
-                params.b = beatmap.BeatmapID;
-            }else{
-                let md5_hash = crypto.createHash('md5').update(content).digest("hex");
-                params.h = md5_hash;
-            }
+	if(beatmapset_id == false){
+		const content = await fs.promises.readFile(beatmap_path, 'utf8');
+		const hash = crypto.createHash('md5').update(content).digest("hex");
 
-            axios.get('https://osu.ppy.sh/api/get_beatmaps', { params }).then(response => {
-                response = response.data;
-                if(response.length == 0){
-                    reject();
-                    return false;
-                }
+		const { data } = await axios.get('https://osu.ppy.sh/api/get_beatmaps', { params: {
+			k: config.credentials.osu_api_key,
+			h: hash
+		}});
 
-                let beatmapset_id = response[0].beatmapset_id;
+		if(data.length == 0){
+			throw "Couldn't find beatmap";
+		}
 
-                helper.log('downloading from', `https://osu.gatari.pw/d/${beatmapset_id}`);
+		beatmapset_id = response[0].beatmapset_id;
+	}
 
-                axios.get(`https://beatconnect.io/b/${beatmapset_id}`, {responseType: 'stream'}).then(response => {
-                    if(Number(response.data.headers['content-length']) < 500){
-                        reject();
-                        return false;
-                    }
+	let mapStream;
 
-                    let stream = response.data.pipe(fs.createWriteStream(path.resolve(download_path, 'map.zip')));
+	try{
+		const chimuCheckMapExists = await axios.get(`https://api.chimu.moe/v1/set/${beatmapset_id}`);
 
-                    stream.on('finish', () => {
-                        let extraction_path = path.resolve(download_path, 'map');
-                        let extraction = fs.createReadStream(path.resolve(download_path, 'map.zip')).pipe(unzip.Extract({ path: extraction_path }));
+		if(chimuCheckMapExists.status != 200)
+			throw "Map not found";
 
-                        extraction.on('close', async () => {
-							output.beatmap_path = extraction_path;
+		const chimuMap = await axios.get(`https://api.chimu.moe/v1/set/${beatmapset_id}`, { responseType: 'stream' });
+		mapStream = chimuMap.data;
+	}catch(e){
+		const beatconnectMap = await axios.get(`https://beatconnect.io/b/${beatmapset_id}`, { responseType: 'stream' });
+		mapStream = beatconnectMap.data;
+	}
 
-                            if(beatmap.AudioFilename && await helper.fileExists(path.resolve(extraction_path, beatmap.AudioFilename)))
-                                output.audio_path = path.resolve(extraction_path, beatmap.AudioFilename);
+	const extraction_path = path.resolve(download_path, 'map');
 
-                            if(beatmap.bgFilename && await helper.fileExists(path.resolve(extraction_path, beatmap.bgFilename)))
-                                output.background_path = path.resolve(extraction_path, beatmap.bgFilename);
+	const extraction = mapStream.pipe(unzip.Extract({ path: extraction_path }));
 
-                            if(beatmap.bgFilename && output.background_path){
-                                helper.log('resizing image');
+	await new Promise((resolve, reject) => {
+		extraction.on('close', resolve);
+		extraction.on('error', reject);
+	});
 
-                                Jimp.read(output.background_path).then(img => {
-                                    img
-                                    .cover(...size)
-                                    .color([
-                                        { apply: 'shade', params: [80] }
-                                    ])
-                                    .writeAsync(path.resolve(extraction_path, 'bg.png')).then(() => {
-                                        output.background_path = path.resolve(extraction_path, 'bg.png');
+	output.beatmap_path = extraction_path;
 
-                                        resolve(output);
-                                    }).catch(err => {
-                                        output.background_path = null;
-                                        resolve(output);
-                                        helper.error(err);
-                                    });
-                                }).catch(err => {
-                                    output.background_path = null;
-                                    resolve(output);
-                                    helper.error(err);
-                                });
-                            }else{
-                                if(Object.keys(output).length == 0){
-                                    reject();
-                                    return false;
-                                }
+	if(beatmap.AudioFilename && await helper.fileExists(path.resolve(extraction_path, beatmap.AudioFilename)))
+		output.audio_path = path.resolve(extraction_path, beatmap.AudioFilename);
 
-                                resolve(output);
-                            }
-                        });
+	if(beatmap.bgFilename && await helper.fileExists(path.resolve(extraction_path, beatmap.bgFilename)))
+		output.background_path = path.resolve(extraction_path, beatmap.bgFilename);
 
-                        extraction.on('error', () => {
-                            reject();
-                        });
-                    });
+	if(beatmap.bgFilename && output.background_path){
+		try{
+			const img = await Jimp.read(output.background_path);
 
-                    stream.on('error', () => {
-                        reject();
-                    });
-                }).catch(() => {
-                    reject();
-                });
-            }).catch(reject);
-        }).catch(err => {
-			reject();
-			return false;
-		});
+			await img
+			.cover(...size)
+			.color([
+				{ apply: 'shade', params: [80] }
+			])
+			.writeAsync(path.resolve(extraction_path, 'bg.png'));
+	
+			output.background_path = path.resolve(extraction_path, 'bg.png');
+		}catch(e){
+			output.background_path = null;
+			helper.error(e);
+		}
+	}else if(Object.keys(output).length == 0){
+		return false;
+	}
 
-        if(config.debug)
-            helper.log('downloading beatmap osz');
-    });
+	return output;
 }
 
 let beatmap, speed_multiplier;
