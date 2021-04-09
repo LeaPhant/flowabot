@@ -1,6 +1,5 @@
 const { execFileSync } = require('child_process');
 const URL = require('url');
-const fs = require('fs-extra');
 const path = require('path');
 const os = require('os');
 const { fork } = require('child_process');
@@ -161,7 +160,7 @@ module.exports = {
                     let _last_beatmap = last_beatmap[msg.channel.id];
 
                     beatmap_id = _last_beatmap.beatmap_id;
-                    download_promise = helper.downloadBeatmap(beatmap_id);
+                    download_promise = helper.downloadBeatmap(beatmap_id).catch(helper.error);
 
                     if(last_beatmap[msg.channel.id].score_id && mods.length == 0)
                         ({ score_id } = last_beatmap[msg.channel.id]);
@@ -223,7 +222,7 @@ module.exports = {
 								if(err)
 									reject(err);
 
-								resolve({file: buf, name: 'frame.png'});
+								resolve({files: [{ attachment: buf, name: 'frame.png' }]});
 							});
 						}
 

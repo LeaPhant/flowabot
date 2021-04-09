@@ -3,7 +3,8 @@ const moment = require('moment');
 const ojsama = require('ojsama');
 const osuBeatmapParser = require('osu-parser');
 const path = require('path');
-const fs = require('fs-extra');
+const util = require('util');
+const fs = require('fs').promises;
 
 const { createCanvas } = require('canvas');
 
@@ -11,18 +12,19 @@ const ur_calc = require('./renderer/ur.js');
 const frame = require('./renderer/render_frame.js');
 const helper = require('./helper.js');
 
-const highcharts = require('highcharts-export-server');
-const {execFileSync} = require('child_process');
+const { ChartJSNodeCanvas } = require('chartjs-node-canvas');
+
+const graphCanvas = new ChartJSNodeCanvas({ width: 600, height: 400 });
+
 const Jimp = require('jimp');
+
+const getFrame = util.promisify(frame.get_frame);
 
 const MINUTE = 60 * 1000;
 const STRAIN_STEP = 400.0;
 const DECAY_BASE = [ 0.3, 0.15 ];
 const STAR_SCALING_FACTOR = 0.0675;
 const EXTREME_SCALING_FACTOR = 0.5;
-const DECAY_WEIGHT = 0.9;
-
-highcharts.initPool();
 
 const config = require('./config.json');
 
@@ -47,6 +49,67 @@ let discord_client, last_beatmap;
 const DIFF_MODS = ["HR","EZ","DT","HT"];
 
 const TIME_MODS = ["DT", "HT"];
+
+const CHART_OPTIONS = {
+    fontColor: '#FFFFFFCC',
+    legend: {
+        display: false
+    },
+    layout: {
+        padding: {
+            top: 0,
+            bottom: 20,
+            left: 20,
+            right: 20
+        }
+    },
+    elements: {
+        line: {
+            borderColor: '#F06292',
+            fill: false
+        }
+    },
+    title: {
+        display: true,
+        fontColor: '#ECEFF1DD',
+        fontSize: 14,
+        fontStyle: 'bold',
+        padding: 20
+    },
+    scales: {
+        yAxes: [{
+            gridLines: {
+                display: true,
+                color: '#607D8BAA',
+                drawBorder: false,
+                zeroLineColor: '#607D8BAA',
+                drawTicks: false
+            },
+            ticks: {
+                fontColor: '#FFFFFFAA',
+                fontStyle: 'bold',
+                padding: 10
+            }
+        }],
+        xAxes: [{
+            gridLines: {
+                display: false
+            },
+            ticks: {
+                fontColor: '#FFFFFFAA',
+                fontStyle: 'bold',
+                maxTicksLimit: 12,
+                maxRotation: 0,
+                padding: 10
+            },
+            type: 'time',
+            time: { 
+                unit: 'second', 
+                displayFormats: { second: 'm:ss' } 
+            }
+        }]
+    }
+};
 
 const CHART_THEME = {
     chart: {
@@ -560,19 +623,19 @@ function getScore(recent_raw, cb){
                 return;
             }
 
-			helper.downloadBeatmap(recent_raw.beatmap_id).finally(() => {
+			helper.downloadBeatmap(recent_raw.beatmap_id).finally(async () => {
 				let beatmap_path = path.resolve(config.osu_cache_path, `${recent_raw.beatmap_id}.osu`);
 
 				let strains_bar;
 
-				if(fs.existsSync(beatmap_path)){
-					strains_bar = module.exports.get_strains_bar(beatmap_path, recent.mods.join(''), recent.fail_percent);
+				if(await helper.fileExists(beatmap_path)){
+					strains_bar = await module.exports.get_strains_bar(beatmap_path, recent.mods.join(''), recent.fail_percent);
 
 					if(strains_bar)
 						recent.strains_bar = true;
 				}
 
-	            if(replay && fs.existsSync(beatmap_path)){
+	            if(replay && await helper.fileExists(beatmap_path)){
 	                let ur_promise = new Promise((resolve, reject) => {
 						if(config.debug)
 							helper.log('getting ur');
@@ -609,7 +672,7 @@ function getScore(recent_raw, cb){
 	            }else{
 	                cb(null, recent, strains_bar);
 	            }
-			});
+			}).catch(helper.error);
         }).catch(err => {
             cb('Map not in the database, maps that are too new don\'t work yet');
             helper.log(err);
@@ -1466,7 +1529,7 @@ module.exports = {
 
 			helper.downloadBeatmap(beatmap_id).finally(() => {
 				resolve(beatmap_id);
-			});
+			}).catch(helper.error);
 		});
     },
 
@@ -1492,10 +1555,9 @@ module.exports = {
 		return beatmap_id;
     },
 
-    get_bpm_graph: function(osu_file_path, mods_string, cb){
-        helper.log(osu_file_path);
+    get_bpm_graph: async function(osu_file_path, mods_string = ""){
         try{
-            let parser = new ojsama.parser().feed(fs.readFileSync(osu_file_path, 'utf8'));
+            let parser = new ojsama.parser().feed(await fs.readFile(osu_file_path, 'utf8'));
 
             let mods = ojsama.modbits.from_string(mods_string || "");
             let mods_array = getMods(mods);
@@ -1516,7 +1578,7 @@ module.exports = {
                 map.version += ' +' + mods_filtered.join('');
             }
 
-            let bpms = [];
+            const bpms = [];
 
             for(let t = 0; t < map.timing_points.length; t++){
                 let timing_point = map.timing_points[t];
@@ -1525,67 +1587,50 @@ module.exports = {
 
                 let bpm = +(MINUTE / timing_point.ms_per_beat * speed_multiplier).toFixed(2);
 
-                if(bpms.length > 0){
-                    if(bpms[bpms.length - 1] != bpm){
-                        bpms.push([timing_point.time, bpms[bpms.length - 1][1]]);
-                        bpms.push([timing_point.time, bpm]);
-                    }
-                }else{
-                    bpms.push([timing_point.time, bpm]);
-                }
+                if(t == 0)
+                    bpms.push({ t: 0, y: bpm });
+
+                bpms.push({ t: timing_point.time, y: bpm });
             }
 
-            if(bpms.length == 0){
-                cb('An error occured getting the Beatmap BPM values');
-                return false;
-            }
+            if(bpms.length == 0)
+                throw 'An error occured getting the Beatmap BPM values';
 
-            bpms.push([map.objects[map.objects.length - 1].time, bpms[bpms.length - 1][1]]);
+            bpms.push({ t: map.objects[map.objects.length - 1].time, y: bpms[bpms.length - 1]['y'] });
 
-            let highcharts_settings = {
-                type: 'png',
-                options: {
-                    chart: {
-                        type: 'spline',
-                    },
-                    title: { text: `${map.artist} - ${map.title}` },
-                    subtitle: { text: `Version: ${map.version}, Mapped by ${map.creator}` },
-                    yAxis: {
-                        title: {
-                            align: 'high',
-                            text: 'BPM',
-                            style: {
-                                'text-anchor': 'start'
-                            },
-                            rotation: 0,
-                            y: -20,
-                            x: 10
-                        }
-                    },
-                    xAxis: {
-                        type: 'datetime',
-                        dateTimeLabelFormats: {
-                            month: '%M:%S',
-                            year: '%M:%S',
-                            day: '%M:%S',
-                            minute: '%M:%S',
-                            second: '%M:%S',
-                            millisecond: '%M:%S'
-                        }
-                    },
-                    series: [{ showInLegend: false, data: bpms }]
+            console.log(bpms);
+
+            const chartOptions = Object.assign({}, CHART_OPTIONS);
+
+            chartOptions.title.text = [`${map.artist} - ${map.title}`, `Version: ${map.version}, Mapped by ${map.creator}`];
+            chartOptions.scales.yAxes[0].ticks.precision = 0;
+
+            const configuration = {
+                type: 'line',
+                data: {
+                    datasets: [{
+                        label: 'BPM',
+                        steppedLine: true,
+                        lineTension: 0,
+                        borderJoinStyle: 'round',
+                        data: bpms
+                    }]
                 },
-                themeOptions: CHART_THEME
+                options: chartOptions
             };
 
-            highcharts.export(highcharts_settings, (err, res) => {
-                if(err) cb('An error occured creating the graph')
-                else cb(null, res.data);
-            });
+            const outputChart = await graphCanvas.renderToBuffer(configuration);
+
+            const graphImage = new Jimp(600, 400, '#263238E6');
+            const _graph = await Jimp.read(outputChart);
+            graphImage.composite(_graph, 0, 0);
+
+            const buffer = await graphImage.getBufferAsync('image/png');
+
+            return buffer;
         }catch(e){
-            cb('An error occured creating the graph');
             helper.error(e);
-            return;
+            throw 'An error occured creating the graph';
         }
     },
 
@@ -1704,8 +1749,8 @@ module.exports = {
 
     calculate_strains: calculateStrains,
 
-	get_strains_bar: function(osu_file_path, mods_string, progress){
-		let map_strains = module.exports.get_strains(osu_file_path, mods_string);
+	get_strains_bar: async function(osu_file_path, mods_string, progress){
+		let map_strains = await module.exports.get_strains(osu_file_path, mods_string);
 
 		if(!map_strains)
 			return false;
@@ -1791,83 +1836,77 @@ module.exports = {
 		});
 	},
 
-    get_strains: function(osu_file_path, mods_string, type){
-        try{
-			console.log(osu_file_path);
-            let parser = new ojsama.parser().feed(fs.readFileSync(osu_file_path, 'utf8'));
-            let map = parser.map;
+    get_strains: async function(osu_file_path, mods_string, type){
+        let parser = new ojsama.parser().feed(await fs.readFile(osu_file_path, 'utf8'));
+        let map = parser.map;
 
-            let mods = ojsama.modbits.from_string(mods_string || "");
-            let mods_array = getMods(mods);
+        let mods = ojsama.modbits.from_string(mods_string || "");
+        let mods_array = getMods(mods);
 
-            let mods_filtered = mods_array.filter(mod => DIFF_MODS.includes(mod));
+        let mods_filtered = mods_array.filter(mod => DIFF_MODS.includes(mod));
 
-            if(mods_filtered.length > 0){
-                map.version += ' +' + mods_filtered.join('');
-            }
-
-            let speed_multiplier = 1;
-
-            if(mods_array.includes("DT"))
-                speed_multiplier *= 1.5;
-
-            if(mods_array.includes("HT"))
-                speed_multiplier *= 0.75;
-
-            let stars = new ojsama.diff().calc({map: map, mods: mods});
-
-            let total = stars.total;
-
-            if(type == 'aim')
-                total = stars.aim;
-
-            if(type == 'speed')
-                total = stars.speed;
-
-            let aim_strains = calculateStrains(1, stars.objects, speed_multiplier).map(a => a = Math.sqrt(a * 9.9999) * STAR_SCALING_FACTOR);
-            let speed_strains = calculateStrains(0, stars.objects, speed_multiplier).map(a => a = Math.sqrt(a * 9.9999) * STAR_SCALING_FACTOR);
-
-            let star_strains = [];
-
-            let max_strain = 0;
-
-            let _strain_step = STRAIN_STEP * speed_multiplier;
-
-            let strain_offset = Math.floor(map.objects[0].time / _strain_step) * _strain_step - _strain_step
-
-            let max_strain_time = strain_offset;
-
-            for(let i = 0; i < aim_strains.length; i++)
-                star_strains.push(aim_strains[i] + speed_strains[i] + Math.abs(speed_strains[i] - aim_strains[i]) * EXTREME_SCALING_FACTOR);
-
-            let chosen_strains = star_strains;
-
-            if(type == 'aim')
-                chosen_strains = aim_strains;
-
-            if(type == 'speed')
-                chosen_strains = speed_strains;
-
-            chosen_strains.forEach((strain, i) => {
-                if(strain > max_strain){
-                    max_strain_time = i * STRAIN_STEP + strain_offset;
-                    max_strain = strain;
-                }
-            });
-
-            return {
-                strains: chosen_strains,
-                max_strain: max_strain,
-                max_strain_time: max_strain_time,
-                max_strain_time_real: max_strain_time * speed_multiplier,
-                total: total,
-                mods_array: mods_array,
-                map: map
-            };
-        }catch(e){
-            helper.log(e);
-			return false;
+        if(mods_filtered.length > 0){
+            map.version += ' +' + mods_filtered.join('');
         }
+
+        let speed_multiplier = 1;
+
+        if(mods_array.includes("DT"))
+            speed_multiplier *= 1.5;
+
+        if(mods_array.includes("HT"))
+            speed_multiplier *= 0.75;
+
+        let stars = new ojsama.diff().calc({map: map, mods: mods});
+
+        let total = stars.total;
+
+        if(type == 'aim')
+            total = stars.aim;
+
+        if(type == 'speed')
+            total = stars.speed;
+
+        let aim_strains = calculateStrains(1, stars.objects, speed_multiplier).map(a => a = Math.sqrt(a * 9.9999) * STAR_SCALING_FACTOR);
+        let speed_strains = calculateStrains(0, stars.objects, speed_multiplier).map(a => a = Math.sqrt(a * 9.9999) * STAR_SCALING_FACTOR);
+
+        let star_strains = [];
+
+        let max_strain = 0;
+
+        let _strain_step = STRAIN_STEP * speed_multiplier;
+
+        let strain_offset = Math.floor(map.objects[0].time / _strain_step) * _strain_step - _strain_step
+
+        let max_strain_time = strain_offset;
+
+        for(let i = 0; i < aim_strains.length; i++)
+            star_strains.push(aim_strains[i] + speed_strains[i] + Math.abs(speed_strains[i] - aim_strains[i]) * EXTREME_SCALING_FACTOR);
+
+        let chosen_strains = star_strains;
+
+        if(type == 'aim')
+            chosen_strains = aim_strains;
+
+        if(type == 'speed')
+            chosen_strains = speed_strains;
+
+        chosen_strains.forEach((strain, i) => {
+            if(strain > max_strain){
+                max_strain_time = i * STRAIN_STEP + strain_offset;
+                max_strain = strain;
+            }
+        });
+
+        return {
+            strains: chosen_strains,
+            max_strain: max_strain,
+            max_strain_time: max_strain_time,
+            max_strain_time_real: max_strain_time * speed_multiplier,
+            total: total,
+            mods_array: mods_array,
+            map: map
+        };
     },
 
     track_user: function(channel_id, user, top, cb){
@@ -1954,100 +1993,64 @@ module.exports = {
         });
     },
 
-    get_strains_graph: function(osu_file_path, mods_string, cs, ar, type, cb){
+    get_strains_graph: async function(osu_file_path, mods_string = "", cs, ar, type){
         try{
-            let strains = this.get_strains(osu_file_path, mods_string, type);
-            let {map, mods_array, max_strain_time_real} = strains;
-
-            helper.log('max strain time', max_strain_time_real);
+            let strains = await module.exports.get_strains(osu_file_path, mods_string, type);
+            let { map, mods_array, max_strain_time_real } = strains;
 
             let chosen_strains = strains.strains;
 
-            let strain_points = [];
             let max_chunks = 70;
             let chunk_size = Math.ceil(chosen_strains.length / max_chunks);
 
+            const stars = [];
+
             for(let i = 0; i < chosen_strains.length; i += chunk_size){
                 let _strains = chosen_strains.slice(i, i + chunk_size);
-                strain_points.push([i * STRAIN_STEP, Math.max(..._strains)]);
+
+                stars.push({ t: i * STRAIN_STEP, y: Math.max(..._strains) });
             }
 
-            let highcharts_settings = {
-                type: 'png',
-                options: {
-                    chart: {
-                        type: 'spline',
-                    },
-                    plotOptions: {
-                        series: {
-                            lineWidth: 3,
-                            name: false
-                        },
-                        spline: {
-                            marker: {
-                                enabled: false
-                            }
-                        }
-                    },
-                    title: { text: `${map.artist} - ${map.title}` },
-                    subtitle: { text: `Version: ${map.version}, Mapped by ${map.creator}` },
-                    yAxis: {
-                        title: {
-                            align: 'high',
-                            text: 'Stars',
-                            style: {
-                                'text-anchor': 'start'
-                            },
-                            rotation: 0,
-                            y: -20,
-                            x: 10
-                        },
-                         plotLines: [{
-                            color: 'rgba(255,255,255,0.4)',
-                            width: 2,
-                            value: strains.total
-                        }]
-                    },
-                    xAxis: {
-                        type: 'datetime',
-                        dateTimeLabelFormats: {
-                            month: '%M:%S',
-                            year: '%M:%S',
-                            day: '%M:%S',
-                            minute: '%M:%S',
-                            second: '%M:%S',
-                            millisecond: '%M:%S'
-                        }
-                    },
-                    series: [
-                        { name: 'Stars', showInLegend: false, data: strain_points },
-                    ]
+            const chartOptions = Object.assign({}, CHART_OPTIONS);
+
+            chartOptions.title.text = [`${map.artist} - ${map.title}`, `Version: ${map.version}, Mapped by ${map.creator}`];
+            chartOptions.scales.yAxes[0].ticks.suggestedMax = Math.ceil(Math.max(...stars.map(a => a['y'])));
+            chartOptions.scales.yAxes[0].ticks.beginAtZero = true;
+
+            const configuration = {
+                type: 'line',
+                data: {
+                    datasets: [{
+                        label: 'Stars',
+                        data: stars
+                    }, { // draws horizontal line for total star rating
+                        data: [{ t: 0, y: strains.total}, { t: stars[stars.length - 1]['t'], y: strains.total }],
+                        fill: false,
+                        radius: 0,
+                        borderColor: 'rgba(255,255,255,0.4)'
+                    }]
                 },
-                themeOptions: CHART_THEME
+                options: chartOptions
             };
 
-            highcharts.export(highcharts_settings, (err, res) => {
-                if(err) cb('An error occured creating the graph');
-                else{
-                    frame.get_frame(osu_file_path, max_strain_time_real - map.objects[0].time % 400, mods_array, [468, 351], {ar: ar, cs: cs}, (err, output_frame) => {
-						if(err) cb(err);
-                        else{
-							Jimp.read(Buffer.from(res.data, 'base64')).then(_graph => {
-	                            Jimp.read(output_frame).then(_frame => {
-	                                _graph.composite(_frame, 75, 20, { opacitySource: 0.6 });
-	                                _graph.getBufferAsync('image/png').then(buffer => {
-	                                    cb(null, buffer);
-	                                }).catch(helper.error);
-	                            }).catch(helper.error);
-	                        }).catch(helper.error);
-						}
-                    });
-                }
-            });
+            const outputChart = await graphCanvas.renderToBuffer(configuration);
+
+            const output_frame = await getFrame(osu_file_path, max_strain_time_real - map.objects[0].time % 400, mods_array, [427, 320], {ar: ar, cs: cs})
+            
+            const graphImage = new Jimp(600, 400, '#263238E6');
+            
+            const _graph = await Jimp.read(outputChart);
+            const _frame = await Jimp.read(output_frame);
+            _graph.composite(_frame, 90, 55, { opacitySource: 0.6 });
+
+            graphImage.composite(_graph, 0, 0);
+
+            const buffer = await graphImage.getBufferAsync('image/png');
+
+            return buffer;
         }catch(e){
-            cb('An error occured creating the graph');
             helper.error(e);
-            return;
+            throw "Failed processing strains graph";
         }
     }
 };

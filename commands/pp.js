@@ -1,5 +1,5 @@
 const { execFileSync, execFile } = require('child_process');
-const fs = require('fs-extra');
+const fs = require('fs').promises;
 const path = require('path');
 const os = require('os');
 const URL = require('url');
@@ -72,7 +72,7 @@ module.exports = {
                     download_promise.catch(reject);
                 }
 
-                Promise.resolve(download_promise).then(() => {
+                Promise.resolve(download_promise).then(async () => {
                     if(beatmap_id === undefined && download_path === undefined){
                         reject('Invalid beatmap url');
                         return false;
@@ -81,7 +81,7 @@ module.exports = {
                     let beatmap_path = download_path ? download_path : path.resolve(config.osu_cache_path, `${beatmap_id}.osu`);
 
                     if(!isNaN(cs) || !isNaN(ar) || !isNaN(od)){
-                        let beatmap = fs.readFileSync(beatmap_path, 'utf8');
+                        let beatmap = await fs.readFile(beatmap_path, 'utf8');
                         let beatmap_new = "";
                         let lines = beatmap.split("\n");
                         lines.forEach(function(line){
@@ -96,7 +96,8 @@ module.exports = {
                         beatmap_new += _line + "\n";
                         });
                         beatmap_path = path.resolve(os.tmpdir(), `${Math.floor(Math.random() * 1000000) + 1}.osu`);
-                        fs.writeFileSync(beatmap_path, beatmap_new);
+                        
+                        await fs.writeFile(beatmap_path, beatmap_new);
 
                         if(config.debug)
                             helper.log(beatmap_path);

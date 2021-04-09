@@ -2,10 +2,11 @@ const LocalStorage = require('node-localstorage').LocalStorage;
 localStorage = new LocalStorage('./scratch');
 
 const moment = require('moment');
-const fs = require('fs-extra');
+const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
 const axios = require('axios');
+const fileExists = async path => !!(await fs.promises.stat(path).catch(e => false));
 
 const config = require('./config.json');
 
@@ -15,6 +16,8 @@ const cmd_escape = "```";
 let commands;
 
 module.exports = {
+    fileExists,
+
     init: _commands => {
         commands = _commands;
     },
@@ -125,8 +128,8 @@ module.exports = {
         return "Couldn't find command.";
     },
 
-    validateBeatmap: beatmap_path => {
-        let file = fs.readFileSync(beatmap_path, 'utf8');
+    validateBeatmap: async beatmap_path => {
+        let file = await fs.promises.readFile(beatmap_path, 'utf8');
         let lines = file.split("\n");
 
         if(lines.length > 0 && !lines[0].includes('osu file format'))
@@ -137,54 +140,55 @@ module.exports = {
 
     downloadFile: (file_path, url) => {
         return new Promise((resolve, reject) => {
-            fs.ensureDirSync(path.dirname(file_path));
+            fs.promises.mkdir(path.dirname(file_path), { recursive: true }).then(() => {
+                axios.get(url, {responseType: 'stream'}).then(response => {
+                    const stream = response.data.pipe(fs.createWriteStream(file_path));
+    
+                    stream.on('finish', async () => {
+                        if(await module.exports.validateBeatmap(file_path) == false){
+                            await fs.promises.rm(file_path, { recursive: true });
+    
+                            reject('Failed downloading beatmap');
+                        }
 
-            axios.get(url, {responseType: 'stream'}).then(response => {
-                let stream = response.data.pipe(fs.createWriteStream(file_path));
-
-                stream.on('finish', () => {
-                    if(!module.exports.validateBeatmap(file_path)){
-                        fs.remove(file_path);
-                        reject("Couldn't download file");
-                    }
-
-                    resolve();
-                });
-
-                stream.on('error', () => {
-                    reject("Couldn't download file");
-                });
-            }).catch(() => {
-                reject("Couldn't download file");
-            });
+                        resolve();
+                    });
+    
+                    stream.on('error', err => {
+                        reject(err);
+                    });
+                }).catch(reject);
+            }).catch(reject);
         });
     },
 
-    downloadBeatmap: beatmap_id => {
-        return new Promise((resolve, reject) => {
+    downloadBeatmap: async beatmap_id => {
+        try{
             let beatmap_path = path.resolve(config.osu_cache_path, `${beatmap_id}.osu`);
 
-            fs.ensureDirSync(path.dirname(beatmap_path));
+            await fs.promises.mkdir(path.dirname(beatmap_path), { recursive: true });
 
-            if(!fs.existsSync(beatmap_path)
-            || (fs.existsSync(beatmap_path) && !module.exports.validateBeatmap(beatmap_path))){
-                module.exports.downloadFile(beatmap_path, `https://osu.ppy.sh/osu/${beatmap_id}`).then(() => {
-                    resolve();
-                }).catch(reject);
-            }else{
-                resolve();
+            if(await fileExists(beatmap_path) == false
+            || (await fileExists(beatmap_path) && await module.exports.validateBeatmap(beatmap_path) == false)){
+                await module.exports.downloadFile(beatmap_path, `https://osu.ppy.sh/osu/${beatmap_id}`);
+                
+                console.log('downloaded file');
             }
-        });
+        }catch(err){
+            helper.error(err);
+
+            throw "Couldn't download beatmap";
+        }
     },
 
     emote: (emoteName, guild, client) => {
         let emote;
 
         if(guild)
-            emote = guild.emojis.find(emoji => emoji.name.toLowerCase() === emoteName.toLowerCase());
+            emote = guild.emojis.cache.find(emoji => emoji.name.toLowerCase() === emoteName.toLowerCase());
 
         if(!emote)
-            emote = client.emojis.find(emoji => emoji.name.toLowerCase() === emoteName.toLowerCase());
+            emote = client.emojis.cache.find(emoji => emoji.name.toLowerCase() === emoteName.toLowerCase());
 
         return emote;
     },

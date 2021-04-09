@@ -1,8 +1,7 @@
 const { createCanvas, Image } = require('canvas');
 const path = require('path');
-const fs = require('fs-extra');
+const fs = require('fs').promises;
 const helper = require('../helper.js');
-const { isArray } = require('util');
 
 const PLAYFIELD_WIDTH = 512;
 const PLAYFIELD_HEIGHT = 384;
@@ -1185,7 +1184,7 @@ process.on('message', async obj => {
                 }
             }
 
-            fs.writeFileSync(path.resolve(file_path, `${current_frame}.rgba`), Buffer.from(image_data));
+            await fs.writeFile(path.resolve(file_path, `${current_frame}.rgba`), Buffer.from(image_data));
 
             process.send(current_frame);
 

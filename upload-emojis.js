@@ -1,5 +1,5 @@
 const Discord = require('discord.js');
-const fs = require('fs-extra');
+const fs = require('fs').promises;
 const path = require('path');
 const readline = require('readline');
 
@@ -19,7 +19,7 @@ const config = require('./config.json');
 let guilds = [];
 
 client.on('ready', () => {
-    client.guilds.array().forEach(guild => {
+    client.guilds.cache.array().forEach(guild => {
         if(guild.me.hasPermission('MANAGE_EMOJIS'))
             guilds.push(guild);
     });
@@ -28,7 +28,7 @@ client.on('ready', () => {
         throw "Bot has no servers to upload emotes to";
 
     guilds.forEach((guild, index) => {
-        let staticEmojis = guild.emojis.filter(a => !a.animated && !a.deleted && !a.managed).array().length;
+        let staticEmojis = guild.emojis.cache.filter(a => !a.animated && !a.deleted && !a.managed).array().length;
         console.log(index, `${guild.name} - ${staticEmojis} / 50 or more emote slots`);
     });
 
@@ -43,16 +43,13 @@ client.on('ready', () => {
 
         let guild = guilds[index];
 
-        fs.readdir('./emotes', (err, files) => {
-            if(err)
-                throw err;
-
+        fs.readdir('./emotes').then(files => {
             let promises = [];
 
             files.forEach(file => {
                 if(path.extname(file) == '.png')
                     promises.push(
-                        guild.createEmoji(`./emotes/${file}`, path.basename(file, path.extname(file)))
+                        guild.emojis.create(`./emotes/${file}`, path.basename(file, path.extname(file)))
                     );
             });
 
@@ -63,6 +60,8 @@ client.on('ready', () => {
             }).catch(err => {
                 throw err;
             });
+        }).catch(err => {
+            throw err;
         });
     });
 });

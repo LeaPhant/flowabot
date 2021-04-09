@@ -1,8 +1,12 @@
 if(require('semver').lt(process.version, '10.0.0'))
 	throw "flowabot only runs on Node.js 10 or higher";
 
+process.on('uncaughtException', function(err){
+    console.error(err.stack);
+});
+
 const Discord = require('discord.js');
-const fs = require('fs-extra');
+const fs = require('fs').promises;
 const path = require('path');
 const objectPath = require("object-path");
 const chalk = require('chalk');
@@ -99,10 +103,7 @@ function checkCommand(msg, command){
 let commands = [];
 let commands_path = path.resolve(__dirname, 'commands');
 
-fs.readdir(commands_path, (err, items) => {
-    if(err)
-        throw "Unable to read commands folder";
-
+fs.readdir(commands_path).then(items => {
     items.forEach(item => {
         if(path.extname(item) == '.js'){
             let command = require(path.resolve(commands_path, item));
@@ -118,8 +119,8 @@ fs.readdir(commands_path, (err, items) => {
                 if(!Array.isArray(command.folderRequired))
                     folderRequired = [folderRequired];
 
-                folderRequired.forEach(folder => {
-                    if(!fs.existsSync(path.resolve(__dirname, folder)))
+                folderRequired.forEach(async folder => {
+                    if(await helper.fileExists(path.resolve(__dirname, folder)) == false)
                         available = false;
                         unavailability_reason.push(`required folder ${folder} does not exist`);
                 });
@@ -173,6 +174,9 @@ fs.readdir(commands_path, (err, items) => {
     });
 
     helper.init(commands);
+}).catch(err => {
+    throw "Unable to read commands folder";
+    helper.error(err);
 });
 
 let handlers = [];
@@ -267,12 +271,12 @@ function onMessage(msg){
 			                        }
 
 									if(remove_path)
-										fs.remove(remove_path, err => { if(err) helper.error });
+										fs.rm(remove_path, { recursive: true }).catch(helper.error);
 								});
 							}
 
                             if(remove_path)
-                                fs.remove(remove_path, err => { if(err) helper.error });
+                                fs.rm(remove_path, { recursive: true }).catch(helper.error);
                         }).catch(err => {
 							msg.channel.send(`Couldn't run command: \`${err}\``);
 						});
