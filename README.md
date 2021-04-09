@@ -38,7 +38,7 @@
 
 - **Using Linux or macOS is recommended** (No support for Windows, here's two unofficial guides to run it on Windows if you wanna try anyway: https://github.com/LeaPhant/flowabot/issues/9, https://pastebin.com/g6yuxCCf)
 - Git (https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
-- Node.js 12 or higher (https://nodejs.org/)
+- Node.js 14 or higher (https://nodejs.org/)
 - node-gyp (https://github.com/nodejs/node-gyp#installation)
 - Be sure to have gcc/g++ installed, e.g. `sudo apt install build-essential` on Ubuntu
 - Discord bot token and client ID (https://discord.com/developers/applications/)

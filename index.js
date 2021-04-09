@@ -1,5 +1,5 @@
-if(require('semver').lt(process.version, '10.0.0'))
-	throw "flowabot only runs on Node.js 10 or higher";
+if(require('semver').lt(process.version, '14.14.0'))
+	throw "flowabot only runs on Node.js 14.14.0 or higher";
 
 process.on('uncaughtException', function(err){
     console.error(err.stack);
