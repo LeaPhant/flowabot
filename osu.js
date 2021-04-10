@@ -729,7 +729,7 @@ function updateTrackedUsers(){
                                 ur_promise.then(recent => {
                                     let embed = module.exports.format_embed(recent);
                                     tracked_users[user].channels.forEach(channel_id => {
-                                        let channel = discord_client.channels.get(channel_id);
+                                        let channel = discord_client.channels.cache.get(channel_id);
                                         if(channel)
                                             channel.send(`${recent.username} got a new #${recent.pb} top play!`,
 												{
@@ -744,7 +744,7 @@ function updateTrackedUsers(){
                             }else{
                                 let embed = module.exports.format_embed(recent);
                                 tracked_users[user].channels.forEach(channel_id => {
-                                    let channel = discord_client.channels.get(channel_id);
+                                    let channel = discord_client.channels.cache.get(channel_id);
                                     if(channel)
                                         channel.send(`${recent.username} got a new #${recent.pb} top play!`,
 											{
