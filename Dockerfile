@@ -5,9 +5,9 @@ RUN apt-get update \
 
 WORKDIR /root
 
-RUN wget -q https://download.visualstudio.microsoft.com/download/pr/3224f4c4-8333-4b78-b357-144f7d575ce5/ce8cb4b466bba08d7554fe0900ddc9dd/dotnet-sdk-2.2.301-linux-x64.tar.gz \
+RUN wget -q https://download.visualstudio.microsoft.com/download/pr/ab82011d-2549-4e23-a8a9-a2b522a31f27/6e615d6177e49c3e874d05ee3566e8bf/dotnet-sdk-3.1.407-linux-x64.tar.gz \
     && mkdir -p dotnet \
-    && tar zxf dotnet-sdk-2.2.301-linux-x64.tar.gz -C dotnet
+    && tar zxf dotnet-sdk-3.1.407-linux-x64.tar.gz -C dotnet
 
 ENV PATH="/root/dotnet:${PATH}"
 ENV DOTNET_ROOT=/root/dotnet
