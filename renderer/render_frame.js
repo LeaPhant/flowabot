@@ -105,6 +105,10 @@ async function processHitsounds(beatmap_path){
 
 async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length, modded_length, time_scale, file_path){
 	let media = await mediaPromise;
+
+	if(!media)
+		throw "Beatmap data not available";
+
 	let execFilePromise = util.promisify(execFile);
 
 	let beatmapAudio = false;
