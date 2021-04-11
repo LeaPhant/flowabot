@@ -4,7 +4,7 @@ const fs = require('fs');
 const os = require('os');
 const osu = require('../osu');
 const osr = require('node-osr');
-const lzma = require('lzma');
+const lzma = require('lzma-native');
 const ojsama = require('ojsama');
 const axios = require('axios');
 const _ = require('lodash');
@@ -122,11 +122,11 @@ function getCursor(replay){
     };
 }
 
-function parseReplay(buf, decompress = true){
+async function parseReplay(buf, decompress = true){
     let replay_data = buf;
 
     if(decompress)
-        replay_data = lzma.decompress(replay_data);
+        replay_data = (await lzma.decompress(replay_data)).toString();
         
     let replay_frames = replay_data.split(",");
 
@@ -1503,7 +1503,7 @@ async function prepareBeatmap(){
         let replay_path = path.resolve(os.tmpdir(), 'replays', `${options.score_id}`);
 
         if(fs.existsSync(replay_path))
-            replay = {lastCursor: 0, replay_data: parseReplay(fs.readFileSync(replay_path))};
+            replay = {lastCursor: 0, replay_data: await parseReplay(fs.readFileSync(replay_path))};
     }
 
     if(options.osr){
@@ -1512,7 +1512,7 @@ async function prepareBeatmap(){
 
             const parsedOsr = await osr.read(response.data);
 
-            replay = {lastCursor: 0, replay_data: parseReplay(parsedOsr.replay_data, false)};
+            replay = {lastCursor: 0, replay_data: await parseReplay(parsedOsr.replay_data, false)};
         }catch(e){
             console.error(e);
 
