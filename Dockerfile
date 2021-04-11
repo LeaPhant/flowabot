@@ -26,7 +26,7 @@ RUN echo yes | npm install
 
 COPY . .
 
-RUN jq --indent 4 '.pp_path = "/opt/osu-tools/PerformanceCalculator/bin/Release/netcoreapp2.0/PerformanceCalculator.dll"' \
+RUN jq --indent 4 '.pp_path = "/opt/osu-tools/PerformanceCalculator/bin/Release/netcoreapp3.1/PerformanceCalculator.dll"' \
     config.default.json > tmp.$$.json && mv tmp.$$.json config.default.json
 
 CMD ["npm", "start"]
