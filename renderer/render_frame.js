@@ -318,7 +318,7 @@ async function downloadMedia(options, beatmap, beatmap_path, size, download_path
 
 	let beatmapset_id = beatmap.BeatmapSetID;
 
-	if(beatmapset_id == false){
+	if(beatmapset_id == null){
 		const content = await fs.promises.readFile(beatmap_path, 'utf8');
 		const hash = crypto.createHash('md5').update(content).digest("hex");
 
@@ -331,7 +331,7 @@ async function downloadMedia(options, beatmap, beatmap_path, size, download_path
 			throw "Couldn't find beatmap";
 		}
 
-		beatmapset_id = response[0].beatmapset_id;
+		beatmapset_id = data[0].beatmapset_id;
 	}
 
 	let mapStream;
