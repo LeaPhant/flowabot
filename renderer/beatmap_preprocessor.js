@@ -1030,8 +1030,11 @@ function processBeatmap(osuContents){
         });
 
         beatmap.Replay = replay;
+    }else{
+        /*for(const frame of replay.replay_data){
+            
+        }*/
     }
-
     
     for(let i = 0; i < beatmap.hitObjects.length; i++){
         const hitObject = beatmap.hitObjects[i];
@@ -1411,7 +1414,7 @@ function processBeatmap(osuContents){
             current_hit_objects.push(newHitObject);
         }
 
-        if(scoringFrame.offset / 400 > current_aim_strains.length){
+        if(scoringFrame.offset / (400 / speed_multiplier) > current_aim_strains.length){
             current_aim_strains.push(...aim_strains.splice(0, 1));
             current_aim_strains = current_aim_strains.sort((a, b) => b - a);
 
@@ -1428,7 +1431,7 @@ function processBeatmap(osuContents){
             aim_stars = Math.sqrt(aim_stars) * STAR_SCALING_FACTOR;
         }
 
-        if(scoringFrame.offset / 400 > current_speed_strains.length){
+        if(scoringFrame.offset / (400 / speed_multiplier) > current_speed_strains.length){
             current_speed_strains.push(...speed_strains.splice(0, 1));
             current_speed_strains = current_speed_strains.sort((a, b) => b - a);
 
