@@ -5,6 +5,7 @@
     "main": "index.js",
     "scripts": {
         "start": "git pull; npm i && [ ! -f ./config.json ] && npm run config; node index",
+        "fast": "node index",
         "test": "echo \"Error: no test specified\" && exit 1",
         "commands": "node generate-commands-md",
         "config": "node generate-config",
@@ -33,6 +34,7 @@
         "mathjs": "^9.3.0",
         "node-emoji": "^1.10.0",
         "node-fetch": "^2.6.1",
+        "node-ipc": "^9.2.1",
         "node-localstorage": "^2.1.6",
         "node-osr": "^1.2.1",
         "object-path": "^0.11.5",
