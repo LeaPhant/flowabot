@@ -82,11 +82,10 @@ ipc.connectTo(
 
 		ipc.of.world.on('app.framedataAck', function(data){
 			// log_as_worker("Received ACK from server");
-			// WAITING_FOR_SERVER_ACK = false;
 		})
 
-		ipc.of.world.on('app.framedataFullAck', function(data){
-			// log_as_worker("Received ACK from server");
+		ipc.of.world.on('app.resumeWorking', function(data){
+			// log_as_worker("Received ACK from server to resume work");
 			WAITING_FOR_SERVER_ACK = false;
 		})
 
@@ -1278,11 +1277,12 @@ ipc.connectTo(
 							// 	data: abuf
 							// });
 
-							log_as_worker("Sending frame data to main thread " + ++frame_counter);
+							// log_as_worker("Sending frame data to main thread " + ++frame_counter);
 							for (let i = 0; i < Math.ceil(abuf.length/32000); i++){
 								ipc.of.world.emit('app.framedata', {
 									worker_id: worker_id,
 									seqno: i,
+									video_frame_seqno: current_frame,
 									last: (i + 1) * 32000 >= abuf.length,
 									frame_data: abuf.slice(i * 32000, (i+1)*32000).toString('base64')
 								});

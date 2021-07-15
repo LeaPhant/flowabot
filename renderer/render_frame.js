@@ -16,6 +16,8 @@ const ffmpeg = require('ffmpeg-static');
 const unzip = require('unzipper');
 const disk = require('diskusage');
 
+const EventEmitter = require('events');
+
 const {execFile, fork, spawn} = require('child_process');
 
 const config = require('../config.json');
@@ -126,7 +128,7 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 	let beatmapAudio = false;
 
 	try {
-		helper.log(start_time)
+		// helper.log(start_time)
 		await execFilePromise(ffmpeg, [
 			'-ss', start_time / 1000, '-i', `"${media.audio_path}"`, '-t', actual_length * Math.max(1, time_scale) / 1000,
 			'-filter:a', `"afade=t=out:st=${Math.max(0, actual_length * time_scale / 1000 - 0.5 / time_scale)}:d=0.5,atempo=${time_scale},volume=0.7"`,
@@ -474,11 +476,32 @@ module.exports = {
 		if (config.debug)
 			console.time('process beatmap');
 
-		function Queue() { this.frames = []; }
-		Queue.prototype.enqueue = function (frame){ this.frames.push(frame); }
-		Queue.prototype.dequeue = function () { return this.frames.shift(); }
-		Queue.prototype.isEmpty = function () { return this.frames.length === 0; }
-		Queue.prototype.peek = function () { return !this.isEmpty() ? this.frames[0] : undefined; }
+		class Queue extends EventEmitter {
+			constructor(){
+				super();
+				this.frames = [];
+				this.emitEvents = false;
+				this.throttleThreshold = 3;
+			}
+
+			enableEvents(){this.emitEvents = true;}
+			disableEvents(){this.emitEvents = false;}
+
+			enqueue(frame){
+				this.frames.push(frame);
+			}
+			dequeue() {
+				if (this.frames.length - 1 < this.throttleThreshold && this.emitEvents){
+					this.emit('unthrottle');
+				}
+				return this.frames.shift();
+			}
+			isEmpty() { return this.frames.length === 0; }
+			length() { return this.frames.length; }
+			peek() { return !this.isEmpty() ? this.frames[0] : undefined; }
+			shouldSlowdown() { return this.length() > 1};
+		}
+
 
 		const {msg} = options;
 
@@ -650,17 +673,12 @@ module.exports = {
 
 
 			file_path = path.resolve(config.frame_path != null ? config.frame_path : os.tmpdir(), 'frames', `${rnd}`);
-
 			await fs.promises.mkdir(file_path, {recursive: true});
 
 			let threads = require('os').cpus().length;
-			// let threads = 1;
-
 			let modded_length = time_scale > 1 ? Math.min(actual_length * time_scale, lastObjectTime) : actual_length;
-
 			let amount_frames = Math.floor(modded_length / time_frame);
 
-			// let frames_size = amount_frames * size[0] * size[1] * 4;
 
 			// recursively does reads frame from file and pipes to 2nd ffmpeg stdin
 			let pipeFrameLoop = (ffmpegProcess, cb) => {
@@ -699,43 +717,42 @@ module.exports = {
 			}
 
 			let newPipeFrameLoop = async (ffmpegProcess, callback) => {
-				helper.log("hello? somebody there?")
+				// helper.log("################### entering newPipeFrameLoop #######################");
 				let next_frame_worker_id = 0;
 				let frame_counter = 0;
 				while (frame_counter < amount_frames) {
-					helper.log("trying to feed frame " + frame_counter);
 					let next_frame_worker_queue = worker_frame_queues[next_frame_worker_id];
 					let next_frame = next_frame_worker_queue.peek();
 					if (typeof next_frame === 'undefined') {
-						await new Promise(r => setTimeout(r, 10));
+						// helper.log("queue empty... sleeping (waiting on " + next_frame_worker_id + " - video frame #" + frame_counter +")");
+						// helper.log("waiting on next frame, sleeping...");
+						await new Promise(r => setTimeout(r, 50));
 						continue;
 					}
 
-					// helper.log("in newPipeFrameLoop sending frames to ffmpeg")
 					// let next_frame_buffer = Buffer.from(next_frame);
-					let next_frame_buffer = Buffer.from(next_frame);
-					helper.log(next_frame_buffer.length);
-					ffmpegProcess.stdin.write(next_frame_buffer, err => {
+					// helper.log(next_frame_buffer.length);
+					ffmpegProcess.stdin.write(next_frame, err => {
 						if (err) {
-							helper.error("something bad happened");
+							helper.error("something bad happened on video encoder");
 							helper.error(err);
 							callback(null);
-							return;
 						}
-						// helper.log("in the callback, but no err");
-						frame_counter++;
-
-						if (frame_counter === amount_frames){
-							ffmpegProcess.stdin.end();
-							callback(null);
-							return;
-						}
-
-						next_frame_worker_id = (next_frame_worker_id + 1) % threads;
-						next_frame_worker_queue.dequeue();
 					});
 
-					await new Promise(r => setTimeout(r, 5));
+					frame_counter++;
+
+					if (frame_counter === amount_frames){
+						ffmpegProcess.stdin.end();
+						callback(null);
+						return;
+					}
+
+					next_frame_worker_id = (next_frame_worker_id + 1) % threads;
+					next_frame_worker_queue.dequeue();
+					// helper.log("end of loop: " + next_frame_worker_id, worker_frame_queues);
+
+					// await new Promise(r => setTimeout(r, 5));
 				}
 
 			}
@@ -864,7 +881,7 @@ module.exports = {
 						if (!line.startsWith('frame='))
 							return;
 
-						helper.log(line);
+						// helper.log(line);
 						const frame = parseInt(line.substring(6).trim());
 
 						renderStatus[2] = `– encoding video (${Math.round(frame / amount_frames * 100)}%)`;
@@ -933,6 +950,11 @@ module.exports = {
 
 							let worker_to_init = workers[worker_idx];
 							worker_frame_queues[worker_idx] = new Queue();
+							worker_frame_queues[worker_idx].enableEvents();
+							worker_frame_queues[worker_idx].on('unthrottle', function(){
+								ipc.server.emit(socket, 'app.resumeWorking', 'true');
+							});
+
 							worker_frame_buffers[worker_idx] = [];  // init frame buffer
 
 							ipc.server.emit(socket, 'receiveWork', {
@@ -975,15 +997,14 @@ module.exports = {
 							// todo: implement slowing down of frame tap if video encoder can't keep up
 							let frame_wid = data.worker_id;
 							worker_frame_buffers[frame_wid].push(Buffer.from(data.frame_data, 'base64'));
+							ipc.server.emit(socket, 'app.framedataAck', 'ACK');
 							if(data.last){
-								ipc.server.emit(socket, 'app.framedataFullAck', 'ACK');
-								log_as_server("received full frame from worker " + frame_wid + ", received in total: " + ++frame_counter);
-
+								// log_as_server("received full frame from worker " + frame_wid + ", received in total: " + ++frame_counter + ", video frame #" + data.video_frame_seqno);
 								worker_frame_queues[frame_wid].enqueue(Buffer.concat(worker_frame_buffers[frame_wid]))
 								worker_frame_buffers[frame_wid].splice(0, worker_frame_buffers[frame_wid].length);
-							}
-							else {
-								ipc.server.emit(socket, 'app.framedataAck', 'ACK');
+								if(worker_frame_queues[frame_wid].length() < worker_frame_queues[frame_wid].throttleThreshold){
+									ipc.server.emit(socket, 'app.resumeWorking', 'true');
+								}
 							}
 					})
 
