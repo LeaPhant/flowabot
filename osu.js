@@ -1702,10 +1702,12 @@ module.exports = {
 
             if(options.extended){
                 const hitCount = Number(data.count300) + Number(data.count100) + Number(data.count50);
+                const s_count = (Number(data.count_rank_sh) + Number(data.count_rank_s)).toLocaleString();
+                const ss_count = (Number(data.count_rank_ssh) + Number(data.count_rank_ss)).toLocaleString();
 
                 embed.fields.push({
-                    name: 'SS Count',
-                    value: (Number(data.count_rank_ssh) + Number(data.count_rank_ss)).toLocaleString(),
+                    name: 'S / SS Count',
+                    value: `${s_count} / ${ss_count}`,
                     inline: true
                 },
                 {
