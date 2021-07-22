@@ -1706,8 +1706,8 @@ module.exports = {
                 const ss_count = (Number(data.count_rank_ssh) + Number(data.count_rank_ss)).toLocaleString();
 
                 embed.fields.push({
-                    name: 'Combined S / SS',
-                    value: `${getRankEmoji('X')} ${ss_count} ${getRankEmoji('S')} ${s_count}`,
+                    name: 'Combined Ranks',
+                    value: `${getRankEmoji('X')} ${ss_count} ${getRankEmoji('S')} ${s_count}`,
                     inline: true
                 },
                 {
