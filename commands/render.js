@@ -107,6 +107,7 @@ module.exports = {
                     audio = false;
                 }else if(arg.endsWith('%')){
                     speed = parseInt(arg) / 100;
+                    speed = Math.max(0.01, speed);
                 }else if(arg.endsWith('fps')){
                     let _fps = parseInt(arg);
                     if(!isNaN(_fps)){
