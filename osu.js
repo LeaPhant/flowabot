@@ -47,7 +47,7 @@ if(helper.getItem('top_plays')){
 
 let discord_client, last_beatmap;
 
-const DIFF_MODS = ["HR","EZ","DT","HT"];
+const DIFF_MODS = ["HR","EZ","DT","HT","FL"];
 
 const TIME_MODS = ["DT", "HT"];
 
