@@ -18,6 +18,7 @@
     "license": "MIT",
     "dependencies": {
         "axios": "^0.21.1",
+        "booba": "^0.0.5",
         "canvas": "^2.7.0",
         "chalk": "^4.1.0",
         "chart.js": "^2.9.4",
@@ -32,7 +33,7 @@
         "lzma-native": "^7.0.1",
         "mathjs": "^9.3.0",
         "node-emoji": "^1.10.0",
-        "node-fetch": "^2.6.1",
+        "node-fetch": "^2.6.6",
         "node-localstorage": "^2.1.6",
         "node-osr": "^1.2.1",
         "object-path": "^0.11.5",

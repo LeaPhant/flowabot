@@ -1,5 +1,7 @@
 const axios = require('axios');
 const ojsama = require('ojsama');
+const { std_ppv2 } = require('booba');
+
 const osuBeatmapParser = require('osu-parser');
 const path = require('path');
 const util = require('util');
@@ -538,6 +540,11 @@ function getScore(recent_raw, cb){
             response = response.data;
 
             let beatmap = response.beatmap;
+            const recent_fc = Object.assign({
+                countmiss: 0,
+                count300: recent.count300 + recent.countmiss,
+                maxcombo: beatmap.max_combo
+            }, recent);
 
             let diff_settings = calculateCsArOdHp(beatmap.cs, beatmap.ar, beatmap.od, beatmap.hp, recent.mods);
 
@@ -553,125 +560,97 @@ function getScore(recent_raw, cb){
             if(recent_raw.rank == 'F')
                 fail_percent = (recent.count300 + recent.count100 + recent.count50 + recent.countmiss) / beatmap.hit_objects;
 
-            recent = Object.assign({
-                approved: beatmap.approved,
-                beatmapset_id: beatmap.beatmapset_id,
-                artist: beatmap.artist,
-                title: beatmap.title,
-                version: beatmap.version,
-                bpm_min: beatmap.bpm_min * speed,
-                bpm_max: beatmap.bpm_max * speed,
-                max_combo: beatmap.max_combo,
-                bpm: beatmap.bpm * speed,
-                creator: beatmap.creator,
-                creator_id: beatmap.creator_id,
-                approved_date: beatmap.approved_date,
-                cs: diff_settings.cs,
-                ar: diff_settings.ar,
-                od: diff_settings.od,
-                hp: diff_settings.hp,
-                duration: beatmap.total_length,
-                fail_percent: fail_percent
-            }, recent);
+            const play = new std_ppv2().setPerformance(recent_raw).setDifficulty(response);
 
-            let diff = response.difficulty[getModsEnum(recent.mods.filter(mod => DIFF_MODS.includes(mod)))];
-
-            if(diff.aim && diff.speed){
-                let pp = ojsama.ppv2({
-                    aim_stars: diff.aim,
-                    speed_stars: diff.speed,
-                    base_ar: beatmap.ar,
-                    base_od: beatmap.od,
-                    n100: Number(recent_raw.count100),
-                    n50: Number(recent_raw.count50),
-                    mods: Number(recent_raw.enabled_mods),
-                    combo: Number(recent_raw.maxcombo),
-                    ncircles: beatmap.num_circles,
-                    nsliders: beatmap.num_sliders,
-                    nobjects: beatmap.hit_objects,
-                    max_combo: beatmap.max_combo,
-                    nmiss: Number(recent_raw.countmiss)
-                });
-
-                let pp_fc = ojsama.ppv2({
-                    aim_stars: diff.aim,
-                    speed_stars: diff.speed,
-                    base_ar: beatmap.ar,
-                    base_od: beatmap.od,
-                    n100: Number(recent_raw.count100),
-                    n50: Number(recent_raw.count50),
-                    mods: Number(recent_raw.enabled_mods),
-                    ncircles: beatmap.num_circles,
-                    nsliders: beatmap.num_sliders,
-                    nobjects: beatmap.hit_objects,
-                    max_combo: beatmap.max_combo,
-                });
+            Promise.all([play.compute(), play.compute(true)]).then(results => {
+                const pp = results[0];
+                const pp_fc = results[1];
 
                 recent = Object.assign({
-                    stars: diff.total,
-                    pp_fc: pp_fc.total,
-                    acc: pp.computed_accuracy.value() * 100,
-                    acc_fc: pp_fc.computed_accuracy.value() * 100
+                    approved: beatmap.approved,
+                    beatmapset_id: beatmap.beatmapset_id,
+                    artist: beatmap.artist,
+                    title: beatmap.title,
+                    version: beatmap.version,
+                    bpm_min: beatmap.bpm_min * speed,
+                    bpm_max: beatmap.bpm_max * speed,
+                    max_combo: beatmap.max_combo,
+                    bpm: beatmap.bpm * speed,
+                    creator: beatmap.creator,
+                    creator_id: beatmap.creator_id,
+                    approved_date: beatmap.approved_date,
+                    cs: diff_settings.cs,
+                    ar: play.map.ar,
+                    od: play.map.od,
+                    hp: diff_settings.hp,
+                    duration: beatmap.total_length,
+                    fail_percent: fail_percent
                 }, recent);
 
-				if(!('pp' in recent)){
-					recent.pp = pp.total;
-				}
-            }else{
+                recent = Object.assign({
+                    stars: play.diff.total,
+                    pp_fc: pp_fc.total,
+                    acc: pp.computed_accuracy,
+                    acc_fc: pp_fc.computed_accuracy
+                }, recent);
+
+                if(recent.pp == null)
+                    recent.pp = pp.total;
+
+                helper.downloadBeatmap(recent_raw.beatmap_id).finally(async () => {
+                    let beatmap_path = path.resolve(config.osu_cache_path, `${recent_raw.beatmap_id}.osu`);
+    
+                    let strains_bar;
+    
+                    if(await helper.fileExists(beatmap_path)){
+                        strains_bar = await module.exports.get_strains_bar(beatmap_path, recent.mods.join(''), recent.fail_percent);
+    
+                        if(strains_bar)
+                            recent.strains_bar = true;
+                    }
+    
+                    if(replay && await helper.fileExists(beatmap_path)){
+                        let ur_promise = new Promise((resolve, reject) => {
+                            if(config.debug)
+                                helper.log('getting ur');
+    
+                            ur_calc.get_ur(
+                                {
+                                    apikey: settings.api_key,
+                                    player: recent_raw.user_id,
+                                    beatmap_id: recent_raw.beatmap_id,
+                                    mods_enabled: recent_raw.enabled_mods,
+                                    score_id: recent.score_id,
+                                    mods: recent.mods
+                                }).then(response => {
+                                    recent.ur = response.ur;
+    
+                                    if(recent.countmiss == (response.miss || 0) 
+                                    && recent.count100 == (response['100'] || 0)
+                                    && recent.count50 == (response['50'] || 0))
+                                        recent.countsb = response.sliderbreak;
+    
+                                    if(recent.mods.includes("DT") || recent.mods.includes("NC"))
+                                        recent.cvur = response.ur / 1.5;
+                                    else if(recent.mods.includes("HT"))
+                                        recent.cvur = response.ur * 1.5;
+    
+                                    resolve(recent);
+                                });
+                        });
+    
+                        recent.ur = -1;
+                        if(recent.mods.includes("DT") || recent.mods.includes("HT"))
+                            recent.cvur = -1;
+                        cb(null, recent, strains_bar, ur_promise);
+                    }else{
+                        cb(null, recent, strains_bar);
+                    }
+                }).catch(helper.error);                
+            }).catch(error => {
                 cb('No difficulty data for this map! Please try again later');
                 return;
-            }
-
-			helper.downloadBeatmap(recent_raw.beatmap_id).finally(async () => {
-				let beatmap_path = path.resolve(config.osu_cache_path, `${recent_raw.beatmap_id}.osu`);
-
-				let strains_bar;
-
-				if(await helper.fileExists(beatmap_path)){
-					strains_bar = await module.exports.get_strains_bar(beatmap_path, recent.mods.join(''), recent.fail_percent);
-
-					if(strains_bar)
-						recent.strains_bar = true;
-				}
-
-	            if(replay && await helper.fileExists(beatmap_path)){
-	                let ur_promise = new Promise((resolve, reject) => {
-						if(config.debug)
-							helper.log('getting ur');
-
-	                    ur_calc.get_ur(
-	                        {
-	                            apikey: settings.api_key,
-	                            player: recent_raw.user_id,
-	                            beatmap_id: recent_raw.beatmap_id,
-	                            mods_enabled: recent_raw.enabled_mods,
-								score_id: recent.score_id,
-	                            mods: recent.mods
-	                        }).then(response => {
-                                recent.ur = response.ur;
-
-                                if(recent.countmiss == (response.miss || 0) 
-                                && recent.count100 == (response['100'] || 0)
-                                && recent.count50 == (response['50'] || 0))
-                                    recent.countsb = response.sliderbreak;
-
-	                            if(recent.mods.includes("DT") || recent.mods.includes("NC"))
-	                                recent.cvur = response.ur / 1.5;
-	                            else if(recent.mods.includes("HT"))
-	                                recent.cvur = response.ur * 1.5;
-
-	                            resolve(recent);
-	                        });
-	                });
-
-	                recent.ur = -1;
-	                if(recent.mods.includes("DT") || recent.mods.includes("HT"))
-	                    recent.cvur = -1;
-	                cb(null, recent, strains_bar, ur_promise);
-	            }else{
-	                cb(null, recent, strains_bar);
-	            }
-			}).catch(helper.error);
+            });
         }).catch(err => {
             cb('Map not in the database, maps that are too new don\'t work yet');
             helper.log(err);
