@@ -540,11 +540,6 @@ function getScore(recent_raw, cb){
             response = response.data;
 
             let beatmap = response.beatmap;
-            const recent_fc = Object.assign({
-                countmiss: 0,
-                count300: recent.count300 + recent.countmiss,
-                maxcombo: beatmap.max_combo
-            }, recent);
 
             let diff_settings = calculateCsArOdHp(beatmap.cs, beatmap.ar, beatmap.od, beatmap.hp, recent.mods);
 
