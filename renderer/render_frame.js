@@ -646,12 +646,14 @@ module.exports = {
 
             let bitrate = 500 * 1024;
 
-            if(actual_length > 160 * 1000 && actual_length < 210 * 1000)
-                size = [350, 262];
-            else if(actual_length >= 210 * 1000)
-                size = [180, 128];
+            if (!options.toS3){
+				if(actual_length > 160 * 1000 && actual_length < 210 * 1000)
+					size = [350, 262];
+				else if(actual_length >= 210 * 1000)
+					size = [180, 128];
+			}
 
-            if(actual_length > 360 * 1000){
+            if(actual_length > 360 * 1000 && !options.toS3){
                 actual_length = 360 * 1000;
                 max_time = time + actual_length;
             }
@@ -727,11 +729,11 @@ module.exports = {
                 let mediaPromise = downloadMedia(options, beatmap, beatmap_path, size, file_path);
 				let audioProcessingPromise = renderHitsounds(mediaPromise, beatmap, start_time, actual_length, modded_length, time_scale, file_path);
 
-                if(options.type == 'mp4')
-                    bitrate = Math.min(bitrate, (0.7 * MAX_SIZE) * 8 / (actual_length / 1000) / 1024);
+                if(options.type === 'mp4' && !options.toS3){
+					bitrate = Math.min(bitrate, (0.7 * MAX_SIZE) * 8 / (actual_length / 1000) / 1024);
+				}
 
                 let workers = [];
-
                 for(let i = 0; i < threads; i++){
                     workers.push(
                         fork(path.resolve(__dirname, 'render_worker.js'))
