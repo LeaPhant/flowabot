@@ -282,22 +282,24 @@
 		bucket_endpoint: 'none'
 	};
 	let temporary_credentials = {
-		client_id: '',
-		client_secret: '',
-		bucket_name: '',
-		bucket_endpoint: ''
+		client_id: 'none',
+		client_secret: 'none',
+		bucket_name: 'none',
+		bucket_endpoint: 'none'
 	}
 	const S3_credential_fields = ['client_id', 'client_secret', 'bucket_name', 'bucket_endpoint'];
 
-	if (config.credentials.S3)
+	if (config.credentials.S3){
 		default_value = config.credentials.S3;
+	}
+	valid_key = true;
 
 	do {
 		console.log('');
 		console.log(`(Optional) An S3 Bucket and access credentials are needed for the \`toS3\` parameter of the ${config.prefix}render command to work.`);
 
 		for (const field in S3_credential_fields){
-			value = readline.question(`S3 Bucket [${chalk.green(default_value)}]: `);
+			value = readline.question(`S3 Bucket [${chalk.green(default_value[field])}]: `);
 			if(!value){
 				temporary_credentials[field] = default_value[field];
 			}
@@ -306,29 +308,36 @@
 			}
 		}
 
-		try{
-			const aws = require('aws-sdk');
-			const S3Endpoint = new aws.Endpoint(temporary_credentials.bucket_endpoint);
-			let s3 = new aws.S3({
-				endpoint: S3Endpoint,
-				accessKeyId: temporary_credentials.client_id,
-				secretAccessKey: temporary_credentials.client_secret
-			});
+		if (temporary_credentials.client_id !== 'none'){
+			try{
+				const aws = require('aws-sdk');
+				const S3Endpoint = new aws.Endpoint(temporary_credentials.bucket_endpoint);
+				let s3 = new aws.S3({
+					endpoint: S3Endpoint,
+					accessKeyId: temporary_credentials.client_id,
+					secretAccessKey: temporary_credentials.client_secret
+				});
 
-			let test_upload_params = {
-				Bucket: temporary_credentials.bucket_name,
-				Key: crypto.randomBytes(16).toString('hex'),
-				Body: 'test'
-			};
-			s3.upload(test_upload_params, function({err}){
-				if (err) {throw err}
-			})
-		} catch(e){
-			console.log(chalk.redBright("Invalid S3 Bucket Credentials!"));
-			valid_key = false;
-			temporary_credentials = default_value;
+				let test_upload_params = {
+					Bucket: temporary_credentials.bucket_name,
+					Key: crypto.randomBytes(16).toString('hex'),
+					Body: 'test'
+				};
+				s3.upload(test_upload_params, function({err}){
+					if (err) {throw err}
+				})
+			} catch(e){
+				console.log(chalk.redBright("Invalid S3 Bucket Credentials!"));
+				valid_key = false;
+				temporary_credentials = default_value;
+			}
 		}
-	} while (!valid_key && value !== 'none');
+
+	} while (!valid_key &&
+			temporary_credentials.client_id !== 'none' &&
+			temporary_credentials.client_secret !== 'none' &&
+			temporary_credentials.bucket_name !== 'none' &&
+			temporary_credentials.bucket_endpoint !== 'none');
 
     console.log('');
 
