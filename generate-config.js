@@ -290,16 +290,18 @@
 	const S3_credential_fields = ['client_id', 'client_secret', 'bucket_name', 'bucket_endpoint'];
 
 	if (config.credentials.S3){
+		// console.log("existing S3 credentials found, assigning to default_value");
+		// console.log(config.credentials.S3);
 		default_value = config.credentials.S3;
 	}
-	valid_key = true;
 
 	do {
 		console.log('');
 		console.log(`(Optional) An S3 Bucket and access credentials are needed for the \`toS3\` parameter of the ${config.prefix}render command to work.`);
+		valid_key = true;
 
-		for (const field in S3_credential_fields){
-			value = readline.question(`S3 Bucket [${chalk.green(default_value[field])}]: `);
+		for (const field of S3_credential_fields){
+			value = readline.question(`${field} [${chalk.green(default_value[field])}]: `);
 			if(!value){
 				temporary_credentials[field] = default_value[field];
 			}
@@ -323,9 +325,8 @@
 					Key: crypto.randomBytes(16).toString('hex'),
 					Body: 'test'
 				};
-				s3.upload(test_upload_params, function({err}){
-					if (err) {throw err}
-				})
+				await s3.upload(test_upload_params).promise();
+				// console.log(upload_result)
 			} catch(e){
 				console.log(chalk.redBright("Invalid S3 Bucket Credentials!"));
 				valid_key = false;
@@ -338,6 +339,8 @@
 			temporary_credentials.client_secret !== 'none' &&
 			temporary_credentials.bucket_name !== 'none' &&
 			temporary_credentials.bucket_endpoint !== 'none');
+
+	config.credentials.S3 = temporary_credentials;
 
     console.log('');
 
