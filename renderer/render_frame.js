@@ -507,7 +507,7 @@ module.exports = {
 
 		options.msg = null;
 
-		const renderStatus = ['– processing beatmap', '– rendering frames', '– encoding video'];
+		const renderStatus = ['– processing beatmap', '– rendering video'];
 
 		// noinspection JSCheckFunctionSignatures
 		const renderMessage = await msg.channel.send({embed: {description: renderStatus.join("\n")}});
@@ -796,7 +796,7 @@ module.exports = {
 					if (config.debug)
 						console.timeEnd('encode video');
 
-					renderStatus[1] = `✓ encoding video (${((Date.now() - encodingProcessStart) / 1000).toFixed(3)}s)`;
+					// renderStatus[1] = `✓ encoding video (${((Date.now() - encodingProcessStart) / 1000).toFixed(3)}s)`;
 
 					resolveRender({
 						files: [{
@@ -863,7 +863,7 @@ module.exports = {
 						if (config.debug)
 							console.timeEnd('encode video');
 
-						renderStatus[2] = `✓ encoding video (${((Date.now() - encodingProcessStart) / 1000).toFixed(3)}s)`;
+						renderStatus[1] = `✓ rendering video (${((Date.now() - encodingProcessStart) / 1000).toFixed(3)}s)`;
 
 						resolveRender({
 							files: [{
@@ -884,7 +884,7 @@ module.exports = {
 						// helper.log(line);
 						const frame = parseInt(line.substring(6).trim());
 
-						renderStatus[2] = `– encoding video (${Math.round(frame / amount_frames * 100)}%)`;
+						renderStatus[1] = `– rendering video (${Math.round(frame / amount_frames * 100)}%)`;
 					});
 
 					newPipeFrameLoop(ffmpegProcess, err => {
@@ -980,7 +980,7 @@ module.exports = {
 								done++;
 
 								if (done === threads) {
-									renderStatus[1] = `✓ rendering frames (${((Date.now() - framesProcessStart) / 1000).toFixed(3)}s)`;
+									// renderStatus[1] = `✓ rendering frames (${((Date.now() - framesProcessStart) / 1000).toFixed(3)}s)`;
 
 									if (config.debug)
 										console.timeEnd('render beatmap');
