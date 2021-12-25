@@ -63,6 +63,7 @@ module.exports = {
             let hidden = false;
             let flashlight = false;
             let analyze = false;
+            let toS3 = false;
 
             argv.map(arg => arg.toLowerCase());
 
@@ -138,7 +139,9 @@ module.exports = {
                         percent = last_beatmap[msg.channel.id].fail_percent;
                         length = 4;
                     }
-                }else{
+                }else if(arg === 'toS3'){
+					toS3 = true;
+				}else{
                     // noinspection HttpUrlsUsage
 					if(arg.startsWith('http://') || arg.startsWith('https://')){
                         beatmap_url = arg;
@@ -210,13 +213,38 @@ module.exports = {
 
                             frame.get_frames(download_path, time, length * 1000, mods, size, {
                                 combo,
-                                type: video_type, cs, ar, od, analyze, hidden, flashlight, black: false, osr, score_id, audio, fps, speed,
-                                fill: video_type === 'mp4', noshadow: true, percent, border: false, objects, msg
+                                type: video_type,
+								cs,
+								ar,
+								od,
+								analyze,
+								hidden,
+								flashlight,
+								black: false,
+								osr,
+								score_id,
+								audio,
+								fps,
+								speed,
+                                fill: video_type === 'mp4',
+								noshadow: true,
+								percent,
+								border: false,
+								objects,
+								msg,
+								toS3: toS3,
                             });
 						}else{
 							frame.get_frame(download_path, time, mods, [800, 600], {
                                 combo,
-								cs: cs, ar: ar, score_id, black: true, fill: true, analyze, hidden, percent: percent
+								cs: cs,
+								ar: ar,
+								score_id,
+								black: true,
+								fill: true,
+								analyze,
+								hidden,
+								percent: percent,
 							}, (err, buf) => {
 								if(err)
 									reject(err);

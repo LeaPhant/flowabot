@@ -15,6 +15,7 @@ const { execFile, fork, spawn } = require('child_process');
 
 const config = require('../config.json');
 const helper = require('../helper.js');
+const aws = require('aws-sdk');
 
 const MAX_SIZE = 8 * 1024 * 1024;
 
@@ -137,7 +138,7 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 		for(const scoringFrame of scoringFrames){
 			if(scoringFrame.combo >= scoringFrame.previousCombo || scoringFrame.previousCombo < 30)
 				continue;
-	
+
 			hitSounds.push({
 				offset: (scoringFrame.offset - start_time) / time_scale,
 				sound: 'combobreak',
@@ -156,7 +157,7 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 			if(beatmap.Replay.auto !== true){
 				if(hitObject.hitOffset == null)
 					continue;
-	
+
 				offset += hitObject.hitOffset;
 			}
 
@@ -175,7 +176,7 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 				}
 			}
 		}
-		
+
 		if(hitObject.objectName == 'slider'){
 			hitObject.EdgeHitSounds.forEach((edgeHitSounds, index) => {
 				edgeHitSounds.forEach(hitSound => {
@@ -184,7 +185,7 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 					if(index == 0 && beatmap.Replay.auto !== true){
 						if(hitObject.hitOffset == null)
 							return;
-						
+
 						offset += hitObject.hitOffset;
 					}
 
@@ -377,7 +378,7 @@ async function downloadMedia(options, beatmap, beatmap_path, size, download_path
 				{ apply: 'shade', params: [80] }
 			])
 			.writeAsync(path.resolve(extraction_path, 'bg.png'));
-	
+
 			output.background_path = path.resolve(extraction_path, 'bg.png');
 		}catch(e){
 			output.background_path = null;
@@ -391,6 +392,8 @@ async function downloadMedia(options, beatmap, beatmap_path, size, download_path
 }
 
 let beatmap, speed_multiplier;
+
+let s3 = null;
 
 module.exports = {
     get_frame: function(beatmap_path, time, enabled_mods, size, options, cb){
@@ -465,12 +468,60 @@ module.exports = {
 
 		updateRenderStatus().catch(console.error);
 
+		// const resolveRender = async opts => {
+		// 	updateRenderStatus();
+		// 	clearInterval(updateInterval);
+		//
+		// 	await msg.channel.send(opts);
+		// 	await renderMessage.delete();
+		// };
 		const resolveRender = async opts => {
 			updateRenderStatus();
 			clearInterval(updateInterval);
 
-			await msg.channel.send(opts);
-			await renderMessage.delete();
+			if(options.toS3 && typeof opts === "object"){  //if opts not an object, send error msg to discord directly
+				console.log(config.credentials.S3);
+				if (config.credentials.S3.client_id !== "" &&
+					config.credentials.S3.client_secret !== "" &&
+					config.credentials.S3.bucket_name !== "" &&
+					config.credentials.S3.bucket_endpoint !== ""){
+					const doSpacesEndpoint = new aws.Endpoint(config.credentials.S3.bucket_endpoint);
+					s3 = new aws.S3({
+						endpoint: doSpacesEndpoint,
+						accessKeyId: config.credentials.S3.client_id,
+						secretAccessKey: config.credentials.S3.client_secret
+					});
+				}
+
+				if (s3 !== null){
+					await msg.channel.send("yep uploading to s3 ty");
+
+					let readStream = fs.createReadStream(opts.files[0].attachment);
+					readStream.on('error', function(err){
+						msg.channel.send(err);
+					})
+					readStream.on('open', function() {
+						let upload_params = {
+							Bucket: config.credentials.S3.bucket_name,
+							Key: `${crypto.randomBytes(16).toString('hex')}.${opts.files[0].name}`,
+							Body: readStream,
+							ACL: "public-read"
+						}
+						s3.upload(upload_params, function(err, data) {
+							if (err) {console.log(err, err.stack);}
+							else     {
+								// console.log(data);
+								msg.channel.send(`https://${data.Location}`);
+								renderMessage.delete();
+							}
+						});
+					})
+				}
+			} else {
+				await msg.channel.send(opts);
+				await renderMessage.delete();
+			}
+
 		};
 
 		const beatmapProcessStart = Date.now();
@@ -787,7 +838,7 @@ module.exports = {
 								name: `video.${options.type}`
 							}]}).then(() => {
 								fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
-							}).catch(console.error);					 
+							}).catch(console.error);
 						});
 
 						ffmpegProcess.stderr.on('data', data => {
