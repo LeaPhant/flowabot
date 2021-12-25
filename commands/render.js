@@ -10,7 +10,7 @@ const config = require('../config.json');
 module.exports = {
     command: ['render', 'frame', 'fail'],
     description: "Render picture or gif of a beatmap at a specific time. Videos 10 seconds or longer are automatically rendered as mp4 video with audio and beatmap background.",
-    usage: '[beatmap url] [+mods] [AR8] [CS6] [preview/strains/aim/speed/fail] [HD] [20%] [mp4] [plain] [120fps] [mm:ss] [353x] [4s]',
+    usage: '[beatmap url] [+mods] [AR8] [CS6] [preview/strains/aim/speed/fail] [HD] [20%] [mp4] [plain] [120fps] [mm:ss] [353x] [4s] [highres]',
     example: [
         {
             run: "render strains",
@@ -115,7 +115,8 @@ module.exports = {
                     }
                 }else if(arg === 'analyze'){
                     analyze = true;
-                }else if(arg.endsWith('s')){
+                // }else if(arg.endsWith('s')){
+                }else if(/^[0-9]+(\.[0-9]+)?s$/g.test(arg)){
                     length = parseFloat(arg);
                 }else if(arg.endsWith('x')){
                     combo = parseInt(arg);
@@ -141,6 +142,8 @@ module.exports = {
                     }
                 }else if(arg === 'toS3'){
 					toS3 = true;
+				}else if(arg === 'highres'){
+                	size = [1280, 960];
 				}else{
                     // noinspection HttpUrlsUsage
 					if(arg.startsWith('http://') || arg.startsWith('https://')){

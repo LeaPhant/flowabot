@@ -18,6 +18,7 @@ const helper = require('../helper.js');
 const aws = require('aws-sdk');
 
 const MAX_SIZE = 8 * 1024 * 1024;
+const MAX_EMBED_SIZE = 50 * 1024 * 1024;
 
 const resources = path.resolve(__dirname, "res");
 
@@ -443,7 +444,6 @@ module.exports = {
 			clearInterval(updateInterval);
 
 			if(options.toS3 && typeof opts === "object"){  //if opts not an object, send error msg to discord directly
-				console.log(config.credentials.S3);
 				if (config.credentials.S3.client_id !== "" &&
 					config.credentials.S3.client_secret !== "" &&
 					config.credentials.S3.bucket_name !== "" &&
@@ -457,7 +457,7 @@ module.exports = {
 				}
 
 				if (s3 !== null){
-					await msg.channel.send("yep uploading to s3 ty");
+					// await msg.channel.send("yep uploading to s3 ty");
 
 					let readStream = fs.createReadStream(opts.files[0].attachment);
 					readStream.on('error', function(err){
@@ -474,7 +474,12 @@ module.exports = {
 							if (err) {console.log(err, err.stack);}
 							else     {
 								// console.log(data);
-								msg.channel.send(`https://${data.Location}`);
+								// msg.channel.send(`https://${data.Location}`);
+								if (data.Location.includes("https://")) {
+									msg.channel.send(data.Location);
+								}else{
+									msg.channel.send(`https://${data.Location}`);
+								}
 								renderMessage.delete();
 							}
 						});
@@ -605,7 +610,7 @@ module.exports = {
 
             let time_frame = 1000 / fps * time_scale;
 
-            let bitrate = 500 * 1024;
+            let bitrate = 2 * 1024;
 
             if (!options.toS3){
 				if(actual_length > 160 * 1000 && actual_length < 210 * 1000)
@@ -688,8 +693,12 @@ module.exports = {
                 let mediaPromise = downloadMedia(options, beatmap, beatmap_path, size, file_path);
 				let audioProcessingPromise = renderHitsounds(mediaPromise, beatmap, start_time, actual_length, modded_length, time_scale, file_path);
 
-                if(options.type === 'mp4' && !options.toS3){
-					bitrate = Math.min(bitrate, (0.7 * MAX_SIZE) * 8 / (actual_length / 1000) / 1024);
+                if(options.type === 'mp4'){
+                	if (options.toS3){
+                		bitrate = Math.min(bitrate, (0.7 * MAX_EMBED_SIZE) * 8 / (actual_length / 1000) / 1024);
+					} else {
+						bitrate = Math.min(bitrate, (0.7 * MAX_SIZE) * 8 / (actual_length / 1000) / 1024);
+					}
 				}
 
                 let workers = [];
