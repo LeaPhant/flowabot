@@ -1,8 +1,6 @@
-const { execFileSync } = require('child_process');
 const URL = require('url');
 const path = require('path');
 const os = require('os');
-const { fork } = require('child_process');
 
 const osu = require('../osu.js');
 const helper = require('../helper.js');
