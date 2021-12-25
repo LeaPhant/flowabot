@@ -19,47 +19,8 @@ const aws = require('aws-sdk');
 
 const MAX_SIZE = 8 * 1024 * 1024;
 
-let enabled_mods = [""];
-
 const resources = path.resolve(__dirname, "res");
 
-const mods_enum = {
-	"": 0,
-	"NF": Math.pow(2, 0),
-	"EZ": Math.pow(2, 1),
-	"TD": Math.pow(2, 2),
-	"HD": Math.pow(2, 3),
-	"HR": Math.pow(2, 4),
-	"DT": Math.pow(2, 6),
-	"HT": Math.pow(2, 8),
-	"NC": Math.pow(2, 9),
-	"FL": Math.pow(2, 10),
-	"SO": Math.pow(2, 12)
-}
-
-const default_hitsounds = [
-	"normal-hitnormal",
-	"normal-hitclap",
-	"normal-hitfinish",
-	"normal-hitwhistle",
-	"normal-sliderslide",
-	"normal-slidertick",
-	"normal-sliderwhistle",
-	"soft-hitnormal",
-	"soft-hitclap",
-	"soft-hitfinish",
-	"soft-hitwhistle",
-	"soft-sliderslide",
-	"soft-slidertick",
-	"soft-sliderwhistle",
-	"drum-hitnormal",
-	"drum-hitclap",
-	"drum-hitfinish",
-	"drum-hitwhistle",
-	"drum-sliderslide",
-	"drum-slidertick",
-	"drum-sliderwhistle",
-];
 
 function getTimingPoint(timingPoints, offset){
     let timingPoint = timingPoints[0];
@@ -151,7 +112,7 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 	for(const hitObject of hitObjects){
 		let timingPoint = getTimingPoint(beatmap.timingPoints, hitObject.startTime);
 
-		if(hitObject.objectName == 'circle' && Array.isArray(hitObject.HitSounds)){
+		if(hitObject.objectName === 'circle' && Array.isArray(hitObject.HitSounds)){
 			let offset = hitObject.startTime;
 
 			if(beatmap.Replay.auto !== true){
@@ -177,12 +138,12 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 			}
 		}
 
-		if(hitObject.objectName == 'slider'){
+		if(hitObject.objectName === 'slider'){
 			hitObject.EdgeHitSounds.forEach((edgeHitSounds, index) => {
 				edgeHitSounds.forEach(hitSound => {
 					let offset = hitObject.startTime + index * (hitObject.duration / hitObject.repeatCount);
 
-					if(index == 0 && beatmap.Replay.auto !== true){
+					if(index === 0 && beatmap.Replay.auto !== true){
 						if(hitObject.hitOffset == null)
 							return;
 
@@ -207,7 +168,7 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 
 			hitObject.SliderTicks.forEach(tick => {
 				for(let i = 0; i < hitObject.repeatCount; i++){
-					let offset = hitObject.startTime + (i % 2 == 0 ? tick.offset : tick.reverseOffset) + i * (hitObject.duration / hitObject.repeatCount);
+					let offset = hitObject.startTime + (i % 2 === 0 ? tick.offset : tick.reverseOffset) + i * (hitObject.duration / hitObject.repeatCount);
 
 					let tickTimingPoint = getTimingPoint(beatmap.timingPoints, offset);
 
@@ -251,7 +212,7 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 	for(let i = 0; i < chunkCount; i++){
 		let hitSoundsChunk = hitSounds.filter(a => a.offset >= i * chunkLength && a.offset < (i + 1) * chunkLength);
 
-		if(hitSoundsChunk.length == 0)
+		if(hitSoundsChunk.length === 0)
 			continue;
 
 		chunksToMerge++;
@@ -312,7 +273,7 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 }
 
 async function downloadMedia(options, beatmap, beatmap_path, size, download_path){
-	if(options.type != 'mp4' || !options.audio || !config.credentials.osu_api_key)
+	if(options.type !== 'mp4' || !options.audio || !config.credentials.osu_api_key)
 		return false;
 
 	let output = {};
@@ -328,7 +289,7 @@ async function downloadMedia(options, beatmap, beatmap_path, size, download_path
 			h: hash
 		}});
 
-		if(data.length == 0){
+		if(data.length === 0){
 			throw "Couldn't find beatmap";
 		}
 
@@ -340,8 +301,10 @@ async function downloadMedia(options, beatmap, beatmap_path, size, download_path
 	try{
 		const chimuCheckMapExists = await axios.get(`https://api.chimu.moe/v1/set/${beatmapset_id}`, { timeout: 2000 });
 
-		if(chimuCheckMapExists.status != 200)
-			throw "Map not found";
+		if(chimuCheckMapExists.status !== 200){
+			// noinspection ExceptionCaughtLocallyJS
+				throw "Map not found";
+			}
 
 		const chimuMap = await axios.get(`https://api.chimu.moe/v1/download/${beatmapset_id}?n=0`, { timeout: 10000, responseType: 'stream' });
 
@@ -384,14 +347,14 @@ async function downloadMedia(options, beatmap, beatmap_path, size, download_path
 			output.background_path = null;
 			helper.error(e);
 		}
-	}else if(Object.keys(output).length == 0){
+	}else if(Object.keys(output).length === 0){
 		return false;
 	}
 
 	return output;
 }
 
-let beatmap, speed_multiplier;
+let beatmap;
 
 let s3 = null;
 
@@ -415,10 +378,10 @@ module.exports = {
         worker.on('message', _beatmap => {
             beatmap = _beatmap;
 
-            if(time == 0 && options.percent){
+            if(time === 0 && options.percent){
                 time = beatmap.hitObjects[Math.floor(options.percent * beatmap.hitObjects.length)].startTime - 2000;
             }else{
-                let firstNonSpinner = beatmap.hitObjects.filter(x => x.objectName != 'spinner');
+                let firstNonSpinner = beatmap.hitObjects.filter(x => x.objectName !== 'spinner');
                 time = Math.max(time, firstNonSpinner[0].startTime);
             }
 
@@ -553,7 +516,7 @@ module.exports = {
             if(config.debug)
                 console.timeEnd('process beatmap');
 
-            if(time == 0 && options.percent){
+            if(time === 0 && options.percent){
                 time = beatmap.hitObjects[Math.floor(options.percent * (beatmap.hitObjects.length - 1))].startTime - 2000;
             }else if(options.objects){
                 let objectIndex = 0;
@@ -574,7 +537,7 @@ module.exports = {
 					options.type = 'mp4';
 
             }else{
-                let firstNonSpinner = beatmap.hitObjects.filter(x => x.objectName != 'spinner');
+                let firstNonSpinner = beatmap.hitObjects.filter(x => x.objectName !== 'spinner');
                 time = Math.max(time, Math.max(0, firstNonSpinner[0].startTime - 1000));
             }
 
@@ -582,7 +545,7 @@ module.exports = {
 				let current_combo = 0;
 
 				for(let hitObject of beatmap.hitObjects){
-					if(hitObject.objectName == 'slider'){
+					if(hitObject.objectName === 'slider'){
 						current_combo += 1;
 
 						for(let i = 0; i < hitObject.repeatCount; i++){
@@ -621,8 +584,6 @@ module.exports = {
             let file_path;
             let fps = options.fps || 60;
 
-            let i = 0;
-
             let time_scale = 1;
 
             if(enabled_mods.includes('DT') || enabled_mods.includes('NC'))
@@ -631,7 +592,7 @@ module.exports = {
             if(enabled_mods.includes('HT') || enabled_mods.includes('DC'))
                 time_scale *= 0.75;
 
-			if(options.speed != 1)
+			if(options.speed !== 1)
 				time_scale = options.speed;
 
 			actual_length = Math.min(length + 1000, Math.max(actual_length, actual_length / time_scale));
@@ -639,7 +600,7 @@ module.exports = {
             if(!('type' in options))
                 options.type = 'gif';
 
-            if(options.type == 'gif')
+            if(options.type === 'gif')
                 fps = 50;
 
             let time_frame = 1000 / fps * time_scale;
@@ -685,7 +646,7 @@ module.exports = {
 							frames_piped.push(current_frame);
 							frames_rendered.slice(frames_rendered.indexOf(current_frame), 1);
 
-							if(frames_piped.length == amount_frames){
+							if(frames_piped.length === amount_frames){
 								ffmpegProcess.stdin.end();
 								cb(null);
 								return;
@@ -697,8 +658,6 @@ module.exports = {
 					}).catch(err => {
 						resolveRender("Error encoding video").catch(console.error);
 						helper.error(err);
-
-						return;
 					});
 				}else{
 					setTimeout(() => {
@@ -745,7 +704,7 @@ module.exports = {
                 if(config.debug)
                 	console.time('render beatmap');
 
-				if(options.type == 'gif'){
+				if(options.type === 'gif'){
 					if(config.debug)
 						console.time('encode video');
 
@@ -896,7 +855,7 @@ module.exports = {
 
                         done++;
 
-                        if(done == threads){
+                        if(done === threads){
 							renderStatus[1] = `✓ rendering frames (${((Date.now() - framesProcessStart) / 1000).toFixed(3)}s)`;
 
 							if(config.debug)
