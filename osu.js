@@ -1009,11 +1009,13 @@ module.exports = {
 		od_100_ms = od_100_base - od_100_factor * od;
 		od_50_ms  = od_50_base  - od_50_factor  * od;
 
+		let display_od = (od_300_base - od_300_ms/od_time_multiplier)/od_300_factor;
+
 		var output = "";
 		if(mods_array.length > 0)
 			output += "OD" + od_raw + "+" + mods_array.join("").toUpperCase() + " -> ";
 
-		output += "OD" + +od.toFixed(2) +
+		output += "OD" + +display_od.toFixed(2) +
 			" (" + [od_300_ms, od_100_ms, od_50_ms].map(
 				odms => (odms/od_time_multiplier).toFixed(2)
 			).join("ms, ") + "ms)";
