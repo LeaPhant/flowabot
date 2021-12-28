@@ -1179,7 +1179,7 @@ async function run_worker_job(data) {
 			if (stop){
 				break;
 			}
-			while (WAITING_FOR_SERVER_ACK){
+			while (WAITING_FOR_SERVER_ACK && !stop){
 				await new Promise(r => setTimeout(r, 20));
 			}
 

@@ -421,7 +421,7 @@ async function downloadMedia(options, beatmap, beatmap_path, size, download_path
 let beatmap, speed_multiplier;
 
 function check_abort(render_id){
-	console.log("checking abort");
+	// console.log("checking abort");
 	let renders = JSON.parse(helper.getItem("render_queue"));
 	return renders === null ? false : (renders.hasOwnProperty(render_id) ? renders[render_id].abort : false);
 }
@@ -982,12 +982,7 @@ module.exports = {
 							}, 500);
 
 
-
 							worker_to_init.on('close', code => {
-								if (code > 0) {
-									cb("Error rendering beatmap");
-									return false;
-								}
 								clearInterval(abort_interval);
 								done++;
 
@@ -1002,6 +997,11 @@ module.exports = {
 									if (config.debug)
 										console.timeEnd('render beatmap');
 									ipc.server.stop();
+								}
+
+								if (code > 0) {
+									cb("Error rendering beatmap");
+									return false;
 								}
 							});
 
