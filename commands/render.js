@@ -2,12 +2,66 @@ const { execFileSync } = require('child_process');
 const URL = require('url');
 const path = require('path');
 const os = require('os');
-const { fork } = require('child_process');
+const process = require('process');
 
 const osu = require('../osu.js');
 const helper = require('../helper.js');
 const frame = require('../renderer/render_frame.js')
 const config = require('../config.json');
+
+function abort_handler(msg, render_args, reject){
+	if (render_args.length !== 2) {
+		reject(`Expected exactly 2 arguments for a render abort, got ${render_args.length} arguments.`);
+		return;
+	}
+	let render_id = render_args.indexOf('abort') ? render_args[0] : render_args[1];
+	try{
+		render_id = parseInt(render_id);
+		render_id = render_id.toString();  // this is dumb, fix please
+		console.log(`Aborting render ${render_id}`);
+		console.log(helper.getItem("render_queue"));
+		if (JSON.parse(helper.getItem("render_queue")).hasOwnProperty(render_id)){
+			console.log(`${render_id} exists`);
+			let render = JSON.parse(helper.getItem("render_queue"))[render_id];
+			render.abort = true;
+			update_render(render);
+			return;
+		}
+		reject(`Render '${render_id}' not found.`);
+	} catch (e) {
+		reject(`Could not abort render '${render_id}': ${e}`);
+	}
+
+}
+
+function queue_render(){
+	let renders = JSON.parse(helper.getItem("render_queue"));
+	if (renders === null) {
+		renders = {};
+	}
+	let render_id;
+	while (true){
+		render_id = process.pid * 1000 + Math.floor(Math.random() * 1000);
+		render_id = render_id.toString();
+		if (!renders.hasOwnProperty(render_id)){
+			break;
+		}
+	}
+	renders[render_id] = {
+		"id": render_id,
+		"status": "queued",
+		"start_time": Date.now(),
+		"abort": false
+	};
+	helper.setItem("render_queue", JSON.stringify(renders));
+	return renders[render_id];
+}
+
+function update_render(render){
+	let renders = JSON.parse(helper.getItem("render_queue"));
+	renders[render.id] = render;
+	helper.setItem("render_queue", JSON.stringify(renders));
+}
 
 module.exports = {
     command: ['render', 'frame', 'fail'],
@@ -67,6 +121,13 @@ module.exports = {
             let analyze = false;
 
             argv.map(arg => arg.toLowerCase());
+
+            console.log(argv);
+            if (argv.includes('abort')){
+				abort_handler(msg, argv.slice(1), reject);
+				console.log('aborting');
+				return;
+			}
 
             argv.slice(1).forEach(arg => {
                 if(arg.startsWith('+'))
@@ -207,10 +268,13 @@ module.exports = {
 					}
 
 					Promise.resolve(preview_promise).then(previewTime => {
+						let current_render = queue_render();
 						if(previewTime)
 							time = previewTime;
 
 						if(length > 0 || objects){
+							current_render.status = "rendering";
+							update_render(current_render);
                             resolve(null);
 
                             frame.get_frames(download_path, time, length * 1000, mods, size, {
@@ -236,7 +300,8 @@ module.exports = {
 								bg_opacity,
 								border: false,
 								objects,
-								msg
+								msg,
+								render: current_render,
                             });
 						}else{
 							frame.get_frame(download_path, time, mods, [800, 600], {
