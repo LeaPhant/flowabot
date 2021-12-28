@@ -418,12 +418,18 @@ async function downloadMedia(options, beatmap, beatmap_path, size, download_path
 	return output;
 }
 
-let beatmap, speed_multiplier;
+let beatmap, speed_multiplier, has_aborted;
 
 function check_abort(render_id){
-	// console.log("checking abort");
 	let renders = JSON.parse(helper.getItem("render_queue"));
-	return renders === null ? false : (renders.hasOwnProperty(render_id) ? renders[render_id].abort : false);
+	// return renders === null ? false : (renders.hasOwnProperty(render_id) ? renders[render_id].abort : false);
+	if (renders === null){
+		return false;
+	}
+	if (renders.hasOwnProperty(render_id)){
+		return renders[render_id].abort;
+	}
+	return false;
 }
 
 module.exports = {
@@ -977,6 +983,7 @@ module.exports = {
 
 							let abort_interval = setInterval(() => {
 								if (check_abort(render.id)){
+									has_aborted = true;
 									ipc.server.emit(socket, 'abort', '');
 								}
 							}, 500);
@@ -996,6 +1003,11 @@ module.exports = {
 
 									if (config.debug)
 										console.timeEnd('render beatmap');
+
+									if (has_aborted){
+										resolveRender(`Aborted render ${render.id}.`);
+									}
+
 									ipc.server.stop();
 								}
 

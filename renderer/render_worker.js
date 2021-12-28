@@ -1226,8 +1226,6 @@ async function run_worker_job(data) {
 			current_frame += threads;
 			time += time_frame;
 		}
-
-		ipc.of.world.emit('app.readyToTerminate', 'true');
 	}else{  // no end time -> render single frame
 		processFrame(time, options);
 
@@ -1302,7 +1300,7 @@ ipc.connectTo(
 			async function (data){
 				// log_as_worker(data);
 				await run_worker_job(data);
-
+				ipc.of.world.emit('app.readyToTerminate', 'true');
 			}
 		)
 
