@@ -418,7 +418,8 @@ async function downloadMedia(options, beatmap, beatmap_path, size, download_path
 	return output;
 }
 
-let beatmap, speed_multiplier, has_aborted;
+let beatmap, speed_multiplier;
+let has_aborted = false;
 
 function check_abort(render_id){
 	let renders = JSON.parse(helper.getItem("render_queue"));
