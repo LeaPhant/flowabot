@@ -144,7 +144,7 @@ function calculateCsArOdHp(cs_raw, ar_raw, od_raw, hp_raw, mods_enabled, clock_r
 }
 
 module.exports = {
-    command: ['rosu', 'rosu-pp', 'rpp'],
+    command: ['rosu', 'rosu-pp', 'rpp', 'pp'],
     description: "Uses rosu-pp to calculate pp for a beatmap.",
     argsRequired: 1,
     usage: '<map link> [+HDDT] [99.23%] [2x100] [1x50] [3m] [342x] [1.2*] [OD9.5] [AR10.3] [CS6] [HP8]',
