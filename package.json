@@ -19,6 +19,7 @@
     "dependencies": {
         "axios": "^0.21.1",
         "booba": "^0.0.12",
+        "bparser-js": "^1.0.2",
         "canvas": "^2.7.0",
         "chalk": "^4.1.0",
         "chart.js": "^2.9.4",
@@ -32,6 +33,7 @@
         "luxon": "^1.26.0",
         "lzma-native": "^7.0.1",
         "mathjs": "^9.3.0",
+        "mysql": "^2.18.1",
         "node-emoji": "^1.10.0",
         "node-fetch": "^2.6.6",
         "node-localstorage": "^2.1.6",
@@ -40,9 +42,13 @@
         "ojsama": "^2.2.0",
         "osu-parser": "git+https://github.com/LeaPhant/osu-parser.git",
         "readline-sync": "^1.4.10",
+        "rosu-pp": "^0.6.0",
         "semver": "^7.3.5",
+        "table": "^6.7.5",
+        "tcp-ping": "^0.1.1",
         "tz-lookup": "^6.1.25",
         "unzipper": "^0.10.11",
+        "urban-dictionary": "^3.0.2",
         "vm2": "^3.9.3"
     }
 }

@@ -2,6 +2,8 @@ const axios = require('axios');
 const ojsama = require('ojsama');
 const { std_ppv2 } = require('booba');
 
+const fetch = require('node-fetch');
+
 const osuBeatmapParser = require('osu-parser');
 const path = require('path');
 const util = require('util');
@@ -1307,6 +1309,113 @@ module.exports = {
         return { user, tops };
 	},
 
+    get_pins: async function(options, cb){
+
+        const token_url = "https://osu.ppy.sh/oauth/token";
+        
+        let headers = {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+        };
+        
+        let body = {
+            "client_id": config.credentials.client_id,
+            "client_secret": config.credentials.client_secret,
+            "grant_type": "client_credentials",
+            "scope": "public"  
+        }
+        
+        const token_response = await axios(token_url, {
+            method: "POST",
+            headers,
+            data: body,
+        })
+
+        const token_res = await token_response.data;
+        
+        const token = token_res.access_token;
+
+        const user_url = `https://osu.ppy.sh/api/v2/users/${options.user}/osu`;
+
+
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "Authorization": `Bearer ${token}`
+        };
+
+        const user_res = await axios(user_url, {
+                params: {
+                    "key": "username"
+                },
+                method: "GET",
+                headers,
+            })
+        const user = await user_res.data;
+
+        const pinned_url = `https://osu.ppy.sh/api/v2/users/${user.id}/scores/pinned`;
+                
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "Authorization": `Bearer ${token}`
+        };
+
+        const pins_res = await axios(pinned_url, {
+                    params: {
+                        "mode": "osu",
+                        "limit": options.count,
+                    },
+                    method: "GET",
+                    headers,
+                })
+        const pins = await pins_res.data;
+
+        if(pins.length < 1){
+            cb(`No top pins found for ${user.username}`);   
+            return;
+        }
+
+        let { data } = await axios(`${config.beatmap_api}/b/${pins.map(a => a.beatmap.id).join(",")}`)
+        
+        if(Array.isArray(data) == false){
+            data = [data]
+        }
+
+        for(const pin of pins){
+            const { beatmap, difficulty } = data.find(a => a.beatmap.beatmap_id == pin.beatmap.id);
+
+            pin.accuracy = (pin.accuracy * 100).toFixed(2);
+
+            const diff = difficulty[getModsEnum(pin.mods.filter(mod => DIFF_MODS.includes(mod)))];
+
+            pin.stars = diff.total;
+
+            const pp_fc = ojsama.ppv2({
+                aim_stars: diff.aim,
+                speed_stars: diff.speed,
+                base_ar: beatmap.ar,
+                base_od: beatmap.od,
+                n300: Number(pin.statistics.count_300 + pin.statistics.count_miss),
+                n100: Number(pin.statistics.count_100),
+                n50: Number(pin.statistics.count_50),
+                mods: Number(getModsEnum(pin.mods)),
+                ncircles: beatmap.num_circles,
+                nsliders: beatmap.num_sliders,
+                nobjects: beatmap.hit_objects,
+                max_combo: beatmap.max_combo,
+            });
+
+            pin.pp_fc = pp_fc.total;
+            pin.acc_fc = (pp_fc.computed_accuracy.value() * 100).toFixed(2);
+            pin.rank_emoji = getRankEmoji(pin.rank);
+
+            pin.beatmap = beatmap;
+        }
+        
+        return { user, pins };
+	},
+
     get_top: function(options, cb){
         let params = {
             limit: options.rb | options.ob ? 100 : options.index,
@@ -1489,6 +1598,12 @@ module.exports = {
 
 	        if(beatmap_url.includes("#osu/"))
 	            beatmap_id = parseInt(beatmap_url.split("#osu/").pop());
+            else if(beatmap_url.includes("#fruits/"))
+                beatmap_id = parseInt(beatmap_url.split("#fruits/").pop());
+            else if(beatmap_url.includes("#taiko/"))
+                beatmap_id = parseInt(beatmap_url.split("#taiko/").pop());
+            else if(beatmap_url.includes("#mania/"))
+                beatmap_id = parseInt(beatmap_url.split("#mania/").pop());
 	        else if(beatmap_url.includes("/b/"))
 	            beatmap_id = parseInt(beatmap_url.split("/b/").pop());
 	        else if(beatmap_url.includes("/osu/"))
@@ -1606,7 +1721,7 @@ module.exports = {
     },
 
     get_user: function(options, cb){
-        api.get('/get_user', {params: {u: options.u}}).then(response => {
+        api.get('/get_user', {params: {u: options.u}}).then(async function (response) {
             response = response.data;
 
 			if(response.length == 0){
@@ -1627,6 +1742,19 @@ module.exports = {
             let play_time = `${Math.floor(Number(data.total_seconds_played) / 3600)}h`;
             play_time += ` ${Math.floor(Number(data.total_seconds_played) % 3600 / 60)}m`;
 
+            let sr;
+
+            await axios.get(`https://score.respektive.pw/u/${data.user_id}`).then(function (response) {
+                sr = response.data[0].rank;
+            }).catch(err => {
+                sr = 0;
+                console.log(err);
+            });
+            let score_rank = ""; 
+            if (sr > 0) {
+                score_rank = ` (#${sr})`;
+            }
+
             let embed = {
                 color: 12277111,
                 thumbnail: {
@@ -1643,7 +1771,7 @@ module.exports = {
                 fields: [
                     {
                         name: 'Ranked Score',
-                        value: Number(data.ranked_score).toLocaleString(),
+                        value: Number(data.ranked_score).toLocaleString() + score_rank ,
                         inline: true
                     },
                     {

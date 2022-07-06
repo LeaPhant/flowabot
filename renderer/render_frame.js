@@ -13,6 +13,8 @@ const disk = require('diskusage');
 
 const { execFile, fork, spawn } = require('child_process');
 
+const execFilePromise = util.promisify(execFile);
+
 const config = require('../config.json');
 const helper = require('../helper.js');
 
@@ -21,6 +23,22 @@ const MAX_SIZE = 8 * 1024 * 1024;
 let enabled_mods = [""];
 
 const resources = path.resolve(__dirname, "res");
+
+
+async function copyDir(src,dest) {
+    const entries = await fs.promises.readdir(src, {withFileTypes: true});
+    await fs.promises.mkdir(dest);
+    for(let entry of entries) {
+        const srcPath = path.join(src, entry.name);
+        const destPath = path.join(dest, entry.name);
+        if(entry.isDirectory()) {
+            await copyDir(srcPath, destPath);
+        } else {
+            await fs.promises.copyFile(srcPath, destPath);
+        }
+    }
+}
+
 
 const mods_enum = {
 	"": 0,
@@ -108,8 +126,6 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 
 	if(!media)
 		throw "Beatmap data not available";
-
-	let execFilePromise = util.promisify(execFile);
 
 	let beatmapAudio = false;
 
@@ -334,6 +350,21 @@ async function downloadMedia(options, beatmap, beatmap_path, size, download_path
 		beatmapset_id = data[0].beatmapset_id;
 	}
 
+	if(await helper.fileExists(`./maps/${beatmapset_id}`)){
+        let extraction_path = path.resolve(`./maps/${beatmapset_id}`);
+        output.beatmap_path = extraction_path;
+
+		if(options.lagtrain){
+			output.audio_path = '/home/osu/mikazuki/renderer/res/lagtrain.mp3';
+		}else if(beatmap.AudioFilename && fs.existsSync(path.resolve(extraction_path, beatmap.AudioFilename))){
+            output.audio_path = path.resolve(extraction_path, beatmap.AudioFilename);
+		}
+
+        output.background_path = path.resolve(extraction_path, 'bg.png');
+
+        return output;
+    }
+
 	let mapStream;
 
 	try{
@@ -361,8 +392,11 @@ async function downloadMedia(options, beatmap, beatmap_path, size, download_path
 
 	output.beatmap_path = extraction_path;
 
-	if(beatmap.AudioFilename && await helper.fileExists(path.resolve(extraction_path, beatmap.AudioFilename)))
+	if(options.lagtrain){
+		output.audio_path = '/home/osu/mikazuki/renderer/res/lagtrain.mp3';
+	}else if(beatmap.AudioFilename && await helper.fileExists(path.resolve(extraction_path, beatmap.AudioFilename))){
 		output.audio_path = path.resolve(extraction_path, beatmap.AudioFilename);
+	}
 
 	if(beatmap.bgFilename && await helper.fileExists(path.resolve(extraction_path, beatmap.bgFilename)))
 		output.background_path = path.resolve(extraction_path, beatmap.bgFilename);
@@ -386,6 +420,8 @@ async function downloadMedia(options, beatmap, beatmap_path, size, download_path
 	}else if(Object.keys(output).length == 0){
 		return false;
 	}
+
+	copyDir(extraction_path, './maps/' + beatmapset_id).catch(helper.error);
 
 	return output;
 }
@@ -558,7 +594,7 @@ module.exports = {
 
 			let lastObjectTime = lastObject.endTime + 1500;
 
-            length = Math.min(400 * 1000, length);
+            length = Math.min(800 * 1000, length);
 
             let start_time = time;
 
@@ -593,17 +629,7 @@ module.exports = {
 
             let time_frame = 1000 / fps * time_scale;
 
-            let bitrate = 500 * 1024;
-
-            if(actual_length > 160 * 1000 && actual_length < 210 * 1000)
-                size = [350, 262];
-            else if(actual_length >= 210 * 1000)
-                size = [180, 128];
-
-            if(actual_length > 360 * 1000){
-                actual_length = 360 * 1000;
-                max_time = time + actual_length;
-            }
+            let bitrate = 1200;
 
             file_path = path.resolve(config.frame_path != null ? config.frame_path : os.tmpdir(), 'frames', `${rnd}`);
 
@@ -677,7 +703,7 @@ module.exports = {
 				let audioProcessingPromise = renderHitsounds(mediaPromise, beatmap, start_time, actual_length, modded_length, time_scale, file_path);
 
                 if(options.type == 'mp4')
-                    bitrate = Math.min(bitrate, (0.7 * MAX_SIZE) * 8 / (actual_length / 1000) / 1024);
+                    bitrate = Math.max(850, Math.min(bitrate, (0.95 * MAX_SIZE) * 8 / (actual_length / 1000) / 1024));
 
                 let workers = [];
 
@@ -706,7 +732,7 @@ module.exports = {
 						if(code > 0){
 							resolveRender("Error encoding video")
 							.then(() => {
-								fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
+								fs.promises.rmdir(file_path, { recursive: true }).catch(helper.error);
 							}).catch(console.error);
 
 							return false;
@@ -717,19 +743,23 @@ module.exports = {
 
 						renderStatus[1] = `✓ encoding video (${((Date.now() - encodingProcessStart) / 1000).toFixed(3)}s)`;
 
-						resolveRender({files: [{
-							attachment: `${file_path}/video.${options.type}`,
-							name: `video.${options.type}`
-						}]}).then(() => {
-							fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
-						}).catch(console.error);
+                        resolveRender({files: [{
+                            attachment: `${file_path}/video.${options.type}`,
+                            name: `video.${options.type}`
+                        }]}).then(() => {
+                            fs.promises.rmdir(file_path, { recursive: true }).catch(helper.error);
+                        })
+                        .catch(console.error)
+                        .finally(() => {
+                            fs.promises.rmdir(file_path, { recursive: true }).catch(helper.error);
+                        });
 					});
 
 					pipeFrameLoop(ffmpegProcess, err => {
 						if(err){
 							resolveRender("Error encoding video")
 							.then(() => {
-								fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
+								fs.promises.rmdir(file_path, { recursive: true }).catch(helper.error);
 							}).catch(console.error);
 
 							return false;
@@ -758,7 +788,7 @@ module.exports = {
 
 						ffmpeg_args.push(
 							'-filter_complex', `"overlay=(W-w)/2:shortest=1"`,
-							'-pix_fmt', 'yuv420p', '-r', fps, '-c:v', 'libx264', '-b:v', `${bitrate}k`,
+							'-pix_fmt', 'yuv420p', '-r', fps, '-c:v', 'libx264', /*'-b:v', `${bitrate}k`*/ '-crf', 23,
 							'-c:a', 'aac', '-b:a', '164k', '-shortest', '-preset', 'veryfast',
 							'-movflags', 'faststart', '-g', fps, '-force_key_frames', '00:00:00.000', `${file_path}/video.mp4`
 						);
@@ -767,11 +797,11 @@ module.exports = {
 
 						let ffmpegProcess = spawn(ffmpeg, ffmpeg_args, { shell: true });
 
-						ffmpegProcess.on('close', code => {
+						ffmpegProcess.on('close', async code => {
 							if(code > 0){
 								resolveRender("Error encoding video")
 								.then(() => {
-									fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
+									fs.promises.rmdir(file_path, { recursive: true }).catch(helper.error);
 								}).catch(console.error);
 
 								return false;
@@ -782,12 +812,48 @@ module.exports = {
 
 							renderStatus[2] = `✓ encoding video (${((Date.now() - encodingProcessStart) / 1000).toFixed(3)}s)`;
 
-							resolveRender({files: [{
-								attachment: `${file_path}/video.${options.type}`,
-								name: `video.${options.type}`
-							}]}).then(() => {
-								fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
-							}).catch(console.error);					 
+                             const stat = await fs.promises.stat(`${file_path}/video.${options.type}`);
+
+                            console.log('size', stat.size / 1024, 'KiB');
+                            console.log('max size', MAX_SIZE / 1024, 'KiB');
+
+                            if(stat.size < MAX_SIZE){
+                                resolveRender({files: [{
+                                    attachment: `${file_path}/video.${options.type}`,
+                                    name: `video.${options.type}`
+                                }]}).then(() => {
+                                    fs.promises.rmdir(file_path, { recursive: true }).catch(helper.error);
+                                })
+                                .catch(console.error)
+                                .finally(() => {
+                                    fs.promises.rmdir(file_path, { recursive: true }).catch(helper.error);
+                                });
+                            }else{
+                                try{
+                                    console.log('uploading to pek.li');
+
+                                    const response = await execFilePromise('curl',
+                                        [
+                                            '-s', '-X', 'POST', 'https://pek.li/api/upload',
+                                            '-H', 'content-type: multipart/form-data',
+                                            '-H', 'accept: application/vnd.chibisafe.json',
+                                            '-H', 'token: ' + config.credentials.pekli_token,
+                                            '-F', `files[]=@${file_path}/video.${options.type}`
+                                        ]);
+
+                                    const json = JSON.parse(response.stdout);
+
+                                    resolveRender(json.url).then(() => {
+                                        fs.promises.rmdir(file_path, { recursive: true }).catch(helper.error);
+                                    }).catch(console.error)
+                                    .finally(() => {
+                                        fs.promises.rmdir(file_path, { recursive: true }).catch(helper.error);
+                                    });
+                                }catch(e){
+                                    console.log(err);
+                                    fs.promises.rmdir(file_path, { recursive: true }).catch(helper.error);
+                                }
+                            }
 						});
 
 						ffmpegProcess.stderr.on('data', data => {
@@ -805,7 +871,7 @@ module.exports = {
 							if(err){
 								resolveRender("Error encoding video")
 								.then(() => {
-									fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
+									fs.promises.rmdir(file_path, { recursive: true }).catch(helper.error);
 								}).catch(console.error);
 
 								return false;

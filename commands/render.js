@@ -65,6 +65,7 @@ module.exports = {
             let hidden = false;
             let flashlight = false;
             let analyze = false;
+            let lagtrain = false;
 
             argv.map(arg => arg.toLowerCase());
 
@@ -116,6 +117,8 @@ module.exports = {
                     }
                 }else if(arg == 'analyze'){
                     analyze = true;
+                }else if(arg == 'lagtrain'){
+                    lagtrain = true;
                 }else if(arg.endsWith('s')){
                     length = parseFloat(arg);
                 }else if(arg.endsWith('x')){
@@ -210,7 +213,7 @@ module.exports = {
 
                             frame.get_frames(download_path, time, length * 1000, mods, size, {
                                 combo,
-                                type: video_type, cs, ar, od, analyze, hidden, flashlight, black: false, osr, score_id, audio, fps, speed,
+                                type: video_type, cs, ar, od, analyze, lagtrain, hidden, flashlight, black: false, osr, score_id, audio, fps, speed,
                                 fill: video_type == 'mp4', noshadow: true, percent, border: false, objects, msg
                             });
 						}else{

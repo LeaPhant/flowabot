@@ -26,8 +26,12 @@ module.exports = {
                     value: "https://github.com/LeaPhant/flowabot"
                 },
                 {
+                    name: "mikazuki fork",
+                    value: "https://github.com/respektive/flowabot"
+                },
+                {
                     name: "Commands",
-                    value: "https://github.com/LeaPhant/flowabot/blob/master/COMMANDS.md"
+                    value: "https://github.com/respektive/flowabot/blob/master/COMMANDS.md"
                 },
                 {
                     name: "Prefix",

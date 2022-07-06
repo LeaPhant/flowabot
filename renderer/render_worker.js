@@ -821,7 +821,7 @@ process.on('message', async obj => {
 
                 ctx.textBaseline = "top";
                 ctx.font = `${26 * scale_multiplier}px monospace`;
-                ctx.fillText(`${pp.toFixed(2)}pp`, 15, 45);
+                ctx.fillText(`${parseFloat(pp).toFixed(2)}pp`, 15, 45);
 
                 ctx.font = `${21 * scale_multiplier}px monospace`;
                 ctx.fillText(`★${stars.toFixed(2)}`, 15, 47 + 26 * scale_multiplier);
