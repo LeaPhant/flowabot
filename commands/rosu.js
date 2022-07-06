@@ -54,6 +54,9 @@ const od10_ms = 19.5;
 
 function getModsEnum(mods){
     let return_value = 0;
+
+    if (mods.includes("nc")) mods.push("dt");
+
     mods.forEach(mod => {
         return_value |= mods_enum[mod.toUpperCase()];
     });
@@ -68,13 +71,13 @@ function round(num) {
 function calculateCsArOdHp(cs_raw, ar_raw, od_raw, hp_raw, mods_enabled, clock_rate){
 	var speed = 1, ar_multiplier = 1, ar, ar_ms;
 
-	if(mods_enabled.includes("dt")){
+	if(clock_rate){
+        speed *= clock_rate;
+    }else if(mods_enabled.includes("dt")){
 		speed *= 1.5;
 	}else if(mods_enabled.includes("ht")){
 		speed *= .75;
-	}else if(clock_rate){
-        speed *= clock_rate;
-    } 
+	}
 
 	if(mods_enabled.includes("hr")){
 		ar_multiplier *= 1.4;
@@ -169,7 +172,7 @@ module.exports = {
             let mods = [];
             let download_path, download_promise;
 
-            let acc_percent, combo, n100, n50, nmiss, od, ar, cs, hp, clock_rate;
+            let acc_percent, combo, n100, n50, nmiss, od=5, ar=5, cs=5, hp=5, clock_rate;
 
             if(beatmap_url.startsWith('<') && beatmap_url.endsWith('>'))
                 beatmap_url = beatmap_url.substring(1, beatmap_url.length - 1);
@@ -302,7 +305,8 @@ module.exports = {
                     }
                     let diff_settings = calculateCsArOdHp(base_cs, base_ar, base_od, base_hp, mods, clock_rate)
 
-                    console.log(diff_settings)
+                    //console.log(diff_settings)
+                    //console.log(result)
 
                     ar = round(diff_settings.ar)
                     od = round(diff_settings.od)
