@@ -68,7 +68,7 @@ function round(num) {
     return Math.round(m) / 100 * Math.sign(num);
 }
 
-function calculateCsArOdHp(cs_raw, ar_raw, od_raw, hp_raw, mods_enabled, clock_rate){
+function calculateCsArOdHp(cs_raw=5, ar_raw=5, od_raw=5, hp_raw=5, mods_enabled, clock_rate){
 	var speed = 1, ar_multiplier = 1, ar, ar_ms;
 
 	if(clock_rate){
@@ -172,7 +172,7 @@ module.exports = {
             let mods = [];
             let download_path, download_promise;
 
-            let acc_percent, combo, n100, n50, nmiss, od=5, ar=5, cs=5, hp=5, clock_rate;
+            let acc_percent, combo, n100, n50, nmiss, od, ar, cs, hp, clock_rate;
 
             if(beatmap_url.startsWith('<') && beatmap_url.endsWith('>'))
                 beatmap_url = beatmap_url.substring(1, beatmap_url.length - 1);
