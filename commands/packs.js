@@ -8,17 +8,13 @@ const URL = require('url');
 
 module.exports = {
     command: ['packs', 'pack'],
-    description: "Calculate maximum lazer classic score for a beatmap.",
+    description: "Get the beatmap packs containing the given beatmap.",
     argsRequired: 1,
     usage: '<map link> [+mods]',
     example: [
         {
-            run: "ls https://osu.ppy.sh/b/75",
-            result: "Returns the maximum lazer classic score for Disco Prince with no mods."
-        },
-        {
-            run: "classicscore https://osu.ppy.sh/b/75 +HDHRDT",
-            result: "Returns the maximum lazer classic score for Disco Prince +HDHRDT."
+            run: "packs https://osu.ppy.sh/b/75",
+            result: "Returns the packs containing the given beatmap Disco Prince."
         }
     ],
     call: obj => {

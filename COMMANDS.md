@@ -255,7 +255,7 @@ Show information about this bot.
 ## ;help
 Get help for a command.
 
-**List of all commands:** https://github.com/LeaPhant/flowabot/blob/master/COMMANDS.md
+**List of all commands:** https://github.com/respektive/flowabot/blob/master/COMMANDS.md
 
 **Usage**: `;help <command>`
 ### Example:
@@ -358,22 +358,17 @@ Show osu! stats.
 ```
 Returns nathan on osu's osu! stats.
 ## ;packs
-Calculate maximum lazer classic score for a beatmap.
+Get the beatmap packs containing the given beatmap.
 
 **Variations**: `;packs`, `;pack`
 
 **Usage**: `;packs <map link> [+mods]`
-### Examples:
+### Example:
 
 ```
-;ls https://osu.ppy.sh/b/75
+;packs https://osu.ppy.sh/b/75
 ```
-Returns the maximum lazer classic score for Disco Prince with no mods.
-
-```
-;classicscore https://osu.ppy.sh/b/75 +HDHRDT
-```
-Returns the maximum lazer classic score for Disco Prince +HDHRDT.
+Returns the packs containing the given beatmap Disco Prince.
 ## ;ping
 
 **Usage**: `;ping`
@@ -465,7 +460,7 @@ Returns a 120fps video at 353 combo on the last beatmap without sound and black 
 ## ;rosu
 Uses rosu-pp to calculate pp for a beatmap.
 
-**Variations**: `;rosu`, `;rosu-pp`, `;rpp`
+**Variations**: `;rosu`, `;rosu-pp`, `;rpp`, `;pp`
 
 **Usage**: `;rosu <map link> [+HDDT] [99.23%] [2x100] [1x50] [3m] [342x] [1.2*] [OD9.5] [AR10.3] [CS6] [HP8]`
 ### Examples:
