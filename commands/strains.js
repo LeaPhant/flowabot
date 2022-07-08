@@ -45,6 +45,8 @@ module.exports = {
                     type = 'aim';
                 }else if(arg.toLowerCase() == 'speed'){
                     type = 'speed';
+                }else if(arg.toLowerCase() == 'flashlight'){
+                    type = 'flashlight';
                 }else{
                     beatmap_url = arg;
                     beatmap_promise = osu.parse_beatmap_url(beatmap_url);

@@ -42,7 +42,7 @@
         "ojsama": "^2.2.0",
         "osu-parser": "git+https://github.com/LeaPhant/osu-parser.git",
         "readline-sync": "^1.4.10",
-        "rosu-pp": "^0.6.0",
+        "rosu-pp": "^0.7.0",
         "semver": "^7.3.5",
         "table": "^6.7.5",
         "tcp-ping": "^0.1.1",

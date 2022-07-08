@@ -1,6 +1,7 @@
 const axios = require('axios');
 const ojsama = require('ojsama');
 const { std_ppv2 } = require('booba');
+const rosu = require('rosu-pp')
 
 const fetch = require('node-fetch');
 
@@ -661,29 +662,53 @@ function getScore(recent_raw, cb){
 function calculateStrains(type, diffobjs, speed_multiplier){
     let strains = [];
     let strain_step = STRAIN_STEP * speed_multiplier;
-    let interval_end = (
-        Math.ceil(diffobjs[0].obj.time / strain_step) * strain_step
-    );
+    let interval_end = strain_step
     let max_strain = 0.0;
 
     for (let i = 0; i < diffobjs.length; ++i){
-        while (diffobjs[i].obj.time > interval_end) {
+        while (i * strain_step > interval_end) {
         strains.push(max_strain);
         if (i > 0) {
             let decay = Math.pow(DECAY_BASE[type],
-            (interval_end - diffobjs[i - 1].obj.time) / 1000.0);
-            max_strain = diffobjs[i - 1].strains[type] * decay;
+            (interval_end - ((i - 1) * strain_step)) / 1000.0);
+            max_strain = diffobjs[i - 1] * decay;
         } else {
             max_strain = 0.0;
         }
         interval_end += strain_step;
         }
-        max_strain = Math.max(max_strain, diffobjs[i].strains[type]);
+        max_strain = Math.max(max_strain, diffobjs[i]);
     }
 
     strains.push(max_strain);
 
     return strains;
+}
+
+function calculateDifficultyValue(strains) {
+    const decayWeight = 0.9
+    let difficulty = 0
+    let weight = 1
+
+    let peaks = strains.filter(n => n > 0)
+    .sort((a, b) => a - b).reverse();
+    
+    peaks.forEach(strain => {
+        difficulty += strain * weight;
+        weight *= decayWeight;
+    })
+
+    return difficulty;
+}
+
+function calculateFlashlightDifficultyValue(strains) {
+    let sum = 0;
+
+    for (let i = 0; i < strains.length; i++) {
+        sum += strains[i];
+    }
+
+    return sum * 1.06;
 }
 
 function updateTrackedUsers(){
@@ -1954,31 +1979,66 @@ module.exports = {
         if(mods_array.includes("HT"))
             speed_multiplier *= 0.75;
 
-        let stars = new ojsama.diff().calc({map: map, mods: mods});
+        //let stars = new ojsama.diff().calc({map: map, mods: mods});
+        //console.log(stars)
+        let rosu_stars = rosu.calculate({path: osu_file_path, mods: mods})[0]
+        //console.log(rosu_stars)
+        let rosu_strains = rosu.strains(osu_file_path, mods)
+        //console.log(rosu_strains)
 
-        let total = stars.total;
+        let total = rosu_stars.stars;
 
         if(type == 'aim')
-            total = stars.aim;
+            total = rosu_stars.aimStrain;
+
+        if(type == 'flashlight')
+            total = rosu_stars.flashlightRating;
 
         if(type == 'speed')
-            total = stars.speed;
+            total = rosu_stars.speedStrain;
 
-        let aim_strains = calculateStrains(1, stars.objects, speed_multiplier).map(a => a = Math.sqrt(a * 9.9999) * STAR_SCALING_FACTOR);
-        let speed_strains = calculateStrains(0, stars.objects, speed_multiplier).map(a => a = Math.sqrt(a * 9.9999) * STAR_SCALING_FACTOR);
+        //let aim_strains = calculateStrains(1, stars.objects, speed_multiplier).map(a => a = Math.sqrt(a * 9.9999) * STAR_SCALING_FACTOR);
+        //let speed_strains = calculateStrains(0, stars.objects, speed_multiplier).map(a => a = Math.sqrt(a * 9.9999) * STAR_SCALING_FACTOR);
+
+        //let aim_strains = rosu_strains.aim.map((e, i) => e = Math.sqrt(calculateDifficultyValue(rosu_strains.aim.slice(i-2,i+2))) * STAR_SCALING_FACTOR)
+        let aim_strains = rosu_strains.aim.map(a => a = Math.sqrt(a * 9.9999) * STAR_SCALING_FACTOR)
+        let speed_strains = rosu_strains.speed.map(a => a = Math.sqrt(a * 9.9999) * STAR_SCALING_FACTOR)
+        let flashligh_strains = rosu_strains.flashlight.map((e, i) => e = Math.sqrt(calculateFlashlightDifficultyValue(rosu_strains.flashlight.slice(i-1,i)))) //.map(a => a = Math.sqrt(a * 9.9999) * STAR_SCALING_FACTOR)
+        
+        //console.log(Math.sqrt(calculateDifficultyValue(rosu_strains.aim)) * STAR_SCALING_FACTOR)
 
         let star_strains = [];
 
         let max_strain = 0;
 
-        let _strain_step = STRAIN_STEP * speed_multiplier;
+        //let _strain_step = STRAIN_STEP * speed_multiplier;
 
-        let strain_offset = Math.floor(map.objects[0].time / _strain_step) * _strain_step - _strain_step
+        //let strain_offset = Math.floor(map.objects[0].time / _strain_step) * _strain_step - _strain_step
+        let strain_offset = rosu_strains.section_length
+        //console.log(strain_offset)
 
         let max_strain_time = strain_offset;
 
-        for(let i = 0; i < aim_strains.length; i++)
-            star_strains.push(aim_strains[i] + speed_strains[i] + Math.abs(speed_strains[i] - aim_strains[i]) * EXTREME_SCALING_FACTOR);
+        for(let i = 0; i < aim_strains.length; i++) {
+            //star_strains.push(aim_strains[i] + speed_strains[i] + Math.abs(speed_strains[i] - aim_strains[i]) * EXTREME_SCALING_FACTOR);
+            let baseAimPerformance = Math.pow(5 * Math.max(1, aim_strains[i] / 0.0675) - 4, 3) / 100000;
+            let baseSpeedPerformance = Math.pow(5 * Math.max(1, speed_strains[i] / 0.0675) - 4, 3) / 100000;
+            let baseFlashlightPerformance = 0.0;
+
+            if (mods_array.includes("FL"))
+                baseFlashlightPerformance = Math.Pow(flashligh_strains[i], 2.0) * 25.0;
+
+            let basePerformance = Math.pow(
+                Math.pow(baseAimPerformance, 1.1) +
+                Math.pow(baseSpeedPerformance, 1.1) +
+                Math.pow(baseFlashlightPerformance, 1.1), 1.0 / 1.1
+            );
+            
+            let starRating = basePerformance > 0.00001 ? Math.cbrt(1.12) * 0.027 * (Math.cbrt(100000 / Math.pow(2, 1 / 1.1) * basePerformance) + 4) : 0;
+            
+            star_strains.push(starRating)
+        }
+
 
         let chosen_strains = star_strains;
 
@@ -1987,6 +2047,9 @@ module.exports = {
 
         if(type == 'speed')
             chosen_strains = speed_strains;
+
+        if(type == 'flashlight')
+            chosen_strains = flashligh_strains;
 
         chosen_strains.forEach((strain, i) => {
             if(strain > max_strain){
