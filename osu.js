@@ -2026,7 +2026,7 @@ module.exports = {
             let baseFlashlightPerformance = 0.0;
 
             if (mods_array.includes("FL"))
-                baseFlashlightPerformance = Math.Pow(flashligh_strains[i], 2.0) * 25.0;
+                baseFlashlightPerformance = Math.pow(flashligh_strains[i], 2.0) * 25.0;
 
             let basePerformance = Math.pow(
                 Math.pow(baseAimPerformance, 1.1) +
