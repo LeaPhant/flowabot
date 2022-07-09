@@ -1547,7 +1547,7 @@ module.exports = {
             embed.url = `https://osu.ppy.sh/b/${beatmap.beatmap_id}`;
             embed.description = options.mods.length > 0 ? '+' + options.mods.join('') : 'NOMOD';
 
-            let lines = ['', '', 'Difficulty', ''];
+            let lines = ['', '', 'Difficulty                Eyup Star Rating', ''];
 
             accuracies.forEach((acc, index) => {
                 if(index > 0)
@@ -1587,6 +1587,8 @@ module.exports = {
 
             lines[3] += ' BPM ~ ';
             lines[3] += `**${+diff.total.toFixed(2)}**★`;
+
+            lines[3] += `   **${beatmap.eyup_star_rating ? beatmap.eyup_star_rating.toFixed(2) + "**★": "Unavailable**"}`
 
             embed.fields = [
                 {
