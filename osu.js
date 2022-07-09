@@ -1598,8 +1598,8 @@ module.exports = {
                     value: lines[3]
                 },
                 {
-                    name: 'Nomod SS',
-                    value: `${beatmap.max_score.toLocaleString()} Score`
+                    name: 'Nomod SS     HDHRDTFL SS',
+                    value: `${beatmap.max_score ? beatmap.max_score.toLocaleString() + " Score" : "Unavailable"}   ${beatmap.max_score_fullmod ? beatmap.max_score_fullmod.toLocaleString() + " Score" : "Unavailable"}`
                 }
             ];
 
