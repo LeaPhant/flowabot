@@ -75,3 +75,4 @@ config.json
 build
 osumaps
 commands/disabled
+package-lock.json
