@@ -3,8 +3,6 @@ const ojsama = require('ojsama');
 const { std_ppv2 } = require('booba');
 const rosu = require('rosu-pp')
 
-const fetch = require('node-fetch');
-
 const osuBeatmapParser = require('osu-parser');
 const path = require('path');
 const util = require('util');
@@ -226,6 +224,7 @@ const od0_ms = 79.5;
 const od10_ms = 19.5;
 
 let api;
+const access_token = config.credentials.osu_access_token;
 
 var settings = {
     api_key: ""
@@ -256,6 +255,7 @@ function getMods(enabled_mods){
 }
 
 function sanitizeMods(mods){
+    mods = mods.map(m => m.acronym)
     let return_array = mods;
     if(mods.includes("NC") && mods.includes("DT"))
         return_array.splice(mods.indexOf("DT"), 1);
@@ -444,7 +444,7 @@ function getRankEmoji(rank){
 }
 
 function compareScores(a, b){
-    if(a.date != b.date)
+    if(a.ended_at != b.ended_at)
         return false;
 
     if(a.user_id != b.user_id)
@@ -468,21 +468,22 @@ function ordinalSuffix(i) {
     return i + "th";
 }
 
-function getScore(recent_raw, cb){
+async function getScore(recent_raw, cb){
     let recent = {};
+    let best_score;
 
     recent = Object.assign({
         user_id: recent_raw.user_id,
-        beatmap_id: recent_raw.beatmap_id,
-        rank: recent_raw.rank,
-        score: Number(recent_raw.score),
-        combo: Number(recent_raw.maxcombo),
-        count300: Number(recent_raw.count300),
-        count100: Number(recent_raw.count100),
-        count50: Number(recent_raw.count50),
-        countmiss: Number(recent_raw.countmiss),
-        mods: getMods(Number(recent_raw.enabled_mods)),
-        date: recent_raw.date + 'Z',
+        beatmap_id: recent_raw.beatmap.id,
+        rank: recent_raw.passed ? recent_raw.rank: "F",
+        score: Number(recent_raw.total_score),
+        combo: Number(recent_raw.max_combo),
+        count300: Number(recent_raw.statistics.great ?? 0),
+        count100: Number(recent_raw.statistics.ok ?? 0),
+        count50: Number(recent_raw.statistics.meh ?? 0),
+        countmiss: Number(recent_raw.statistics.miss ?? 0),
+        mods: recent_raw.mods,
+        date: recent_raw.ended_at,
         unsubmitted: false
     }, recent);
 
@@ -491,18 +492,29 @@ function getScore(recent_raw, cb){
 	}
 
     let requests = [
-        api.get('/get_user_best', { params: { u: recent_raw.user_id, limit: 100 } }),
-        api.get('/get_scores', { params: { b: recent_raw.beatmap_id, limit: 100 } }),
-        api.get('/get_scores', { params: { b: recent_raw.beatmap_id, u: recent_raw.user_id, mods: recent_raw.enabled_mods } }),
-        api.get('/get_user', { params: { u: recent_raw.user_id } })
+        api.get(`/users/${recent_raw.user_id}/scores/best`, { params: { limit: 100 } }),
+        //api.get(`/beatmaps/${recent_raw.beatmap.id}/scores`, { params: { mode: 'osu' } }),
+        //api.get(`/beatmaps/${recent_raw.beatmap.id}/scores/users/${recent_raw.user_id}`, { params: { mods: recent_raw.mods } }),
+        api.get(`/users/${recent_raw.user_id}/osu`),
+        api.get(`/beatmapsets/${recent_raw.beatmapset.id}`)
     ];
+
+    try {
+        const response = await api.get(`/beatmaps/${recent_raw.beatmap.id}/scores/users/${recent_raw.user_id}`, { params: { mods: recent_raw.mods } })
+        best_score = response.data.score
+        best_score.position = response.data.position
+    } catch(e) {
+        best_score = e.response.data.score ?? {}
+        best_score.position = e.response.data.position ?? 0
+    }
 
     Promise.all(requests).then(results => {
 
         let user_best = results[0].data;
-        let leaderboard = results[1].data;
-        let best_score = results[2].data[0];
-        let user = results[3].data[0];
+        //let leaderboard = results[1].data;
+        //let best_score = results[2].data;
+        let user = results[1].data;
+        let beatmapset = results[2].data
 
         let pb = 0;
         let lb = 0;
@@ -515,68 +527,96 @@ function getScore(recent_raw, cb){
             }
         }
 
-        for(let i = 0; i < leaderboard.length; i++){
-            if(compareScores(leaderboard[i], recent_raw)){
-                lb = ++i;
-                break;
-            }
+        // for(let i = 0; i < leaderboard.length; i++){
+        //     if(compareScores(leaderboard[i], recent_raw)){
+        //         lb = ++i;
+        //         break;
+        //     }
+        // }
+
+        if(compareScores(best_score, recent_raw)){
+            lb = best_score.position
         }
 
         recent = Object.assign({
             pb: pb,
             lb: lb,
             username: user.username,
-            user_rank: Number(user.pp_rank),
-            user_pp: Number(user.pp_raw)
+            user_rank: Number(user.statistics.global_rank),
+            user_pp: Number(user.statistics.pp)
         }, recent);
 
         if(best_score){
             if(compareScores(best_score, recent_raw)){
-                replay = Number(best_score.replay_available);
-				recent.score_id = best_score.score_id;
+                replay = Number(best_score.replay ? 1 : 0);
+				recent.score_id = best_score.id;
             }else{
                 recent.unsubmitted = true;
 			}
         }
 
-        axios.get(`${config.beatmap_api}/b/${recent.beatmap_id}`).then(response => {
-            response = response.data;
+        api.post(`/beatmaps/${recent.beatmap_id}/attributes`, { mods: recent_raw.mods } ).then(response => {
+            let attributes = response.data.attributes;
+            
+            let beatmap = recent_raw.beatmap;
+            //let beatmapset = recent_raw.beatmapset;
 
-            let beatmap = response.beatmap;
-
-            let diff_settings = calculateCsArOdHp(beatmap.cs, beatmap.ar, beatmap.od, beatmap.hp, recent.mods);
+            let diff_settings = calculateCsArOdHp(beatmap.cs, beatmap.ar, beatmap.accuracy, beatmap.drain, recent.mods);
 
             let speed = 1;
 
-            if(recent.mods.includes('DT'))
+            if(recent.mods.map(x => x.acronym).includes('DT'))
                 speed *= 1.5;
-            else if(recent.mods.includes('HT'))
+            else if(recent.mods.map(x => x.acronym).includes('HT'))
                 speed *= 0.75;
 
             let fail_percent = 1;
 
-            if(recent_raw.rank == 'F')
-                fail_percent = (recent.count300 + recent.count100 + recent.count50 + recent.countmiss) / beatmap.hit_objects;
+            if(!recent_raw.passed)
+                fail_percent = (recent.count300 + recent.count100 + recent.count50 + recent.countmiss) / (beatmap.count_spinners + beatmap.count_sliders + beatmap.count_circles);
 
-            const play = new std_ppv2().setPerformance(recent_raw).setDifficulty(response);
+            let diff = {
+                aim: attributes.aim_difficulty,
+                speed: attributes.speed_difficulty,
+                fl: attributes.flashlight_difficulty,
+                total: attributes.star_rating,
+                slider_factor: attributes.slider_factor,
+                max_combo: attributes.max_combo,
+                ar: attributes.approach_rate,
+                od: attributes.overall_difficulty,
+                count_circles: beatmap.count_circles,
+                count_sliders: beatmap.count_sliders,
+                count_spinners: beatmap.count_spinners
+            }
+
+            let perf = {
+                beatmap_id: recent_raw.beatmap.id,
+                count300: recent_raw.statistics.great ?? 0,
+                count100: recent_raw.statistics.ok ?? 0,
+                count50: recent_raw.statistics.meh ?? 0,
+                countmiss: recent_raw.statistics.miss ?? 0,
+                maxcombo: recent_raw.max_combo,
+                enabled_mods: getModsEnum(recent_raw.mods.map(x => x.acronym))
+            }
+
+            const play = new std_ppv2().setPerformance(perf).setDifficulty(diff);
 
             Promise.all([play.compute(), play.compute(true)]).then(results => {
                 const pp = results[0];
                 const pp_fc = results[1];
-
                 recent = Object.assign({
-                    approved: beatmap.approved,
-                    beatmapset_id: beatmap.beatmapset_id,
-                    artist: beatmap.artist,
-                    title: beatmap.title,
+                    approved: beatmapset.status,
+                    beatmapset_id: beatmapset.id,
+                    artist: beatmapset.artist,
+                    title: beatmapset.title,
                     version: beatmap.version,
                     bpm_min: beatmap.bpm_min * speed,
                     bpm_max: beatmap.bpm_max * speed,
-                    max_combo: beatmap.max_combo,
+                    max_combo: attributes.max_combo,
                     bpm: beatmap.bpm * speed,
-                    creator: beatmap.creator,
-                    creator_id: beatmap.creator_id,
-                    approved_date: beatmap.approved_date,
+                    creator: beatmapset.creator,
+                    creator_id: beatmapset.user_id,
+                    approved_date: beatmapset.ranked_date,
                     cs: diff_settings.cs,
                     ar: play.map.ar,
                     od: play.map.od,
@@ -584,7 +624,7 @@ function getScore(recent_raw, cb){
                     duration: beatmap.total_length,
                     fail_percent: fail_percent
                 }, recent);
-
+  
                 recent = Object.assign({
                     stars: play.diff.total,
                     pp_fc: pp_fc.total,
@@ -595,8 +635,8 @@ function getScore(recent_raw, cb){
                 if(recent.pp == null)
                     recent.pp = pp.total;
 
-                helper.downloadBeatmap(recent_raw.beatmap_id).finally(async () => {
-                    let beatmap_path = path.resolve(config.osu_cache_path, `${recent_raw.beatmap_id}.osu`);
+                helper.downloadBeatmap(recent_raw.beatmap.id).finally(async () => {
+                    let beatmap_path = path.resolve(config.osu_cache_path, `${recent_raw.beatmap.id}.osu`);
     
                     let strains_bar;
     
@@ -614,12 +654,12 @@ function getScore(recent_raw, cb){
     
                             ur_calc.get_ur(
                                 {
-                                    apikey: settings.api_key,
+                                    apikey: config.credentials.osu_api_key,
                                     player: recent_raw.user_id,
-                                    beatmap_id: recent_raw.beatmap_id,
-                                    mods_enabled: recent_raw.enabled_mods,
-                                    score_id: recent.score_id,
-                                    mods: recent.mods
+                                    beatmap_id: recent_raw.beatmap.id,
+                                    mods_enabled: getModsEnum(recent_raw.mods.map(x => x.acronym)),
+                                    score_id: recent_raw.id,
+                                    mods: recent.mods.map(x => x.acronym)
                                 }).then(response => {
                                     recent.ur = response.ur;
     
@@ -628,9 +668,9 @@ function getScore(recent_raw, cb){
                                     && recent.count50 == (response['50'] || 0))
                                         recent.countsb = response.sliderbreak;
     
-                                    if(recent.mods.includes("DT") || recent.mods.includes("NC"))
+                                    if(recent.mods.map(x => x.acronym).includes("DT") || recent.mods.map(x => x.acronym).includes("NC"))
                                         recent.cvur = response.ur / 1.5;
-                                    else if(recent.mods.includes("HT"))
+                                    else if(recent.mods.map(x => x.acronym).includes("HT"))
                                         recent.cvur = response.ur * 1.5;
     
                                     resolve(recent);
@@ -638,7 +678,7 @@ function getScore(recent_raw, cb){
                         });
     
                         recent.ur = -1;
-                        if(recent.mods.includes("DT") || recent.mods.includes("HT"))
+                        if(recent.mods.map(mod => mod.acronym).includes("DT") || recent.mods.map(mod => mod.acronym).includes("HT"))
                             recent.cvur = -1;
                         cb(null, recent, strains_bar, ur_promise);
                     }else{
@@ -658,7 +698,6 @@ function getScore(recent_raw, cb){
         helper.log(err);
     });
 }
-
 function calculateStrains(type, diffobjs, speed_multiplier){
     let strains = [];
     let strain_step = STRAIN_STEP * speed_multiplier;
@@ -715,12 +754,12 @@ function updateTrackedUsers(){
     for(user_id in tracked_users){
         let user = user_id;
 
-        api.get('/get_user_best', {params: { u: user, limit: tracked_users[user].top, mode: 0 }}).then(response => {
+        api.get(`/users/${user}/scores/best`, {params: { limit: tracked_users[user].top, mode: 'osu' }}).then(response => {
             response = response.data;
 
             if(user in top_plays){
                 response.forEach(score => {
-                    score.score_id = Number(score.score_id);
+                    score.score_id = Number(score.id);
                     if(!top_plays[user].includes(Number(score.score_id))){
                         getScore(score, (err, recent, strains_bar, ur_promise) => {
                             if(err)
@@ -764,7 +803,7 @@ function updateTrackedUsers(){
 
             top_plays[user] = [];
             response.forEach(score => {
-                top_plays[user].push(Number(score.score_id));
+                top_plays[user].push(Number(score.id));
             });
 
             helper.setItem('top_plays', JSON.stringify(top_plays));
@@ -776,22 +815,73 @@ function updateTrackedUsers(){
 	setTimeout(updateTrackedUsers, 60 * 1000);
 }
 
+// async function getAccessToken(){
+
+//     const token_url = "https://osu.ppy.sh/oauth/token";
+
+//     let headers = {
+//         "Accept": "application/json",
+//         "Content-Type": "application/json",
+//     };
+
+//     let body = {
+//         "client_id": config.credentials.client_id,
+//         "client_secret": config.credentials.client_secret,
+//         "grant_type": "client_credentials",
+//         "scope": "public"  
+//     }
+
+//     const token_response = await axios(token_url, {
+//         method: "POST",
+//         headers,
+//         data: body,
+//     })
+
+//     const token_res = await token_response.data;
+//     const token = token_res.access_token;
+//     const expires = token_res.expires_in - 1;
+
+//     access_token = token;
+
+//     setTimeout(getAccessToken, expires * 1000);
+
+// }
+
+async function getUserId(username){
+    let res = await api.get(`/users/${username}/osu`, { params: { key: "user" } });
+    let user = res.data;
+    return user.id;
+}
+
 module.exports = {
-    init: function(client, api_key, _last_beatmap){
+    init: async function(client, client_id, client_secret, _last_beatmap, api_key){
 		discord_client = client;
 		last_beatmap = _last_beatmap;
 
-		if(api_key){
-	        settings.api_key = api_key;
+		if(client_id && client_secret){
+            //await getAccessToken();
+            console.log(access_token);
 	        api = axios.create({
+	            baseURL: 'https://osu.ppy.sh/api/v2',
+                headers: {
+                    Authorization: `Bearer ${access_token}`,
+                    "x-api-version": 20220707
+                }
+	        });   
+
+			updateTrackedUsers();
+		}
+
+        if(api_key){
+	        settings.api_key = api_key;
+	        apiv1 = axios.create({
 	            baseURL: 'https://osu.ppy.sh/api',
 	            params: {
 	                k: api_key
 	            }
 	        });
+        }
 
-			updateTrackedUsers();
-		}
     },
 
     get_mode_name: function(mode){
@@ -821,7 +911,7 @@ module.exports = {
 
         if(pp_to_add === null) return false;
 
-        api.get('/get_user', { params: { u: user }}).then(response => {
+        apiv1.get('/get_user', { params: { u: user }}).then(response => {
             let start = Date.now();
             let json = response.data;
 
@@ -836,7 +926,7 @@ module.exports = {
 
             let total_scores = parseInt(json[0].count_rank_ss) + parseInt(json[0].count_rank_s) + parseInt(json[0].count_rank_a);
 
-			api.get('/get_user_best', { params: { u: user, limit: 100 }}).then(response => {
+			apiv1.get('/get_user_best', { params: { u: user, limit: 100 }}).then(response => {
 				json = response.data;
 
                 pp_array = json;
@@ -1019,24 +1109,24 @@ module.exports = {
 			};
 		}
 
-        let ranked_text = 'Submitted';
+        let ranked_text = 'Last updated';
         let ranked_date = recent.approved_date;
 
         switch(recent.approved){
-            case 1:
+            case 'ranked':
                 ranked_text = 'Ranked';
                 break;
-            case 2:
+            case 'approved':
                 ranked_text = 'Approved';
                 break;
-            case 3:
+            case 'qualified':
                 ranked_text = 'Qualified';
                 break;
-            case 4:
+            case 'loved':
                 ranked_text = 'Loved';
                 break;
             default:
-                ranked_date = recent.submitted_date;
+                ranked_date = recent.approved_date;
         }
 
         embed.footer = {
@@ -1063,7 +1153,7 @@ module.exports = {
 
         lines[0] += `${recent.score.toLocaleString()}${helper.sep}`;
         lines[0] += `${+recent.acc.toFixed(2)}%${helper.sep}`;
-        lines[0] += `<t:${DateTime.fromSQL(recent.date).toSeconds()}:R>`;
+        lines[0] += `<t:${DateTime.fromISO(recent.date).toSeconds()}:R>`;
 
         if(recent.pp_fc > recent.pp)
             lines[1] += `**${recent.unsubmitted ? '*' : ''}${+recent.pp.toFixed(2)}pp**${recent.unsubmitted ? '*' : ''} ➔ ${+recent.pp_fc.toFixed(2)}pp for ${+recent.acc_fc.toFixed(2)}% FC${helper.sep}`;
@@ -1115,17 +1205,19 @@ module.exports = {
         lines[3] += `${Duration.fromMillis(recent.duration * 1000).toFormat('mm:ss')} ~ `;
         lines[3] += `CS**${+recent.cs.toFixed(1)}** AR**${+recent.ar.toFixed(1)}** OD**${+recent.od.toFixed(1)}** HP**${+recent.hp.toFixed(1)}** ~ `;
 
-        if(recent.bpm_min != recent.bpm_max)
-            lines[3] += `${+recent.bpm_min.toFixed(1)}-${+recent.bpm_max.toFixed(1)} (**`;
-        else
-            lines[3] += '**';
+        lines[3] += `**${+recent.bpm.toFixed(1)}**`
+        // if(recent.bpm_min != recent.bpm_max)
+        //     lines[3] += `${+recent.bpm_min.toFixed(1)}-${+recent.bpm_max.toFixed(1)} (**`;
+        // else
+        //     lines[3] += '**';
 
-        lines[3] += +recent.bpm.toFixed(1);
+        // lines[3] += +recent.bpm.toFixed(1);
 
-        if(recent.bpm_min != recent.bpm_max)
-            lines[3] += '**)';
-        else
-            lines[3] += '**';
+        // if(recent.bpm_min != recent.bpm_max)
+        //     lines[3] += '**)';
+        // else
+        //     lines[3] += '**';
+
 
         lines[3] += ' BPM ~ ';
         lines[3] += `**${+recent.stars.toFixed(2)}**★`;
@@ -1145,16 +1237,18 @@ module.exports = {
 
     },
 
-    get_recent: function(options, cb){
+    get_recent: async function(options, cb){
         helper.log(options);
-        let limit = options.pass ? 50 : options.index;
+        let limit = options.index;
+        let pass = options.pass ? 0 : 1;
+        let user_id = await getUserId(options.user);
 
-        api.get('/get_user_recent', { params: { u: options.user, limit: limit } }).then(response => {
+        api.get(`/users/${user_id}/scores/recent`, { params: { limit: limit, include_fails: pass, mode: "osu" } }).then(response => {
 
             response = response.data;
-
+            //console.log(response)
             if(response.length < 1){
-                cb(`No recent plays found for ${options.user}`);
+                cb(`No recent ${options.pass ? 'passes' : 'plays'} found for ${options.user}`);
                 return;
             }
 
@@ -1162,37 +1256,56 @@ module.exports = {
 
             let recent = {};
 
-            if(options.pass){
-                let recent_pass = [];
-                for(let i = 0; i < response.length; i++){
-                    if(response[i].rank != 'F')
-                        recent_pass.push(response[i]);
-                }
+            if(response.length < options.index)
+                options.index = response.length;
 
-                if(recent_pass.length > 0){
-                    if(recent_pass.length < options.index)
-                        options.index = recent_pass.length;
-
-                    recent_raw = recent_pass[options.index - 1];
-                }
-
-                if(!recent_raw){
-                    cb(`No recent passes found for ${options.user}`);
-                    return;
-                }
-            }else{
-                if(response.length < options.index)
-                    options.index = response.length;
-
-                recent_raw = response[options.index - 1];
-            }
-
+            recent_raw = response[options.index - 1];
 
             getScore(recent_raw, cb);
         });
     },
 
-    get_compare: function(options, cb){
+    get_compare: async function(options, cb){
+
+        let user_id = await getUserId(options.user);
+
+        if(options.mods) {
+            api.get(`/beatmaps/${options.beatmap_id}/scores/users/${user_id}`, { params: { mods: options.mods } }).then(response => {
+                console.log(response);
+                response = response.data;
+    
+                let recent_raw = response.score;
+                recent_raw.beatmap = {};
+                recent_raw.beatmap.id = options.beatmap_id;
+    
+                getScore(recent_raw, cb);
+            })         
+            .catch(err => {
+                console.log(err);
+                cb(`No scores matching criteria found`);
+            });
+
+        } else {
+            api.get(`/beatmaps/${options.beatmap_id}/scores/users/${user_id}/all`, { params: { mode: "osu" } }).then(response => {
+                response = response.data;
+    
+                if(response.scores.length < options.index)
+                    optiins.index = response.scores.length - 1;
+    
+                let recent_raw = response.scores[options.index - 1];
+                recent_raw.beatmap = {};
+                recent_raw.beatmap.id = options.beatmap_id;
+    
+                getScore(recent_raw, cb);
+            })
+            .catch(err => {
+                console.log(err);
+                cb(`No scores matching criteria found`);
+            });
+        }
+
+
+
         let params = {
             b: options.beatmap_id,
         };
@@ -1204,7 +1317,7 @@ module.exports = {
                 params.mods = getModsEnum(options.mods);
         }
 
-        api.get('/get_scores', { params: params }).then(response => {
+        apiv1.get('/get_scores', { params: params }).then(response => {
             response = response.data;
 
             let score;
@@ -1247,48 +1360,105 @@ module.exports = {
         });
     },
 
-    get_score: function(options, cb){
-        let params = {
-            b: options.beatmap_id,
-            limit: options.index
-        };
+    get_score: async function(options, cb){
 
-        if(options.user)
-            params.u = options.user;
+        let beatmap = await api.get(`/beatmaps/lookup`, { params: { id: options.beatmap_id }})
+        beatmap = beatmap.data
 
-        if(options.mods)
-            params.mods = getModsEnum(options.mods)
+        if(options.user) {
+            let user_id = await getUserId(options.user);
 
-        api.get('/get_scores', { params: params }).then(response => {
-            response = response.data;
-
-            if(response.length < 1){
-                cb(`No scores matching criteria found`);
-                return;
+            if(options.mods) {
+                api.get(`/beatmaps/${options.beatmap_id}/scores/users/${user_id}`, { params: { mods: options.mods } }).then(response => {
+                    console.log(response);
+                    response = response.data;
+        
+                    let recent_raw = response.score;
+                    recent_raw.beatmap = beatmap;
+                    recent_raw.beatmapset = beatmap.beatmapset;
+                    //recent_raw.beatmap.id = options.beatmap_id;
+        
+                    getScore(recent_raw, cb);
+                })         
+                .catch(err => {
+                    console.log(err);
+                    cb(`No scores matching criteria found`);
+                });
+    
+            } else {
+                api.get(`/beatmaps/${options.beatmap_id}/scores/users/${user_id}/all`, { params: { mode: "osu" } }).then(response => {
+                    response = response.data;
+        
+                    if(response.scores.length < options.index)
+                        optiins.index = response.scores.length - 1;
+        
+                    let recent_raw = response.scores[options.index - 1];
+                    recent_raw.beatmap = beatmap;
+                    recent_raw.beatmapset = beatmap.beatmapset;
+                    //recent_raw.beatmap.id = options.beatmap_id;
+        
+                    getScore(recent_raw, cb);
+                })
+                .catch(err => {
+                    console.log(err);
+                    cb(`No scores matching criteria found`);
+                });
             }
+        } else {
+            if(options.mods) {
+                api.get(`/beatmaps/${options.beatmap_id}/scores`, { params: { mods: options.mods } }).then(response => {
+                    response = response.data;
+        
+                    if(response.scores.length < options.index)
+                        optiins.index = response.scores.length - 1;
+        
+                    let recent_raw = response.scores[options.index - 1];
+                    recent_raw.beatmap = beatmap;
+                    recent_raw.beatmapset = beatmap.beatmapset;
+                    //recent_raw.beatmap.id = options.beatmap_id;
+        
+                    getScore(recent_raw, cb);
+                })
+                .catch(err => {
+                    console.log(err);
+                    cb(`No scores matching criteria found`);
+                });
+            } else {
+                api.get(`/beatmaps/${options.beatmap_id}/scores`, { params: { mode: "osu" } }).then(response => {
+                    response = response.data;
+        
+                    if(response.scores.length < options.index)
+                        optiins.index = response.scores.length - 1;
+        
+                    let recent_raw = response.scores[options.index - 1];
 
-            if(response.length < options.index)
-                optiins.index = response.length - 1;
-
-            let recent_raw = response[options.index - 1];
-
-            recent_raw.beatmap_id = options.beatmap_id;
-
-            getScore(recent_raw, cb);
-        });
-
+                    recent_raw.beatmap = beatmap;
+                    recent_raw.beatmapset = beatmap.beatmapset;
+                    //recent_raw.beatmap.id = options.beatmap_id;
+        
+                    getScore(recent_raw, cb);
+                })
+                .catch(err => {
+                    console.log(err);
+                    cb(`No scores matching criteria found`);
+                });
+            }
+        }
     },
 
 	get_tops: async function(options, cb){
+
+        let user_id = await getUserId(options.user);
+
 		let requests = [
-	        api.get('/get_user_best', { params: { u: options.user, limit: options.count } }),
-	        api.get('/get_user', { params: { u: options.user } })
+	        api.get(`/users/${user_id}/scores/best`, { params: { limit: options.count } }),
+	        api.get(`/users/${user_id}/osu`)
         ];
         
         const results = await Promise.all(requests);
 
         let user_best = results[0].data;
-        let user = results[1].data[0];
+        let user = results[1].data;
 
         if(user_best.length < 1){
             cb(`No top plays found for ${options.user}`);
@@ -1297,15 +1467,14 @@ module.exports = {
 
         const tops = user_best.slice(0, options.count || 5);
 
-        const { data } = await axios(`${config.beatmap_api}/b/${tops.map(a => a.beatmap_id).join(",")}`);
+        const { data } = await axios(`${config.beatmap_api}/b/${tops.map(a => a.beatmap.id).join(",")}`);
 
         for(const top of tops){
-            const { beatmap, difficulty } = data.find(a => a.beatmap.beatmap_id == top.beatmap_id);
+            const { beatmap, difficulty } = data.find(a => a.beatmap.beatmap_id == top.beatmap.id);
 
-            top.accuracy = (accuracy(top.count300, top.count100, top.count50, top.countmiss) * 100).toFixed(2);
-            top.mods = getMods(top.enabled_mods);
+            top.accuracy = (top.accuracy * 100).toFixed(2);
 
-            const diff = difficulty[getModsEnum(top.mods.filter(mod => DIFF_MODS.includes(mod)))];
+            const diff = difficulty[getModsEnum(top.mods.map(mod => mod.acronym).filter(mod => DIFF_MODS.includes(mod)))];
 
             top.stars = diff.total;
 
@@ -1314,10 +1483,10 @@ module.exports = {
                 speed_stars: diff.speed,
                 base_ar: beatmap.ar,
                 base_od: beatmap.od,
-                n300: Number(top.count300 + top.countmiss),
-                n100: Number(top.count100),
-                n50: Number(top.count50),
-                mods: Number(top.enabled_mods),
+                n300: Number(top.statistics.great ?? 0 + top.statistics.miss ?? 0),
+                n100: Number(top.statistics.ok ?? 0),
+                n50: Number(top.statistics.meh ?? 0),
+                mods: Number(getModsEnum(top.mods.map(mod => mod.acronym))),
                 ncircles: beatmap.num_circles,
                 nsliders: beatmap.num_sliders,
                 nobjects: beatmap.hit_objects,
@@ -1336,65 +1505,17 @@ module.exports = {
 
     get_pins: async function(options, cb){
 
-        const token_url = "https://osu.ppy.sh/oauth/token";
+        let user_id = await getUserId(options.user);
+
+        let requests = [
+	        api.get(`/users/${user_id}/scores/pinned`, { params: { limit: options.count } }),
+	        api.get(`/users/${user_id}/osu`)
+        ];
         
-        let headers = {
-            "Accept": "application/json",
-            "Content-Type": "application/json",
-        };
-        
-        let body = {
-            "client_id": config.credentials.client_id,
-            "client_secret": config.credentials.client_secret,
-            "grant_type": "client_credentials",
-            "scope": "public"  
-        }
-        
-        const token_response = await axios(token_url, {
-            method: "POST",
-            headers,
-            data: body,
-        })
+        const results = await Promise.all(requests);
 
-        const token_res = await token_response.data;
-        
-        const token = token_res.access_token;
-
-        const user_url = `https://osu.ppy.sh/api/v2/users/${options.user}/osu`;
-
-
-        headers = {
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-            "Authorization": `Bearer ${token}`
-        };
-
-        const user_res = await axios(user_url, {
-                params: {
-                    "key": "username"
-                },
-                method: "GET",
-                headers,
-            })
-        const user = await user_res.data;
-
-        const pinned_url = `https://osu.ppy.sh/api/v2/users/${user.id}/scores/pinned`;
-                
-        headers = {
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-            "Authorization": `Bearer ${token}`
-        };
-
-        const pins_res = await axios(pinned_url, {
-                    params: {
-                        "mode": "osu",
-                        "limit": options.count,
-                    },
-                    method: "GET",
-                    headers,
-                })
-        const pins = await pins_res.data;
+        let pins = results[0].data;
+        let user = results[1].data;
 
         if(pins.length < 1){
             cb(`No top pins found for ${user.username}`);   
@@ -1412,7 +1533,7 @@ module.exports = {
 
             pin.accuracy = (pin.accuracy * 100).toFixed(2);
 
-            const diff = difficulty[getModsEnum(pin.mods.filter(mod => DIFF_MODS.includes(mod)))];
+            const diff = difficulty[getModsEnum(pin.mods.map(mod => mod.acronym).filter(mod => DIFF_MODS.includes(mod)))];
 
             pin.stars = diff.total;
 
@@ -1421,10 +1542,10 @@ module.exports = {
                 speed_stars: diff.speed,
                 base_ar: beatmap.ar,
                 base_od: beatmap.od,
-                n300: Number(pin.statistics.count_300 + pin.statistics.count_miss),
-                n100: Number(pin.statistics.count_100),
-                n50: Number(pin.statistics.count_50),
-                mods: Number(getModsEnum(pin.mods)),
+                n300: Number(pin.statistics.great ?? 0 + pin.statistics.miss ?? 0),
+                n100: Number(pin.statistics.ok ?? 0),
+                n50: Number(pin.statistics.meh ?? 0),
+                mods: Number(getModsEnum(pin.mods.map(mod => mod.acronym))),
                 ncircles: beatmap.num_circles,
                 nsliders: beatmap.num_sliders,
                 nobjects: beatmap.hit_objects,
@@ -1441,42 +1562,42 @@ module.exports = {
         return { user, pins };
 	},
 
-    get_top: function(options, cb){
-        let params = {
-            limit: options.rb | options.ob ? 100 : options.index,
-            u: options.user
-        };
+    get_top: async function(options, cb){
 
-        api.get('/get_user_best', {params: params}).then(response => {
-            response = response.data;
+        let user_id = await getUserId(options.user);
 
-            if(response.length < 1){
-                cb(`No top plays found for ${options.user}`);
-                return;
-            }
+		let requests = [
+	        api.get(`/users/${user_id}/scores/best`, { params: { limit: 100 } })
+        ];
+        
+        const results = await Promise.all(requests);
 
-            let recent_raw;
+        let user_best = results[0].data;
 
-            if(options.rb || options.ob){
-                response.forEach((recent, index) => {
-                    response[index].unix = Math.floor(DateTime.fromSQL(recent.date).toSeconds());
-                });
-            }
+        if(user_best.length < 1){
+            cb(`No top plays found for ${options.user}`);
+            return;
+        }
 
-            if(options.rb)
-                response = response.sort((a, b) => b.unix - a.unix);
+        if(options.rb || options.ob){
+            user_best.forEach((recent, index) => {
+                user_best[index].unix = Math.floor(DateTime.fromISO(recent.ended_at).toSeconds());
+            });
+        }
 
-            if(options.ob)
-                response = response.sort((a, b) => a.unix - b.unix);
+        if(options.rb)
+        user_best = user_best.sort((a, b) => b.unix - a.unix);
 
-            if(response.length < options.index)
-                options.index = response.length;
+        if(options.ob)
+        user_best = user_best.sort((a, b) => a.unix - b.unix);
 
-            recent_raw = response[options.index - 1];
+        if(user_best.length < options.index)
+            options.index = user_best.length;
 
-            getScore(recent_raw, cb);
-        });
-    },
+        recent_raw = user_best[options.index - 1];
+
+        getScore(recent_raw, cb);
+},
 
     get_pp: function(options, cb){
         axios.get(`${config.beatmap_api}/b/${options.beatmap_id}`).then(response => {
@@ -1625,12 +1746,6 @@ module.exports = {
 
 	        if(beatmap_url.includes("#osu/"))
 	            beatmap_id = parseInt(beatmap_url.split("#osu/").pop());
-            else if(beatmap_url.includes("#fruits/"))
-                beatmap_id = parseInt(beatmap_url.split("#fruits/").pop());
-            else if(beatmap_url.includes("#taiko/"))
-                beatmap_id = parseInt(beatmap_url.split("#taiko/").pop());
-            else if(beatmap_url.includes("#mania/"))
-                beatmap_id = parseInt(beatmap_url.split("#mania/").pop());
 	        else if(beatmap_url.includes("/b/"))
 	            beatmap_id = parseInt(beatmap_url.split("/b/").pop());
 	        else if(beatmap_url.includes("/osu/"))
@@ -1748,7 +1863,7 @@ module.exports = {
     },
 
     get_user: function(options, cb){
-        api.get('/get_user', {params: {u: options.u}}).then(async function (response) {
+        api.get(`/users/${options.u}/osu`).then(response => {
             response = response.data;
 
 			if(response.length == 0){
@@ -1756,59 +1871,47 @@ module.exports = {
 				return false;
 			}
 
-            let data = response[0];
+            let data = response;
+
 
             let grades = "";
 
-            grades += `${getRankEmoji('XH')} ${Number(data.count_rank_ssh).toLocaleString()} `;
-            grades += `${getRankEmoji('X')} ${Number(data.count_rank_ss).toLocaleString()} `;
-            grades += `${getRankEmoji('SH')} ${Number(data.count_rank_sh).toLocaleString()} `;
-            grades += `${getRankEmoji('S')} ${Number(data.count_rank_s).toLocaleString()} `;
-            grades += `${getRankEmoji('A')} ${Number(data.count_rank_a).toLocaleString()}`;
+            grades += `${getRankEmoji('XH')} ${Number(data.statistics.grade_counts.ssh).toLocaleString()} `;
+            grades += `${getRankEmoji('X')} ${Number(data.statistics.grade_counts.ss).toLocaleString()} `;
+            grades += `${getRankEmoji('SH')} ${Number(data.statistics.grade_counts.sh).toLocaleString()} `;
+            grades += `${getRankEmoji('S')} ${Number(data.statistics.grade_counts.s).toLocaleString()} `;
+            grades += `${getRankEmoji('A')} ${Number(data.statistics.grade_counts.a).toLocaleString()}`;
 
-            let play_time = `${Math.floor(Number(data.total_seconds_played) / 3600)}h`;
-            play_time += ` ${Math.floor(Number(data.total_seconds_played) % 3600 / 60)}m`;
-
-            let sr;
-
-            await axios.get(`https://score.respektive.pw/u/${data.user_id}`).then(function (response) {
-                sr = response.data[0].rank;
-            }).catch(err => {
-                sr = 0;
-                console.log(err);
-            });
-            let score_rank = ""; 
-            if (sr > 0) {
-                score_rank = ` (#${sr})`;
-            }
+            let play_time = `${Math.floor(Number(data.statistics.play_time) / 3600)}h`;
+            play_time += ` ${Math.floor(Number(data.statistics.play_time) % 3600 / 60)}m`;
 
             let embed = {
                 color: 12277111,
                 thumbnail: {
-                    url: `https://a.ppy.sh/${data.user_id}?${+new Date()}`
+                    url: data.avatar_url
                 },
                 author: {
-                    name: `${data.username} – ${+Number(data.pp_raw).toFixed(2)}pp (#${Number(data.pp_rank).toLocaleString()}) (${data.country}#${Number(data.pp_country_rank).toLocaleString()})`,
-                    icon_url: `https://a.ppy.sh/${data.user_id}?${+new Date()}`,
-                    url: `https://osu.ppy.sh/u/${data.user_id}`
+                    name: `${data.username} – ${+Number(data.statistics.pp).toFixed(2)}pp (#${Number(data.statistics.global_rank).toLocaleString()}) (${data.country_code}#${Number(data.statistics.country_rank).toLocaleString()})`,
+                    icon_url: data.avatar_url,
+                    url: `https://osu.ppy.sh/u/${data.id}`
                 },
                 footer: {
-                    text: `Playing for ${DateTime.fromSQL(data.join_date).toRelative().slice(0, -4)}${helper.sep}Joined on ${DateTime.fromSQL(data.join_date).toFormat('dd MMMM yyyy')}`
+                    text: `Playing for ${DateTime.fromISO(data.join_date).toRelative().slice(0, -4)}${helper.sep}Joined on ${DateTime.fromISO(data.join_date).toFormat('dd MMMM yyyy')}`
                 },
                 fields: [
                     {
                         name: 'Ranked Score',
-                        value: Number(data.ranked_score).toLocaleString() + score_rank ,
+                        value: Number(data.statistics.ranked_score).toLocaleString(),
                         inline: true
                     },
                     {
                         name: 'Total score',
-                        value: Number(data.total_score).toLocaleString(),
+                        value: Number(data.statistics.total_score).toLocaleString(),
                         inline: true
                     },
                     {
                         name: 'Play Count',
-                        value: Number(data.playcount).toLocaleString(),
+                        value: Number(data.statistics.play_count).toLocaleString(),
                         inline: true
                     },
                     {
@@ -1818,21 +1921,21 @@ module.exports = {
                     },
                     {
                         name: 'Level',
-                        value: (+Number(data.level).toFixed(2)).toString(),
+                        value: (+Number(data.statistics.level.current + '.' + data.statistics.level.progress).toFixed(2)).toString(),
                         inline: true
                     },
                     {
                         name: 'Hit Accuracy',
-                        value: `${Number(data.accuracy).toFixed(2)}%`,
+                        value: `${Number(data.statistics.hit_accuracy).toFixed(2)}%`,
                         inline: true
                     }
                 ]
             };
 
             if(options.extended){
-                const hitCount = Number(data.count300) + Number(data.count100) + Number(data.count50);
-                const s_count = (Number(data.count_rank_sh) + Number(data.count_rank_s)).toLocaleString();
-                const ss_count = (Number(data.count_rank_ssh) + Number(data.count_rank_ss)).toLocaleString();
+                const hitCount = Number(data.statistics.total_hits);
+                const s_count = (Number(data.statistics.grade_counts.sh) + Number(data.statistics.grade_counts.s)).toLocaleString();
+                const ss_count = (Number(data.statistics.grade_counts.ssh) + Number(data.statistics.grade_counts.ss)).toLocaleString();
 
                 embed.fields.push({
                     name: 'Combined Ranks',
@@ -1846,7 +1949,7 @@ module.exports = {
                 },
                 {
                     name: 'Hits per Play',
-                    value: (hitCount / Number(data.playcount)).toFixed(1),
+                    value: (hitCount / Number(data.statistics.play_count)).toFixed(1),
                     inline: true
                 });
             }
@@ -2072,7 +2175,7 @@ module.exports = {
     },
 
     track_user: function(channel_id, user, top, cb){
-        api.get('/get_user', { params: { u: user } }).then(response => {
+        apiv1.get('/get_user', { params: { u: user } }).then(response => {
             response = response.data;
 
             if(response.length > 0){
@@ -2114,7 +2217,7 @@ module.exports = {
     },
 
     untrack_user: function(channel_id, user, cb){
-        api.get('/get_user', { params: { u: user } }).then(response => {
+        apiv1.get('/get_user', { params: { u: user } }).then(response => {
             response = response.data;
 
             if(response.length > 0){
