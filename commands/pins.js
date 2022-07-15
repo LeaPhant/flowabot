@@ -12,11 +12,11 @@ module.exports = {
     example: [
         {
             run: "pins",
-            result: "Returns your top 5 pinned plays."
+            result: "Returns your pin 5 pinned plays."
         },
         {
             run: "pins7 vaxei",
-            result: "Returns Vaxei's top 7 pinned plays."
+            result: "Returns Vaxei's pin 7 pinned plays."
         }
     ],
     configRequired: ['credentials.client_id', 'credentials.client_secret'],
@@ -64,7 +64,7 @@ module.exports = {
                         let name = `${pin.rank_emoji} ${pin.stars.toFixed(2)}★ ${pin.beatmap.artist} - ${pin.beatmap.title} [${pin.beatmap.version}]`;
 
                         if(pin.mods.length > 0)
-                            name += ` +${pin.mods.join(",")}`;
+                            name += ` +${pin.mods.map(mod => mod.acronym).join(",")}`;
 
                         name += ` ${pin.accuracy}%`;
 
@@ -80,23 +80,23 @@ module.exports = {
                         else
                             value += `${pin.max_combo}x`;
 
-                            if(Number(pin.statistics.count_100) > 0 || Number(pin.statistics.count_50) > 0 || Number(pin.statistics.count_miss) > 0)
+                        if(Number(pin.statistics.ok ?? 0) > 0 || Number(pin.statistics.meh ?? 0) > 0 || Number(pin.statistics.miss ?? 0) > 0)
                             value += helper.sep;
 
-                        if(Number(pin.statistics.count_100) > 0)
-                            value += `${pin.statistics.count_100}x100`;
+                        if(Number(pin.statistics.ok ?? 0) > 0)
+                            value += `${pin.statistics.ok}x100`;
 
-                        if(Number(pin.statistics.count_50) > 0){
-                            if(Number(pin.statistics.count_100) > 0) value += helper.sep;
-                            value += `${pin.statistics.count_50}x50`;
+                        if(Number(pin.statistics.meh ?? 0) > 0){
+                            if(Number(pin.statistics.ok ?? 0) > 0) value += helper.sep;
+                            value += `${pin.statistics.meh ?? 0}x50`;
                         }
 
-                        if(Number(pin.statistics.count_miss) > 0){
-                            if(Number(pin.statistics.count_100) > 0 || Number(pin.statistics.count_50) > 0) value += helper.sep;
-                            value += `${pin.statistics.count_miss}xMiss`;
+                        if(Number(pin.statistics.miss ?? 0) > 0){
+                            if(Number(pin.statistics.ok ?? 0) > 0 || Number(pin.statistics.meh ?? 0) > 0) value += helper.sep;
+                            value += `${pin.statistics.miss ?? 0}xMiss`;
                         }
 
-                        value += `${helper.sep}${DateTime.fromISO(pin.created_at).toRelative()}`
+                        value += `${helper.sep}<t:${DateTime.fromISO(pin.ended_at).toSeconds()}:R>`
 
                         embed.fields.push({ name, value })
                     }

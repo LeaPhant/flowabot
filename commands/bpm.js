@@ -50,7 +50,7 @@ module.exports = {
                     download_promise = helper.downloadBeatmap(beatmap_id).catch(helper.error);
 
                     mods = Array.isArray(last_beatmap[msg.channel.id].mods) 
-                    ? last_beatmap[msg.channel.id].mods.join('') : '';
+                    ? last_beatmap[msg.channel.id].mods.map(mod => mod.acronym).join('') : '';
                 }
 
                 let download_path = path.resolve(config.osu_cache_path, `${beatmap_id}.osu`);

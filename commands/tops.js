@@ -46,9 +46,9 @@ module.exports = {
                     let embed = {fields: []};
                     embed.color = 12277111;
                     embed.author = {
-                        url: `https://osu.ppy.sh/u/${user.user_id}`,
-                        name: `${user.username} – ${Number(user.pp_raw).toFixed(2)}pp (#${Number(user.pp_rank).toLocaleString()})`,
-                        icon_url: `https://a.ppy.sh/${user.user_id}?${+new Date()}}`
+                        url: `https://osu.ppy.sh/u/${user.id}`,
+                        name: `${user.username} – ${Number(user.statistics.pp).toFixed(2)}pp (#${Number(user.statistics.global_rank).toLocaleString()})`,
+                        icon_url: user.avatar_url
                     };
 
                     embed.thumbnail = {
@@ -61,39 +61,39 @@ module.exports = {
                         let name = `${top.rank_emoji} ${top.stars.toFixed(2)}★ ${top.beatmap.artist} - ${top.beatmap.title} [${top.beatmap.version}]`;
 
                         if(top.mods.length > 0)
-                            name += ` +${top.mods.join(",")}`;
+                            name += ` +${top.mods.map(mod => mod.acronym).join(",")}`;
 
                         name += ` ${top.accuracy}%`;
 
-                        let value = `[🔗](https://osu.ppy.sh/b/${top.beatmap_id}) `;
+                        let value = `[🔗](https://osu.ppy.sh/b/${top.beatmap.id}) `;
 
-                        if(Number(top.maxcombo) < top.beatmap.max_combo && top.pp_fc > top.pp)
+                        if(Number(top.max_combo) < top.beatmap.max_combo && top.pp_fc > top.pp)
                             value += `**${Number(top.pp).toFixed(2)}pp** ➔ ${top.pp_fc.toFixed(2)}pp for ${top.acc_fc}% FC${helper.sep}`;
                         else
                             value += `**${Number(top.pp).toFixed(2)}pp**${helper.sep}`
 
-                        if(Number(top.maxcombo) < top.beatmap.max_combo)
-                            value += `${top.maxcombo}/${top.beatmap.max_combo}x`;
+                        if(Number(top.max_combo) < top.beatmap.max_combo)
+                            value += `${top.max_combo}/${top.beatmap.max_combo}x`;
                         else
-                            value += `${top.maxcombo}x`;
+                            value += `${top.max_combo}x`;
 
-                        if(Number(top.count100) > 0 || Number(top.count50) > 0 || Number(top.countmiss) > 0)
+                        if(Number(top.statistics.ok ?? 0) > 0 || Number(top.statistics.meh ?? 0) > 0 || Number(top.statistics.miss ?? 0) > 0)
                             value += helper.sep;
 
-                        if(Number(top.count100) > 0)
-                            value += `${top.count100}x100`;
+                        if(Number(top.statistics.ok ?? 0) > 0)
+                            value += `${top.statistics.ok}x100`;
 
-                        if(Number(top.count50) > 0){
-                            if(Number(top.count100) > 0) value += helper.sep;
-                            value += `${top.count50}x50`;
+                        if(Number(top.statistics.meh ?? 0) > 0){
+                            if(Number(top.statistics.ok ?? 0) > 0) value += helper.sep;
+                            value += `${top.statistics.meh ?? 0}x50`;
                         }
 
-                        if(Number(top.countmiss) > 0){
-                            if(Number(top.count100) > 0 || Number(top.count50) > 0) value += helper.sep;
-                            value += `${top.countmiss}xMiss`;
+                        if(Number(top.statistics.miss ?? 0) > 0){
+                            if(Number(top.statistics.ok ?? 0) > 0 || Number(top.statistics.meh ?? 0) > 0) value += helper.sep;
+                            value += `${top.statistics.miss ?? 0}xMiss`;
                         }
 
-                        value += `${helper.sep}${DateTime.fromSQL(top.date).toRelative()}`
+                        value += `${helper.sep}<t:${DateTime.fromISO(top.ended_at).toSeconds()}:R>`
 
                         embed.fields.push({ name, value })
                     }
