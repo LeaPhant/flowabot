@@ -6,6 +6,7 @@ const osu = require('../osu');
 const osr = require('node-osr');
 const lzma = require('lzma-native');
 const ojsama = require('ojsama');
+const rosu = require('rosu-pp')
 const axios = require('axios');
 const _ = require('lodash');
 const helper = require('../helper.js');
@@ -1365,6 +1366,10 @@ function processBeatmap(osuContents){
 
     const objects = parser.map.objects.slice();
     const mods = ojsama.modbits.from_string(enabled_mods.filter(a => ["HR", "EZ"].includes(a) == false).join(""));
+    //const strains = rosu.strains(beatmap_path, mods)
+    //const star_strains = osu.get_stars_from_strains(strains, enabled_mods);
+    //const start_offset = beatmap.ScoringFrames[0].offset
+    //console.log(star_strains)
 
     parser.map.cs = beatmap.CircleSize;
     parser.map.od = beatmap.OverallDifficultyRealtime;
@@ -1376,6 +1381,9 @@ function processBeatmap(osuContents){
         parser.map.objects = objects.slice(0, hitCount);
 
         const stars = new ojsama.diff().calc({map: parser.map, mods});
+        //const index = Math.floor((scoringFrame.offset - start_offset) / 400)
+        //const rosu_stars = star_strains[index < star_strains.length ? index : star_strains.length - 1]
+        //console.log(rosu_stars)
 
         const pp = ojsama.ppv2({
             stars,

@@ -44,8 +44,8 @@ if(helper.getItem('last_message')){
 	helper.setItem('last_message', JSON.stringify(last_message));
 }
 
-if(config.credentials.osu_api_key && config.credentials.osu_api_key.length > 0)
-    osu.init(client, config.credentials.osu_api_key, last_beatmap);
+if(config.credentials.client_id && config.credentials.client_secret)
+    osu.init(client, config.credentials.client_id, config.credentials.client_secret, last_beatmap, config.credentials.osu_api_key);
 
 function checkCommand(msg, command){
     if(!msg.content.startsWith(config.prefix))

@@ -62,7 +62,9 @@ module.exports = {
                 else if(compare_mods)
                     compare_mods.splice(1, 0);
 
-                osu.get_compare(options, (err, recent, strains_bar, ur_promise) => {
+                options.index = 1;
+
+                osu.get_score(options, (err, recent, strains_bar, ur_promise) => {
                     if(err){
                         helper.error(err);
                         reject(err);
