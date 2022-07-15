@@ -48,7 +48,7 @@ module.exports = {
                 options.beatmap_id = last_beatmap[msg.channel.id].beatmap_id;
 
                 if(!modsSet)
-                    options.mods = last_beatmap[msg.channel.id].mods;
+                    options.mods = last_beatmap[msg.channel.id].mods.map(mod => mod.acronym);
 
                 if(!accSet)
                     options.custom_acc = last_beatmap[msg.channel.id].acc;
