@@ -61,7 +61,7 @@ module.exports = {
                         let name = `${top.rank_emoji} ${top.stars.toFixed(2)}★ ${top.beatmap.artist} - ${top.beatmap.title} [${top.beatmap.version}]`;
 
                         if(top.mods.length > 0)
-                            name += ` +${top.mods.join(",")}`;
+                            name += ` +${top.mods.map(mod => mod.acronym).join(",")}`;
 
                         name += ` ${top.accuracy}%`;
 
@@ -77,23 +77,23 @@ module.exports = {
                         else
                             value += `${top.max_combo}x`;
 
-                        if(Number(top.statistics.count_100) > 0 || Number(top.statistics.count_50) > 0 || Number(top.statistics.count_miss) > 0)
+                        if(Number(top.statistics.ok ?? 0) > 0 || Number(top.statistics.meh ?? 0) > 0 || Number(top.statistics.miss ?? 0) > 0)
                             value += helper.sep;
 
-                        if(Number(top.statistics.count_100) > 0)
-                            value += `${top.statistics.count_100}x100`;
+                        if(Number(top.statistics.ok ?? 0) > 0)
+                            value += `${top.statistics.ok}x100`;
 
-                        if(Number(top.statistics.count_50) > 0){
-                            if(Number(top.statistics.count_100) > 0) value += helper.sep;
-                            value += `${top.statistics.count_50}x50`;
+                        if(Number(top.statistics.meh ?? 0) > 0){
+                            if(Number(top.statistics.ok ?? 0) > 0) value += helper.sep;
+                            value += `${top.statistics.meh ?? 0}x50`;
                         }
 
-                        if(Number(top.statistics.count_miss) > 0){
-                            if(Number(top.statistics.count_100) > 0 || Number(top.statistics.count_50) > 0) value += helper.sep;
-                            value += `${top.statistics.count_miss}xMiss`;
+                        if(Number(top.statistics.miss ?? 0) > 0){
+                            if(Number(top.statistics.ok ?? 0) > 0 || Number(top.statistics.meh ?? 0) > 0) value += helper.sep;
+                            value += `${top.statistics.miss ?? 0}xMiss`;
                         }
 
-                        value += `${helper.sep}${DateTime.fromISO(top.created_at).toRelative()}`
+                        value += `${helper.sep}<t:${DateTime.fromISO(top.ended_at).toSeconds()}:R>`
 
                         embed.fields.push({ name, value })
                     }

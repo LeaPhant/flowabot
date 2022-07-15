@@ -1474,7 +1474,7 @@ module.exports = {
 
             top.accuracy = (top.accuracy * 100).toFixed(2);
 
-            const diff = difficulty[getModsEnum(top.mods.filter(mod => DIFF_MODS.includes(mod)))];
+            const diff = difficulty[getModsEnum(top.mods.map(mod => mod.acronym).filter(mod => DIFF_MODS.includes(mod)))];
 
             top.stars = diff.total;
 
@@ -1483,10 +1483,10 @@ module.exports = {
                 speed_stars: diff.speed,
                 base_ar: beatmap.ar,
                 base_od: beatmap.od,
-                n300: Number(top.statistics.count_300 + top.statistics.count_miss),
-                n100: Number(top.statistics.count_100),
-                n50: Number(top.statistics.count_50),
-                mods: Number(getModsEnum(top.mods)),
+                n300: Number(top.statistics.great ?? 0 + top.statistics.miss ?? 0),
+                n100: Number(top.statistics.ok ?? 0),
+                n50: Number(top.statistics.meh ?? 0),
+                mods: Number(getModsEnum(top.mods.map(mod => mod.acronym))),
                 ncircles: beatmap.num_circles,
                 nsliders: beatmap.num_sliders,
                 nobjects: beatmap.hit_objects,
@@ -1501,6 +1501,65 @@ module.exports = {
         }
 
         return { user, tops };
+	},
+
+    get_pins: async function(options, cb){
+
+        let user_id = await getUserId(options.user);
+
+        let requests = [
+	        api.get(`/users/${user_id}/scores/pinned`, { params: { limit: options.count } }),
+	        api.get(`/users/${user_id}/osu`)
+        ];
+        
+        const results = await Promise.all(requests);
+
+        let pins = results[0].data;
+        let user = results[1].data;
+
+        if(pins.length < 1){
+            cb(`No top pins found for ${user.username}`);   
+            return;
+        }
+
+        let { data } = await axios(`${config.beatmap_api}/b/${pins.map(a => a.beatmap.id).join(",")}`)
+        
+        if(Array.isArray(data) == false){
+            data = [data]
+        }
+
+        for(const pin of pins){
+            const { beatmap, difficulty } = data.find(a => a.beatmap.beatmap_id == pin.beatmap.id);
+
+            pin.accuracy = (pin.accuracy * 100).toFixed(2);
+
+            const diff = difficulty[getModsEnum(pin.mods.map(mod => mod.acronym).filter(mod => DIFF_MODS.includes(mod)))];
+
+            pin.stars = diff.total;
+
+            const pp_fc = ojsama.ppv2({
+                aim_stars: diff.aim,
+                speed_stars: diff.speed,
+                base_ar: beatmap.ar,
+                base_od: beatmap.od,
+                n300: Number(pin.statistics.great ?? 0 + pin.statistics.miss ?? 0),
+                n100: Number(pin.statistics.ok ?? 0),
+                n50: Number(pin.statistics.meh ?? 0),
+                mods: Number(getModsEnum(pin.mods.map(mod => mod.acronym))),
+                ncircles: beatmap.num_circles,
+                nsliders: beatmap.num_sliders,
+                nobjects: beatmap.hit_objects,
+                max_combo: beatmap.max_combo,
+            });
+
+            pin.pp_fc = pp_fc.total;
+            pin.acc_fc = (pp_fc.computed_accuracy.value() * 100).toFixed(2);
+            pin.rank_emoji = getRankEmoji(pin.rank);
+
+            pin.beatmap = beatmap;
+        }
+        
+        return { user, pins };
 	},
 
     get_top: async function(options, cb){
