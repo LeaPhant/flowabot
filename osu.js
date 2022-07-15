@@ -667,9 +667,9 @@ async function getScore(recent_raw, cb){
                                     && recent.count50 == (response['50'] || 0))
                                         recent.countsb = response.sliderbreak;
     
-                                    if(recent.mods.includes("DT") || recent.mods.includes("NC"))
+                                    if(recent.mods.map(x => x.acronym).includes("DT") || recent.mods.map(x => x.acronym).includes("NC"))
                                         recent.cvur = response.ur / 1.5;
-                                    else if(recent.mods.includes("HT"))
+                                    else if(recent.mods.map(x => x.acronym).includes("HT"))
                                         recent.cvur = response.ur * 1.5;
     
                                     resolve(recent);
@@ -677,7 +677,7 @@ async function getScore(recent_raw, cb){
                         });
     
                         recent.ur = -1;
-                        if(recent.mods.includes("DT") || recent.mods.includes("HT"))
+                        if(recent.mods.map(mod => mod.acronym).includes("DT") || recent.mods.map(mod => mod.acronym).includes("HT"))
                             recent.cvur = -1;
                         cb(null, recent, strains_bar, ur_promise);
                     }else{
