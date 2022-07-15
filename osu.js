@@ -848,8 +848,7 @@ function updateTrackedUsers(){
 // }
 
 async function getUserId(username){
-    username = username.replaceAll("_", " ")
-    username = username.replaceAll("+", " ")
+    username = username.replace("/\+/g", " ")
     let res = await api.get(`/users/${username}/osu`, { params: { key: "user" } });
     let user = res.data;
     return user.id;
