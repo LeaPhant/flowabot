@@ -219,7 +219,7 @@ module.exports = {
     },
 
     validUsername: username => {
-        return !(/[^a-zA-Z0-9\_\[\]\ \-]/g.test(username));
+        return !(/[^a-zA-Z0-9\_\[\]\ \-\+]/g.test(username));
     },
 
     getUsername: (args, message, user_ign) => {

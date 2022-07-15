@@ -27,6 +27,9 @@ module.exports = {
                 return false;
             }
 
+            osu_user = osu_user.replaceAll("_", " ")
+            osu_user = osu_user.replaceAll("+", " ")
+
             osu.get_user({u: osu_user, extended}, (err, embed) => {
                 if(err){
                     reject(err);
