@@ -902,7 +902,7 @@ module.exports = {
         }
     },
 
-    add_pp: function(user, pp_to_add, beatmap, cb){
+    add_pp: async function(user, pp_to_add, beatmap, cb){
         let pp = 0, pp_full = 0, pp_no_bonus = 0, max = 0;
         let pp_array, pp_array_new = [];
         let output_user;
@@ -912,136 +912,145 @@ module.exports = {
 
         if(pp_to_add === null) return false;
 
-        apiv1.get('/get_user', { params: { u: user }}).then(response => {
-            let start = Date.now();
-            let json = response.data;
+        username = user.replace(/\+/g, " ")
+        let res;
+        try {
+            res = await api.get(`/users/${username}/osu`, { params: { key: "user" } });
+        } catch (error) {
+            if (error.response.status == 404) cb("User not found")
+            else cb("Something went wrong.")
+            return false
+        }
 
-            if(json.length < 1){
-                cb('User not found');
-                return false;
+        let json = res.data;
+        output_user = json.username;
+        pp_full = parseFloat(json.statistics.pp);
+        old_rank = parseInt(json.statistics.global_rank);
+
+        let total_scores = 0;
+        for (let grade in json.statistics.grade_counts) {
+            total_scores += json.statistics.grade_counts[grade]
+        }
+
+        api.get(`/users/${json.id}/scores/best`, { params: { limit: 100 } }).then(response => {
+            json = response.data;
+
+            pp_array = json;
+
+            max = json.length;
+            let fixing_score = "";
+
+            json.forEach(function(value, index){
+                let current_pp = parseFloat(value.pp);
+                let current_factor = Math.pow(0.95, index);
+                let current_pp_weighted = current_pp * current_factor;
+
+                pp += current_pp_weighted;
+            });
+
+            if(max == 100){
+                let differences_array = [];
+                json.forEach(function(value, index){
+                    if(index >= 90){
+                        differences_array.push(parseFloat(json[index-1].pp) - parseFloat(json[index].pp));
+                    }
+                });
+
+                let sum = 0;
+                differences_array.forEach(function(value, index){
+                    sum += value;
+                });
+
+                let avg = sum / differences_array.length;
+                let current_pp = parseFloat(json[99].pp);
+
+                for(let x = 0; x < 100; x++){
+                    current_pp -= avg;
+                    let current_factor = Math.pow(0.95, 100 + x);
+                    let current_pp_weighted = current_pp * current_factor;
+
+                    if(current_pp > 0) pp += current_pp_weighted;
+                    pp_array.push({pp: current_pp });
+                }
             }
 
-            output_user = json[0].username;
-            pp_full = parseFloat(json[0].pp_raw);
-            old_rank = parseInt(json[0].pp_rank);
+            pp_no_bonus = pp_full - pp;
 
-            let total_scores = parseInt(json[0].count_rank_ss) + parseInt(json[0].count_rank_s) + parseInt(json[0].count_rank_a);
+            let bonus_pp = pp_no_bonus;
 
-			apiv1.get('/get_user_best', { params: { u: user, limit: 100 }}).then(response => {
-				json = response.data;
+            let beta_bonus_pp = 416.6667 * (1 - Math.pow(0.9994, total_scores));
 
-                pp_array = json;
+            let avg_bonus_pp = (bonus_pp + beta_bonus_pp) / 2;
 
-                max = json.length;
-                let fixing_score = "";
+            if(pp_no_bonus < 0 || !pp_full){
+                pp_no_bonus = 0;
+                no_bonus_pp = true;
 
-                json.forEach(function(value, index){
+            }
+
+            if(beatmap){
+                if(Number.isInteger(Number(beatmap))){
+                    let index = findWithAttr(pp_array, "beatmap_id", beatmap);
+                    if(index < 0){
+                        cb("https://osu.ppy.sh/b/" + beatmap + ": beatmap not found in top scores");
+                        return false;
+                    }
+
+                    pp_array[index].pp = pp_to_add;
+                    pp_array.sort(compare);
+                    fixing_score = " (fixing score on https://osu.ppy.sh/b/" + beatmap + ")";
+                }
+            }else{
+                pp_to_add.forEach(function(value, index){
+                    pp_array.push({pp: value });
+                });
+                pp_array.sort(compare);
+                pp_array.splice(max, pp_to_add.length);
+            }
+
+            setTimeout(function(){
+                pp_array.forEach(function(value, index){
                     let current_pp = parseFloat(value.pp);
                     let current_factor = Math.pow(0.95, index);
                     let current_pp_weighted = current_pp * current_factor;
 
-                    pp += current_pp_weighted;
+                    pp_no_bonus += current_pp_weighted;
                 });
 
-                if(max == 100){
-                    let differences_array = [];
-                    json.forEach(function(value, index){
-                        if(index >= 90){
-                            differences_array.push(parseFloat(json[index-1].pp) - parseFloat(json[index].pp));
-                        }
-                    });
+                let total_pp_weighted = (pp_no_bonus - pp_full);
+                if(total_pp_weighted < 0) total_pp_weighted = 0;
 
-                    let sum = 0;
-                    differences_array.forEach(function(value, index){
-                        sum += value;
-                    });
+                if(pp_no_bonus < pp_full) pp_no_bonus = pp_full;
 
-                    let avg = sum / differences_array.length;
-                    let current_pp = parseFloat(json[99].pp);
+                let adding_pp = "";
 
-                    for(let x = 0; x < 100; x++){
-                        current_pp -= avg;
-                        let current_factor = Math.pow(0.95, 100 + x);
-                        let current_pp_weighted = current_pp * current_factor;
+                pp_to_add.forEach(function(value, index){
+                    adding_pp += value + "pp";
+                    if(index + 1 < pp_to_add.length) adding_pp += "+";
+                });
 
-                        if(current_pp > 0) pp += current_pp_weighted;
-                        pp_array.push({pp: current_pp });
-                    }
-                }
+                let output_message = "";
 
-                pp_no_bonus = pp_full - pp;
-
-                let bonus_pp = pp_no_bonus;
-
-                let beta_bonus_pp = 416.6667 * (1 - Math.pow(0.9994, total_scores));
-
-                let avg_bonus_pp = (bonus_pp + beta_bonus_pp) / 2;
-
-                if(pp_no_bonus < 0 || !pp_full){
-                    pp_no_bonus = 0;
-                    no_bonus_pp = true;
-
-                }
-
-                if(beatmap){
-                    if(Number.isInteger(Number(beatmap))){
-                        let index = findWithAttr(pp_array, "beatmap_id", beatmap);
-                        if(index < 0){
-                            cb("https://osu.ppy.sh/b/" + beatmap + ": beatmap not found in top scores");
-                            return false;
-                        }
-
-                        pp_array[index].pp = pp_to_add;
-                        pp_array.sort(compare);
-                        fixing_score = " (fixing score on https://osu.ppy.sh/b/" + beatmap + ")";
-                    }
+                if(no_bonus_pp){
+                    output_message += output_user + ": " + pp_full + "pp (#" + numberWithCommas(old_rank) + ") ► +" + adding_pp + " (" + (pp_no_bonus - pp_full).toFixed(1) + "pp weighted) ► " + numberWithCommas(pp_no_bonus.toFixed(1)) + "pp" + new_rank + " (inactive account, no bonus pp)" + fixing_score;
                 }else{
-                    pp_to_add.forEach(function(value, index){
-                        pp_array.push({pp: value });
-                    });
-                    pp_array.sort(compare);
-                    pp_array.splice(max, pp_to_add.length);
+                    output_message += output_user + ": " + pp_full + "pp (#" + numberWithCommas(old_rank) + ") ► +" + adding_pp + " (" + (pp_no_bonus - pp_full).toFixed(1) + "pp weighted) ► " + numberWithCommas(pp_no_bonus.toFixed(1)) + "pp" + new_rank + " (" + bonus_pp.toFixed(1) + " bonus pp)" + fixing_score;
                 }
 
-                setTimeout(function(){
-                    pp_array.forEach(function(value, index){
-                        let current_pp = parseFloat(value.pp);
-                        let current_factor = Math.pow(0.95, index);
-                        let current_pp_weighted = current_pp * current_factor;
+                cb(output_message);
 
-                        pp_no_bonus += current_pp_weighted;
-                    });
+                if(config.debug){
+                    helper.log("Current pp: " + pp_full);
+                    helper.log("Added pp: " + adding_pp + " -> " + (pp_no_bonus - pp_full).toFixed(1));
+                    helper.log("Result: " + pp_no_bonus.toFixed(1));
+                }
 
-                    let total_pp_weighted = (pp_no_bonus - pp_full);
-                    if(total_pp_weighted < 0) total_pp_weighted = 0;
-
-                    if(pp_no_bonus < pp_full) pp_no_bonus = pp_full;
-
-                    let adding_pp = "";
-
-                    pp_to_add.forEach(function(value, index){
-                        adding_pp += value + "pp";
-                        if(index + 1 < pp_to_add.length) adding_pp += "+";
-                    });
-
-					let output_message = "";
-
-                    if(no_bonus_pp){
-                        output_message += output_user + ": " + pp_full + "pp (#" + numberWithCommas(old_rank) + ") ► +" + adding_pp + " (" + (pp_no_bonus - pp_full).toFixed(1) + "pp weighted) ► " + numberWithCommas(pp_no_bonus.toFixed(1)) + "pp" + new_rank + " (inactive account, no bonus pp)" + fixing_score;
-                    }else{
-                        output_message += output_user + ": " + pp_full + "pp (#" + numberWithCommas(old_rank) + ") ► +" + adding_pp + " (" + (pp_no_bonus - pp_full).toFixed(1) + "pp weighted) ► " + numberWithCommas(pp_no_bonus.toFixed(1)) + "pp" + new_rank + " (" + bonus_pp.toFixed(1) + " bonus pp)" + fixing_score;
-                    }
-
-                    cb(output_message);
-
-                    if(config.debug){
-                        helper.log("Current pp: " + pp_full);
-                        helper.log("Added pp: " + adding_pp + " -> " + (pp_no_bonus - pp_full).toFixed(1));
-                        helper.log("Result: " + pp_no_bonus.toFixed(1));
-                    }
-
-                }, 350);
-            });
+            }, 350);
+        })
+        .catch((error) => {
+            if (error.response.status == 404) cb("User not found")
+            else cb("Something went wrong.")
+            return false
         });
     },
 
