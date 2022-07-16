@@ -849,8 +849,24 @@ function updateTrackedUsers(){
 // }
 
 async function getUserId(username){
+    let res;
     username = username.replace(/\+/g, " ")
-    let res = await api.get(`/users/${username}/osu`, { params: { key: "user" } });
+    try {
+        res = await api.get(`/users/${username}/osu`, { params: { key: "user" } });
+    } catch (err) {
+        if(err.response.status == 404) {
+            if(retries < 1) {
+                retries += 1
+                username = username.replace(/_/g, " ")
+                res = await api.get(`/users/${username}/osu`, { params: { key: "user" } });
+                let user = res.data;
+                return user.id;
+            }
+            helper.error("Couldn't find user");
+        }
+        else
+            helper.error("Couldn't reach osu!api");
+    }
     let user = res.data;
     return user.id;
 }
@@ -1978,6 +1994,7 @@ module.exports = {
         }).catch(err => {
 			if(err.response.status == 404) {
                 if(retries < 1) {
+                    retries += 1
                     options.u = options.u.replace(/_/g, " ")
                     this.get_user(options, cb)
                     return
