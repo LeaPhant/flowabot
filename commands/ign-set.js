@@ -19,7 +19,7 @@ module.exports = {
                 return false;
             }
 
-            let ign = split[1];
+            let ign = split[1].replace(/\+/g, " ");
             let user_id = msg.author.id;
 
             if(ign.length == 0){
