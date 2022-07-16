@@ -659,7 +659,7 @@ async function getScore(recent_raw, cb){
                                     player: recent_raw.user_id,
                                     beatmap_id: recent_raw.beatmap.id,
                                     mods_enabled: getModsEnum(recent_raw.mods.map(x => x.acronym)),
-                                    score_id: recent_raw.id,
+                                    score_id: recent.score_id,
                                     mods: recent.mods.map(x => x.acronym)
                                 }).then(response => {
                                     recent.ur = response.ur;
