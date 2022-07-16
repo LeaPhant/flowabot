@@ -5,6 +5,7 @@ const path = require('path');
 const os = require('os');
 const { fork } = require('child_process');
 const config = require('../config.json');
+const { access_token } = require('../../osu-oauth-token-refresh/access_token.json')
 
 function calculateUr(options){
 	return new Promise(async (resolve, reject) => {
@@ -12,7 +13,7 @@ function calculateUr(options){
 		const response = await axios.get(`https://osu.ppy.sh/api/v2/scores/osu/${options.score_id}/download`, {
 			responseType: 'arraybuffer',
 			headers: {
-				'Authorization': 'Bearer ' + config.credentials.osu_access_token,
+				'Authorization': 'Bearer ' + access_token,
                 'Content-Type': 'application/x-osu-replay'
             }
 		}).catch(error => console.log(error));
