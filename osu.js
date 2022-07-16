@@ -225,7 +225,7 @@ const od0_ms = 79.5;
 const od10_ms = 19.5;
 
 let api;
-const access_token = config.credentials.osu_access_token;
+const { access_token } = require('../osu-oauth-token-refresh/storage/access_token.json')
 
 var settings = {
     api_key: ""
