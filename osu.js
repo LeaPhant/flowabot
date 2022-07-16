@@ -33,6 +33,7 @@ const EXTREME_SCALING_FACTOR = 0.5;
 const config = require('./config.json');
 
 let tracked_users = {};
+let retries = 0;
 
 if(helper.getItem('tracked_users')){
 	tracked_users = JSON.parse(helper.getItem('tracked_users'));
@@ -1972,14 +1973,23 @@ module.exports = {
                 }
             );
 
+            retries = 0
             cb(null, embed);
         }).catch(err => {
-			if(err.status == 404)
+			if(err.response.status == 404) {
+                if(retries < 1) {
+                    options.u = options.u.replace(/_/g, " ")
+                    this.get_user(options, cb)
+                    return
+                }
+
 				cb("Couldn't find user");
+            }
 			else
 	            cb("Couldn't reach osu!api");
 
             helper.error(err);
+            retries = 0
             return;
         });
     },
