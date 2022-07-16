@@ -848,9 +848,9 @@ function updateTrackedUsers(){
 
 // }
 
-async function getUserId(username){
+async function getUserId(u){
     let res;
-    username = username.replace(/\+/g, " ")
+    let username = await u.replace(/\+/g, " ")
     try {
         res = await api.get(`/users/${username}/osu`, { params: { key: "user" } });
     } catch (err) {
@@ -860,12 +860,17 @@ async function getUserId(username){
                 username = username.replace(/_/g, " ")
                 res = await api.get(`/users/${username}/osu`, { params: { key: "user" } });
                 let user = res.data;
+                retries = 0
                 return user.id;
             }
-            helper.error("Couldn't find user");
+            //cb("Couldn't find user");
+            retries = 0
+            return
         }
         else
-            helper.error("Couldn't reach osu!api");
+            //cb("Couldn't reach osu!api");
+            retries = 0
+            return
     }
     let user = res.data;
     return user.id;
