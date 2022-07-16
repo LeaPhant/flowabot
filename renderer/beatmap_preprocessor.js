@@ -127,7 +127,8 @@ async function parseReplay(buf, decompress = true){
     let replay_data = buf;
 
     if(decompress)
-        replay_data = (await lzma.decompress(replay_data)).toString();
+        replay_data = (await osr.read(buf)).replay_data;
+        //replay_data = (await lzma.decompress(replay_data)).toString();
         
     let replay_frames = replay_data.split(",");
 

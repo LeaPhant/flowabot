@@ -8,19 +8,20 @@ const config = require('../config.json');
 
 function calculateUr(options){
 	return new Promise(async (resolve, reject) => {
-		const response = await axios.get('https://osu.ppy.sh/api/get_replay', {
-			params: {
-				k: options.apikey,
-				u: options.player,
-				b: options.beatmap_id,
-				mods: options.mods_enabled
-			}
-		});
 
-		const replay_raw = Buffer.from(response.data.content, "base64");
+		const response = await axios.get(`https://osu.ppy.sh/api/v2/scores/osu/${options.score_id}/download`, {
+			responseType: 'arraybuffer',
+			headers: {
+				'Authorization': 'Bearer ' + config.credentials.osu_access_token,
+                'Content-Type': 'application/x-osu-replay'
+            }
+		}).catch(error => console.log(error));
+
+		const replay_raw = response.data
+		//const replay_raw = Buffer.from(response.data.content, "base64");
 
 		await fs.mkdir(path.resolve(os.tmpdir(), 'replays'), { recursive: true });
-		await fs.writeFile(path.resolve(os.tmpdir(), 'replays', `${options.score_id}`), replay_raw);
+		await fs.writeFile(path.resolve(os.tmpdir(), 'replays', `${options.score_id}`), replay_raw, { encoding: 'binary' });
 
 		const worker = fork(path.resolve(__dirname, 'beatmap_preprocessor.js'), ['--max-old-space-size=512']);
 
