@@ -1146,7 +1146,7 @@ module.exports = {
         embed.title = `${recent.artist} – ${recent.title} [${recent.version}]`;
         embed.url = `https://osu.ppy.sh/b/${recent.beatmap_id}`;
         if(recent.pb)
-            embed.description = `**__#${recent.pb} Top Play!__**`;
+            embed.description = `**__#${recent.pb} Top Play!__** 👀`;
 
 		if(recent.strains_bar){
 			embed.image = {
