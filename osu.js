@@ -592,7 +592,7 @@ async function getScore(recent_raw, cb){
 
             if (recent.mods.map(x => x.acronym).includes("DT") || recent.mods.map(x => x.acronym).includes("NC")) {
                 speed *= recent.mods.filter(mod => mod.acronym == "DT" || mod.acronym == "NC")[0].settings.speed_change ?? 1.5;
-            } else if (mods.includes("HT") || mods.includes("DC")) {
+            } else if (recent.mods.map(x => x.acronym).includes("HT") || recent.mods.map(x => x.acronym).includes("DC")) {
                 speed *= recent.mods.filter(mod => mod.acronym == "HT" || mod.acronym == "DC")[0].settings.speed_change ?? 0.75;
             }
 
