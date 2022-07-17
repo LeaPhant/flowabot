@@ -1408,8 +1408,14 @@ module.exports = {
     },
 
     get_score: async function(options, cb){
+        let beatmap;
+        try {
+            beatmap = await api.get(`/beatmaps/lookup`, { params: { id: options.beatmap_id }})
+        } catch (err) {
+            cb("Couldn't find that beatmap. 😔")
+            return
+        }
 
-        let beatmap = await api.get(`/beatmaps/lookup`, { params: { id: options.beatmap_id }})
         beatmap = beatmap.data
 
         if(options.solo_score) {
