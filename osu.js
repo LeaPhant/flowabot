@@ -1397,7 +1397,44 @@ module.exports = {
         let beatmap = await api.get(`/beatmaps/lookup`, { params: { id: options.beatmap_id }})
         beatmap = beatmap.data
 
-        if(options.user) {
+        if(options.solo_score) {
+            if(options.mods) {
+                api.get(`/beatmaps/${options.beatmap_id}/solo-scores/`, { params: { mods: options.mods } }).then(response => {
+                    console.log(response);
+                    response = response.data;
+        
+                    let recent_raw = response.score;
+                    recent_raw.beatmap = beatmap;
+                    recent_raw.beatmapset = beatmap.beatmapset;
+                    //recent_raw.beatmap.id = options.beatmap_id;
+        
+                    getScore(recent_raw, cb);
+                })         
+                .catch(err => {
+                    console.log(err);
+                    cb(`No scores matching criteria found`);
+                });
+    
+            } else {
+                api.get(`/beatmaps/${options.beatmap_id}/solo-scores/`, { params: { mode: "osu" } }).then(response => {
+                    response = response.data;
+        
+                    if(response.scores.length < options.index)
+                        options.index = response.scores.length - 1;
+        
+                    let recent_raw = response.scores[options.index - 1];
+                    recent_raw.beatmap = beatmap;
+                    recent_raw.beatmapset = beatmap.beatmapset;
+                    //recent_raw.beatmap.id = options.beatmap_id;
+        
+                    getScore(recent_raw, cb);
+                })
+                .catch(err => {
+                    console.log(err);
+                    cb(`No scores matching criteria found`);
+                });
+            }
+        } else if(options.user) {
             let user_id = await getUserId(options.user);
 
             if(options.mods) {
@@ -1422,7 +1459,7 @@ module.exports = {
                     response = response.data;
         
                     if(response.scores.length < options.index)
-                        optiins.index = response.scores.length - 1;
+                        options.index = response.scores.length - 1;
         
                     let recent_raw = response.scores[options.index - 1];
                     recent_raw.beatmap = beatmap;
@@ -1442,7 +1479,7 @@ module.exports = {
                     response = response.data;
         
                     if(response.scores.length < options.index)
-                        optiins.index = response.scores.length - 1;
+                        options.index = response.scores.length - 1;
         
                     let recent_raw = response.scores[options.index - 1];
                     recent_raw.beatmap = beatmap;
@@ -1460,7 +1497,7 @@ module.exports = {
                     response = response.data;
         
                     if(response.scores.length < options.index)
-                        optiins.index = response.scores.length - 1;
+                        options.index = response.scores.length - 1;
         
                     let recent_raw = response.scores[options.index - 1];
 

@@ -2,7 +2,7 @@ const osu = require('../osu.js');
 const helper = require('../helper.js');
 
 module.exports = {
-    command: 'score',
+    command: ['score', 'soloscore'],
     description: "Search for a score on a beatmap.",
     argsRequired: 1,
     startsWith: true,
@@ -32,7 +32,9 @@ module.exports = {
 
             let command = argv[0].toLowerCase().replace(/[0-9]/g, '');
 
-            if(module.exports.command != command)
+            let solo_score = argv[0].toLowerCase().startsWith('soloscore')
+
+            if(!module.exports.command.includes(command))
                 return false;
 
             let index = 1;
@@ -42,7 +44,7 @@ module.exports = {
             if(_index >= 1 && _index <= 100)
                 index = _index;
 
-            let options = { index: index };
+            let options = { index: index, solo_score: solo_score };
 
             argv.forEach(function(arg){
                 if(arg.startsWith('+'))
