@@ -27,7 +27,7 @@ module.exports = {
             let compare_user = helper.getUsername(argv, msg, user_ign);
 
             if(!(msg.channel.id in last_beatmap)){
-                reject('No recent score to compare to found');
+                reject('No recent score to compare to found. 💀');
                 return false;
             }
 

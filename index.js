@@ -246,7 +246,7 @@ function onMessage(msg){
 							message_promise = msg.channel.send(response);
 
 						message_promise.catch(err => {
-							msg.channel.send(`Couldn't run command: \`${err}\``);
+							msg.channel.send(`Couldn't run command: **${err}**`);
 						});
 
 
@@ -261,7 +261,7 @@ function onMessage(msg){
 							if(replace_promise){
 								msg.channel.send(replace_promise)
 								.catch(err => {
-									msg.channel.send(`Couldn't run command: \`${err}\``);
+									msg.channel.send(`Couldn't run command: **${err}**`);
 								}).finally(() => {
 									message.delete();
 
@@ -278,14 +278,14 @@ function onMessage(msg){
                             if(remove_path)
                                 fs.rm(remove_path, { recursive: true }).catch(helper.error);
                         }).catch(err => {
-							msg.channel.send(`Couldn't run command: \`${err}\``);
+							msg.channel.send(`Couldn't run command: **${err}**`);
 						});
                     }
                 }).catch(err => {
                     if(typeof err === 'object')
                         msg.channel.send(err);
                     else
-                        msg.channel.send(`Couldn't run command: \`${err}\``);
+                        msg.channel.send(`Couldn't run command: **${err}**`);
 
                     helper.error(err);
                 });

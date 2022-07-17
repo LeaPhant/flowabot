@@ -228,7 +228,6 @@ module.exports = {
         args = args.slice(1);
 
         args.forEach(function(arg){
-            arg = arg.replace(/\+/g, " ")
             if(module.exports.validUsername(arg))
                 return_username = arg;
             else if(module.exports.validUsername(arg.substr(1)) && arg.startsWith('*'))

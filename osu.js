@@ -224,8 +224,7 @@ const od_ms_step = 6;
 const od0_ms = 79.5;
 const od10_ms = 19.5;
 
-let api;
-const { access_token } = require('../osu-oauth-token-refresh/access_token.json')
+let api, access_token;
 
 var settings = {
     api_key: ""
@@ -655,7 +654,7 @@ async function getScore(recent_raw, cb){
     
                             ur_calc.get_ur(
                                 {
-                                    apikey: config.credentials.osu_api_key,
+                                    access_token: access_token,
                                     player: recent_raw.user_id,
                                     beatmap_id: recent_raw.beatmap.id,
                                     mods_enabled: getModsEnum(recent_raw.mods.map(x => x.acronym)),
@@ -687,15 +686,16 @@ async function getScore(recent_raw, cb){
                     }
                 }).catch(helper.error);                
             }).catch(error => {
-                cb('No difficulty data for this map! Please try again later');
+                cb('🤡 Something went wrong when trying to calculate Difficulty. 🤡');
                 return;
             });
         }).catch(err => {
-            cb('Map not in the database, maps that are too new don\'t work yet');
+            cb("Couldn't reach osu!api. 💀");
             helper.log(err);
             return;
         });
     }).catch(err => {
+        cb("Couldn't reach osu!api. 💀");
         helper.log(err);
     });
 }
@@ -749,6 +749,22 @@ function calculateFlashlightDifficultyValue(strains) {
     }
 
     return sum * 1.06;
+}
+
+async function updateAccessToken(){
+    let data = await fs.readFile('../osu-oauth-token-refresh/access_token.json', 'utf8')
+    let json = JSON.parse(data)
+    access_token = json.access_token
+
+    api = axios.create({
+        baseURL: 'https://osu.ppy.sh/api/v2',
+        headers: {
+            Authorization: `Bearer ${access_token}`,
+            "x-api-version": 20220707
+        }
+    });
+
+    setTimeout(updateAccessToken, 60 * 1000)
 }
 
 function updateTrackedUsers(){
@@ -858,22 +874,26 @@ async function getUserId(u){
             if(retries < 1) {
                 retries += 1
                 username = username.replace(/_/g, " ")
+                try {
                 res = await api.get(`/users/${username}/osu`, { params: { key: "user" } });
+                } catch (err) {
+                    return {error: err}
+                }
                 let user = res.data;
                 retries = 0
-                return user.id;
+                return {user_id: user.id}
             }
             //cb("Couldn't find user");
             retries = 0
-            return
+            return {error: err}
         }
         else
             //cb("Couldn't reach osu!api");
             retries = 0
-            return
+            return {error: err}
     }
     let user = res.data;
-    return user.id;
+    return {user_id: user.id}
 }
 
 module.exports = {
@@ -882,17 +902,10 @@ module.exports = {
 		last_beatmap = _last_beatmap;
 
 		if(client_id && client_secret){
-            //await getAccessToken();
-            console.log(access_token);
-	        api = axios.create({
-	            baseURL: 'https://osu.ppy.sh/api/v2',
-                headers: {
-                    Authorization: `Bearer ${access_token}`,
-                    "x-api-version": 20220707
-                }
-	        });   
-
+            
+            updateAccessToken();
 			updateTrackedUsers();
+            
 		}
 
         if(api_key){
@@ -939,8 +952,8 @@ module.exports = {
         try {
             res = await api.get(`/users/${username}/osu`, { params: { key: "user" } });
         } catch (error) {
-            if (error.response.status == 404) cb("User not found")
-            else cb("Something went wrong.")
+            if (error.response.status == 404) cb("User not found. 😔")
+            else cb("Something went wrong. 😔")
             return false
         }
 
@@ -1070,8 +1083,8 @@ module.exports = {
             }, 350);
         })
         .catch((error) => {
-            if (error.response.status == 404) cb("User not found")
-            else cb("Something went wrong.")
+            if (error.response.status == 404) cb("User not found. 😔")
+            else cb("⚠️ Something went wrong. ⚠️")
             return false
         });
     },
@@ -1273,14 +1286,15 @@ module.exports = {
         helper.log(options);
         let limit = options.index;
         let pass = options.pass ? 0 : 1;
-        let user_id = await getUserId(options.user);
+        let { user_id, error } = await getUserId(options.user);
+        if(error) { cb("Couldn't reach osu!api. 💀") }
 
         api.get(`/users/${user_id}/scores/recent`, { params: { limit: limit, include_fails: pass, mode: "osu" } }).then(response => {
 
             response = response.data;
             //console.log(response)
             if(response.length < 1){
-                cb(`No recent ${options.pass ? 'passes' : 'plays'} found for ${options.user}`);
+                cb(`No recent ${options.pass ? 'passes' : 'plays'} found for ${options.user}. 🤡`);
                 return;
             }
 
@@ -1299,7 +1313,8 @@ module.exports = {
 
     get_compare: async function(options, cb){
 
-        let user_id = await getUserId(options.user);
+        let { user_id, error } = await getUserId(options.user);
+        if(error) { cb("Couldn't reach osu!api. 💀") }
 
         if(options.mods) {
             api.get(`/beatmaps/${options.beatmap_id}/scores/users/${user_id}`, { params: { mods: options.mods } }).then(response => {
@@ -1314,7 +1329,7 @@ module.exports = {
             })         
             .catch(err => {
                 console.log(err);
-                cb(`No scores matching criteria found`);
+                cb(`No scores matching criteria found. 💀`);
             });
 
         } else {
@@ -1332,7 +1347,7 @@ module.exports = {
             })
             .catch(err => {
                 console.log(err);
-                cb(`No scores matching criteria found`);
+                cb(`No scores matching criteria found. 💀`);
             });
         }
 
@@ -1382,7 +1397,7 @@ module.exports = {
             }
 
             if(!score){
-                cb(`No scores matching criteria found`);
+                cb(`No scores matching criteria found. 💀`);
                 return;
             }
 
@@ -1412,7 +1427,7 @@ module.exports = {
                 })         
                 .catch(err => {
                     console.log(err);
-                    cb(`No scores matching criteria found`);
+                    cb(`No scores matching criteria found. 💀`);
                 });
     
             } else {
@@ -1431,11 +1446,12 @@ module.exports = {
                 })
                 .catch(err => {
                     console.log(err);
-                    cb(`No scores matching criteria found`);
+                    cb(`No scores matching criteria found. 💀`);
                 });
             }
         } else if(options.user) {
-            let user_id = await getUserId(options.user);
+            let { user_id, error } = await getUserId(options.user);
+            if(error) { cb("Couldn't reach osu!api. 💀") }
 
             if(options.mods) {
                 api.get(`/beatmaps/${options.beatmap_id}/scores/users/${user_id}`, { params: { mods: options.mods } }).then(response => {
@@ -1451,7 +1467,7 @@ module.exports = {
                 })         
                 .catch(err => {
                     console.log(err);
-                    cb(`No scores matching criteria found`);
+                    cb(`No scores matching criteria found. 💀`);
                 });
     
             } else {
@@ -1470,7 +1486,7 @@ module.exports = {
                 })
                 .catch(err => {
                     console.log(err);
-                    cb(`No scores matching criteria found`);
+                    cb(`No scores matching criteria found. 💀`);
                 });
             }
         } else {
@@ -1490,7 +1506,7 @@ module.exports = {
                 })
                 .catch(err => {
                     console.log(err);
-                    cb(`No scores matching criteria found`);
+                    cb(`No scores matching criteria found. 💀`);
                 });
             } else {
                 api.get(`/beatmaps/${options.beatmap_id}/scores`, { params: { mode: "osu" } }).then(response => {
@@ -1509,7 +1525,7 @@ module.exports = {
                 })
                 .catch(err => {
                     console.log(err);
-                    cb(`No scores matching criteria found`);
+                    cb(`No scores matching criteria found. 💀`);
                 });
             }
         }
@@ -1517,7 +1533,8 @@ module.exports = {
 
 	get_tops: async function(options, cb){
 
-        let user_id = await getUserId(options.user);
+        let { user_id, error } = await getUserId(options.user);
+        if(error) { cb("Couldn't reach osu!api. 💀") }
 
 		let requests = [
 	        api.get(`/users/${user_id}/scores/best`, { params: { limit: options.count } }),
@@ -1530,7 +1547,7 @@ module.exports = {
         let user = results[1].data;
 
         if(user_best.length < 1){
-            cb(`No top plays found for ${options.user}`);
+            cb(`No top plays found for ${options.user}. 🤨`);
             return;
         }
 
@@ -1574,7 +1591,8 @@ module.exports = {
 
     get_pins: async function(options, cb){
 
-        let user_id = await getUserId(options.user);
+        let { user_id, error } = await getUserId(options.user);
+        if(error) { cb("Couldn't reach osu!api. 💀") }
 
         let requests = [
 	        api.get(`/users/${user_id}/scores/pinned`, { params: { limit: options.count } }),
@@ -1587,7 +1605,7 @@ module.exports = {
         let user = results[1].data;
 
         if(pins.length < 1){
-            cb(`No top pins found for ${user.username}`);   
+            cb(`No pins found for ${user.username}. 😔`);   
             return;
         }
 
@@ -1633,7 +1651,8 @@ module.exports = {
 
     get_top: async function(options, cb){
 
-        let user_id = await getUserId(options.user);
+        let { user_id, error } = await getUserId(options.user);
+        if(error) { cb("Couldn't reach osu!api. 💀") }
 
 		let requests = [
 	        api.get(`/users/${user_id}/scores/best`, { params: { limit: 100 } })
@@ -1644,7 +1663,7 @@ module.exports = {
         let user_best = results[0].data;
 
         if(user_best.length < 1){
-            cb(`No top plays found for ${options.user}`);
+            cb(`No top plays found for ${options.user}. 🤨`);
             return;
         }
 
@@ -1694,7 +1713,7 @@ module.exports = {
             let diff = response.difficulty[getModsEnum(options.mods.filter(mod => DIFF_MODS.includes(mod)))];
 
             if(!diff.aim && !diff.speed){
-                cb('No difficulty data for this map! Please try again later');
+                cb('No difficulty data for this map! Please try again later. 😭');
                 return;
             }
 
@@ -1797,7 +1816,7 @@ module.exports = {
 
             cb(null, embed);
         }).catch(e => {
-            cb('Map not in the database, maps that are too new don\'t work yet');
+            cb('Map not in the database, maps that are too new don\'t work yet. 😐');
             helper.error(e);
             return false;
         });
@@ -1936,7 +1955,7 @@ module.exports = {
             response = response.data;
 
 			if(response.length == 0){
-				cb("Couldn't find user");
+				cb("Couldn't find user. 😔");
 				return false;
 			}
 
@@ -2054,10 +2073,10 @@ module.exports = {
                     return
                 }
 
-				cb("Couldn't find user");
+				cb("Couldn't find user. 😔");
             }
 			else
-	            cb("Couldn't reach osu!api");
+	            cb("Couldn't reach osu!api. 💀");
 
             helper.error(err);
             retries = 0
@@ -2273,14 +2292,14 @@ module.exports = {
                 let user = response[0];
                 if(user.user_id in tracked_users){
                     if(tracked_users[user.user_id].channels.includes(channel_id)){
-                        cb(`${user.username} is already being tracked in this channel`);
+                        cb(`${user.username} is already being tracked in this channel. 🤡`);
                     }else{
                         tracked_users[user.user_id].channels.push(channel_id);
                         tracked_users[user.user_id].top = top;
 
                         delete top_plays[user.user_id];
 
-                        cb(null, `Now tracking ${user.username}'s top ${top} in this channel.`);
+                        cb(null, `Now tracking ${user.username}'s top ${top} in this channel. 🤓`);
                     }
                 }else{
                     tracked_users[user.user_id] = {
@@ -2288,19 +2307,19 @@ module.exports = {
                         channels: [channel_id]
                     };
 
-                    cb(null, `Now tracking ${user.username}'s top ${top}.`);
+                    cb(null, `Now tracking ${user.username}'s top ${top}. 🤓`);
                 }
 
                 helper.setItem('tracked_users', JSON.stringify(tracked_users));
                 helper.setItem('top_plays', JSON.stringify(top_plays));
             }else{
-                cb(`Couldn't find user \`${user}\``);
+                cb(`Couldn't find user \`${user}\`. 😔`);
             }
 		}).catch(err => {
 			if(err.status == 404)
-				cb("Couldn't find user");
+				cb("Couldn't find user. 😔");
 			else
-				cb("Couldn't reach osu!api");
+				cb("Couldn't reach osu!api. 💀");
 
 			helper.error(err);
 			return false;
@@ -2319,9 +2338,9 @@ module.exports = {
                         = tracked_users[user.user_id].channels.filter(a => a != channel_id);
 
                         if(tracked_users[user.user_id].channels.length > 0){
-                            cb(null, `Stopped tracking ${user.username} in this channel.`);
+                            cb(null, `Stopped tracking ${user.username} in this channel. 😔`);
                         }else{
-                            cb(null, `Stopped tracking ${user.username}.`);
+                            cb(null, `Stopped tracking ${user.username}. 😔`);
 
                             delete tracked_users[user.user_id];
                             delete top_plays[user.user_id];
@@ -2330,19 +2349,19 @@ module.exports = {
                         helper.setItem('tracked_users', JSON.stringify(tracked_users));
                         helper.setItem('top_plays', JSON.stringify(top_plays));
                     }else{
-                        cb(`${user.username} is not being tracked in this channel`);
+                        cb(`${user.username} is not being tracked in this channel. 🤡`);
                     }
                 }else{
-                    cb(`${user.username} is not being tracked`);
+                    cb(`${user.username} is not being tracked. 🤡`);
                 }
             }else{
-                cb(`Couldn't find \`${user}\``);
+                cb(`Couldn't find \`${user}\`. 😔`);
             }
         }).catch(err => {
 			if(err.status == 404)
-				cb("Couldn't find user");
+				cb("Couldn't find user. 😔");
 			else
-				cb("Couldn't reach osu!api");
+				cb("Couldn't reach osu!api. 💀");
 
 			helper.error(err);
 			return false;
