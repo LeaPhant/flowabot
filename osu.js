@@ -1895,7 +1895,7 @@ module.exports = {
     },
 
     get_user: function(options, cb){
-        api.get(`/users/${options.u}/osu`).then(response => {
+        api.get(`/users/${options.u}/osu`).then(async function (response) {
             response = response.data;
 
 			if(response.length == 0){
@@ -1905,6 +1905,18 @@ module.exports = {
 
             let data = response;
 
+            let sr;
+
+            await axios.get(`https://score.respektive.pw/u/${data.id}`).then(function (response) {
+                sr = response.data[0].rank;
+            }).catch(err => {
+                sr = 0;
+                console.log(err);
+            });
+            let score_rank = ""; 
+            if (sr > 0) {
+                score_rank = ` (#${sr})`;
+            }
 
             let grades = "";
 
@@ -1933,7 +1945,7 @@ module.exports = {
                 fields: [
                     {
                         name: 'Ranked Score',
-                        value: Number(data.statistics.ranked_score).toLocaleString(),
+                        value: Number(data.statistics.ranked_score).toLocaleString() + score_rank,
                         inline: true
                     },
                     {
