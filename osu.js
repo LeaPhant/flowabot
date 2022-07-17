@@ -31,6 +31,7 @@ const STAR_SCALING_FACTOR = 0.0675;
 const EXTREME_SCALING_FACTOR = 0.5;
 
 const config = require('./config.json');
+const { mod } = require('mathjs');
 
 let tracked_users = {};
 let retries = 0;
@@ -254,13 +255,25 @@ function getMods(enabled_mods){
     return return_array;
 }
 
-function sanitizeMods(mods){
-    mods = mods.map(m => m.acronym)
+function sanitizeMods(mods_raw){
+    let speed_change;
+    let mods = mods_raw.map(m => m.acronym);
     let return_array = mods;
+
+    if (mods.includes("DT") || mods.includes("HT") || mods.includes("NC") || mods.includes("DC")) {
+        speed_change = mods_raw.filter(mod => mod.acronym == "DT" || mod.acronym == "HT" || mod.acronym == "NC" || mod.acronym == "DC")[0].settings.speed_change ?? undefined;
+    }
+
     if(mods.includes("NC") && mods.includes("DT"))
         return_array.splice(mods.indexOf("DT"), 1);
     if(mods.includes("PF") && mods.includes("SD"))
         return_array.splice(mods.indexOf("SD"), 1);
+
+    return_array.forEach((mod, index) => {
+        if (mod == "DT" || mod == "HT" || mod == "NC" || mod == "DC")
+            mods[index] += `(${speed_change}x)`
+    })
+
     return return_array;
 }
 
@@ -560,6 +573,17 @@ async function getScore(recent_raw, cb){
             
             let beatmap = recent_raw.beatmap;
             //let beatmapset = recent_raw.beatmapset;
+
+            if(recent.mods.map(x => x.acronym).includes('DA')) {
+                recent.mods.forEach( mod => {
+                    if(mod.acronym == "DA" && Object.entries(mod.settings).length > 0){ 
+                        beatmap.ar = mod.settings.approach_rate ?? beatmap.ar
+                        beatmap.cs = mod.settings.circle_size ?? beatmap.cs
+                        beatmap.accuracy = mod.settings.overall_difficulty ?? beatmap.accuracy
+                        beatmap.drain = mod.settings.drain_rate ?? beatmap.drain
+                    }
+                })
+            }
 
             let diff_settings = calculateCsArOdHp(beatmap.cs, beatmap.ar, beatmap.accuracy, beatmap.drain, recent.mods);
 
