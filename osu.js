@@ -589,7 +589,7 @@ async function getScore(recent_raw, cb){
             let diff_settings = calculateCsArOdHp(beatmap.cs, beatmap.ar, beatmap.accuracy, beatmap.drain, recent.mods);
 
             let speed = 1;
-            
+
             if (recent.mods.map(x => x.acronym).includes("DT") || recent.mods.map(x => x.acronym).includes("NC")) {
                 speed *= recent.mods.filter(mod => mod.acronym == "DT" || mod.acronym == "NC")[0].settings.speed_change ?? 1.5;
             } else if (mods.includes("HT") || mods.includes("DC")) {
@@ -1446,11 +1446,17 @@ module.exports = {
 
         if(options.solo_score) {
             if(options.mods) {
-                api.get(`/beatmaps/${options.beatmap_id}/solo-scores/`, { params: { mods: options.mods } }).then(response => {
-                    console.log(response);
+                let route = `/beatmaps/${options.beatmap_id}/solo-scores/?type=global&mode=osu`
+
+                options.mods.forEach( mod => route += `&mods[]=${mod}`)
+
+                api.get(route).then(response => {
                     response = response.data;
-        
-                    let recent_raw = response.score;
+
+                    if(response.scores.length < options.index)
+                    options.index = response.scores.length - 1;
+    
+                    let recent_raw = response.scores[options.index - 1];
                     recent_raw.beatmap = beatmap;
                     recent_raw.beatmapset = beatmap.beatmapset;
                     //recent_raw.beatmap.id = options.beatmap_id;
