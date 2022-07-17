@@ -40,70 +40,71 @@ module.exports = {
 
                 return false;
             }else{
-                osu.get_tops({user: top_user, count}).then(response => {
-                    const { tops, user } = response;
+                osu.get_tops({user: top_user, count},(err, response) => {
+                    if(err){
+                        helper.error(err);
+                        reject(err);
+                    }else{
+                        const { tops, user } = response;
 
-                    let embed = {fields: []};
-                    embed.color = 12277111;
-                    embed.author = {
-                        url: `https://osu.ppy.sh/u/${user.id}`,
-                        name: `${user.username} – ${Number(user.statistics.pp).toFixed(2)}pp (#${Number(user.statistics.global_rank).toLocaleString()})`,
-                        icon_url: user.avatar_url
-                    };
+                        let embed = {fields: []};
+                        embed.color = 12277111;
+                        embed.author = {
+                            url: `https://osu.ppy.sh/u/${user.id}`,
+                            name: `${user.username} – ${Number(user.statistics.pp).toFixed(2)}pp (#${Number(user.statistics.global_rank).toLocaleString()})`,
+                            icon_url: user.avatar_url
+                        };
 
-                    embed.thumbnail = {
-                        url: `https://b.ppy.sh/thumb/${tops[0].beatmap.beatmapset_id}l.jpg`
-                    };
+                        embed.thumbnail = {
+                            url: `https://b.ppy.sh/thumb/${tops[0].beatmap.beatmapset_id}l.jpg`
+                        };
 
-                    embed.fields = [];
+                        embed.fields = [];
 
-                    for(const top of tops){
-                        let name = `${top.rank_emoji} ${top.stars.toFixed(2)}★ ${top.beatmap.artist} - ${top.beatmap.title} [${top.beatmap.version}]`;
+                        for(const top of tops){
+                            let name = `${top.rank_emoji} ${top.stars.toFixed(2)}★ ${top.beatmap.artist} - ${top.beatmap.title} [${top.beatmap.version}]`;
 
-                        if(top.mods.length > 0)
-                            name += ` +${top.mods.map(mod => mod.acronym).join(",")}`;
+                            if(top.mods.length > 0)
+                                name += ` +${top.mods.map(mod => mod.acronym).join(",")}`;
 
-                        name += ` ${top.accuracy}%`;
+                            name += ` ${top.accuracy}%`;
 
-                        let value = `[🔗](https://osu.ppy.sh/b/${top.beatmap.id}) `;
+                            let value = `[🔗](https://osu.ppy.sh/b/${top.beatmap.id}) `;
 
-                        if(Number(top.max_combo) < top.beatmap.max_combo && top.pp_fc > top.pp)
-                            value += `**${Number(top.pp).toFixed(2)}pp** ➔ ${top.pp_fc.toFixed(2)}pp for ${top.acc_fc}% FC${helper.sep}`;
-                        else
-                            value += `**${Number(top.pp).toFixed(2)}pp**${helper.sep}`
+                            if(Number(top.max_combo) < top.beatmap.max_combo && top.pp_fc > top.pp)
+                                value += `**${Number(top.pp).toFixed(2)}pp** ➔ ${top.pp_fc.toFixed(2)}pp for ${top.acc_fc}% FC${helper.sep}`;
+                            else
+                                value += `**${Number(top.pp).toFixed(2)}pp**${helper.sep}`
 
-                        if(Number(top.max_combo) < top.beatmap.max_combo)
-                            value += `${top.max_combo}/${top.beatmap.max_combo}x`;
-                        else
-                            value += `${top.max_combo}x`;
+                            if(Number(top.max_combo) < top.beatmap.max_combo)
+                                value += `${top.max_combo}/${top.beatmap.max_combo}x`;
+                            else
+                                value += `${top.max_combo}x`;
 
-                        if(Number(top.statistics.ok ?? 0) > 0 || Number(top.statistics.meh ?? 0) > 0 || Number(top.statistics.miss ?? 0) > 0)
-                            value += helper.sep;
+                            if(Number(top.statistics.ok ?? 0) > 0 || Number(top.statistics.meh ?? 0) > 0 || Number(top.statistics.miss ?? 0) > 0)
+                                value += helper.sep;
 
-                        if(Number(top.statistics.ok ?? 0) > 0)
-                            value += `${top.statistics.ok}x100`;
+                            if(Number(top.statistics.ok ?? 0) > 0)
+                                value += `${top.statistics.ok}x100`;
 
-                        if(Number(top.statistics.meh ?? 0) > 0){
-                            if(Number(top.statistics.ok ?? 0) > 0) value += helper.sep;
-                            value += `${top.statistics.meh ?? 0}x50`;
+                            if(Number(top.statistics.meh ?? 0) > 0){
+                                if(Number(top.statistics.ok ?? 0) > 0) value += helper.sep;
+                                value += `${top.statistics.meh ?? 0}x50`;
+                            }
+
+                            if(Number(top.statistics.miss ?? 0) > 0){
+                                if(Number(top.statistics.ok ?? 0) > 0 || Number(top.statistics.meh ?? 0) > 0) value += helper.sep;
+                                value += `${top.statistics.miss ?? 0}xMiss`;
+                            }
+
+                            value += `${helper.sep}<t:${DateTime.fromISO(top.ended_at).toSeconds()}:R>`
+
+                            embed.fields.push({ name, value })
                         }
 
-                        if(Number(top.statistics.miss ?? 0) > 0){
-                            if(Number(top.statistics.ok ?? 0) > 0 || Number(top.statistics.meh ?? 0) > 0) value += helper.sep;
-                            value += `${top.statistics.miss ?? 0}xMiss`;
-                        }
-
-                        value += `${helper.sep}<t:${DateTime.fromISO(top.ended_at).toSeconds()}:R>`
-
-                        embed.fields.push({ name, value })
+                        resolve({ embed });
                     }
-
-                    resolve({ embed });
-                }).catch(err => {
-                    helper.error(err);
-                    reject(err);
-                    return false;
-                });
+                })
             }
         })
     }

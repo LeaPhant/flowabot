@@ -1592,7 +1592,7 @@ module.exports = {
             top.beatmap = beatmap;
         }
 
-        return { user, tops };
+        cb(null, { user, tops });
 	},
 
     get_pins: async function(options, cb){
@@ -1652,7 +1652,7 @@ module.exports = {
             pin.beatmap = beatmap;
         }
         
-        return { user, pins };
+        cb(null, { user, pins });
 	},
 
     get_top: async function(options, cb){
