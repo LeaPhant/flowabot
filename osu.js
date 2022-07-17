@@ -359,12 +359,13 @@ function getDifficultyAttribs(results){
 
 function calculateCsArOdHp(cs_raw, ar_raw, od_raw, hp_raw, mods_enabled){
 	var speed = 1, ar_multiplier = 1, ar, ar_ms;
+    let mods = mods_enabled.map(x => x.acronym)
 
-	if(mods_enabled.includes("DT")){
-		speed *= 1.5;
-	}else if(mods_enabled.includes("HT")){
-		speed *= .75;
-	}
+    if (mods.includes("DT") || mods.includes("NC")) {
+        speed *= mods_enabled.filter(mod => mod.acronym == "DT" || mod.acronym == "NC")[0].settings.speed_change ?? 1.5;
+    } else if (mods.includes("HT") || mods.includes("DC")) {
+        speed *= mods_enabled.filter(mod => mod.acronym == "HT" || mod.acronym == "DC")[0].settings.speed_change ?? 0.75;
+    }
 
 	if(mods_enabled.includes("HR")){
 		ar_multiplier *= 1.4;
@@ -588,11 +589,12 @@ async function getScore(recent_raw, cb){
             let diff_settings = calculateCsArOdHp(beatmap.cs, beatmap.ar, beatmap.accuracy, beatmap.drain, recent.mods);
 
             let speed = 1;
-
-            if(recent.mods.map(x => x.acronym).includes('DT'))
-                speed *= 1.5;
-            else if(recent.mods.map(x => x.acronym).includes('HT'))
-                speed *= 0.75;
+            
+            if (recent.mods.map(x => x.acronym).includes("DT") || recent.mods.map(x => x.acronym).includes("NC")) {
+                speed *= recent.mods.filter(mod => mod.acronym == "DT" || mod.acronym == "NC")[0].settings.speed_change ?? 1.5;
+            } else if (mods.includes("HT") || mods.includes("DC")) {
+                speed *= recent.mods.filter(mod => mod.acronym == "HT" || mod.acronym == "DC")[0].settings.speed_change ?? 0.75;
+            }
 
             let fail_percent = 1;
 
