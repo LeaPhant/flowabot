@@ -357,6 +357,15 @@ function getDifficultyAttribs(results){
 
     return output;
 }
+function calculateAccuracy(stats) {
+    const acc = (300 * (stats.great ?? 0) + 100 * (stats.ok ?? 0) + 50 * (stats.meh ?? 0)) / (300 * totalHits(stats))
+    return acc * 100;
+}
+
+function totalHits(stats) {
+    const hits = (stats.great ?? 0) + (stats.ok ?? 0) + (stats.meh ?? 0) + (stats.miss ?? 0)
+    return hits;
+}
 
 function calculateCsArOdHp(cs_raw, ar_raw, od_raw, hp_raw, mods_enabled){
 	var speed = 1, ar_multiplier = 1, ar, ar_ms;
@@ -570,157 +579,153 @@ async function getScore(recent_raw, cb){
 			}
         }
 
-        api.post(`/beatmaps/${recent.beatmap_id}/attributes`, { mods: recent_raw.mods } ).then(response => {
-            let attributes = response.data.attributes;
-            
-            let beatmap = recent_raw.beatmap;
-            //let beatmapset = recent_raw.beatmapset;
+        let beatmap = recent_raw.beatmap;
+        //let beatmapset = recent_raw.beatmapset;
 
-            if(recent.mods.map(x => x.acronym).includes('DA')) {
-                recent.mods.forEach( mod => {
-                    if(mod.acronym == "DA" && Object.entries(mod.settings).length > 0){ 
-                        beatmap.ar = mod.settings.approach_rate ?? beatmap.ar
-                        beatmap.cs = mod.settings.circle_size ?? beatmap.cs
-                        beatmap.accuracy = mod.settings.overall_difficulty ?? beatmap.accuracy
-                        beatmap.drain = mod.settings.drain_rate ?? beatmap.drain
+        if(recent.mods.map(x => x.acronym).includes('DA')) {
+            recent.mods.forEach( mod => {
+                if(mod.acronym == "DA" && Object.entries(mod.settings).length > 0){ 
+                    beatmap.ar = mod.settings.approach_rate ?? beatmap.ar
+                    beatmap.cs = mod.settings.circle_size ?? beatmap.cs
+                    beatmap.accuracy = mod.settings.overall_difficulty ?? beatmap.accuracy
+                    beatmap.drain = mod.settings.drain_rate ?? beatmap.drain
+                }
+            })
+        }
+                    
+        let diff_settings = calculateCsArOdHp(beatmap.cs, beatmap.ar, beatmap.accuracy, beatmap.drain, recent.mods);
+
+        let speed = 1;
+
+        if (recent.mods.map(x => x.acronym).includes("DT") || recent.mods.map(x => x.acronym).includes("NC")) {
+            speed *= recent.mods.filter(mod => mod.acronym == "DT" || mod.acronym == "NC")[0].settings.speed_change ?? 1.5;
+        } else if (recent.mods.map(x => x.acronym).includes("HT") || recent.mods.map(x => x.acronym).includes("DC")) {
+            speed *= recent.mods.filter(mod => mod.acronym == "HT" || mod.acronym == "DC")[0].settings.speed_change ?? 0.75;
+        }
+
+        let fail_percent = 1;
+
+        if(!recent_raw.passed)
+        fail_percent = (recent.count300 + recent.count100 + recent.count50 + recent.countmiss) / (beatmap.count_spinners + beatmap.count_sliders + beatmap.count_circles);
+
+        helper.downloadBeatmap(recent_raw.beatmap.id).finally(async () => {
+            let beatmap_path = path.resolve(config.osu_cache_path, `${recent_raw.beatmap.id}.osu`);
+
+            let rosu_arg = {
+                path: beatmap_path,
+                params: [
+                    {
+                        mods: getModsEnum(recent_raw.mods.map(x => x.acronym)),
+                        n300: recent_raw.statistics.great ?? 0,
+                        n100: recent_raw.statistics.ok ?? 0,
+                        n50: recent_raw.statistics.meh ?? 0,
+                        nMisses: recent_raw.statistics.miss ?? 0,
+                        combo: recent_raw.max_combo,
+                        clockRate: speed,
+                        ar: beatmap.ar,
+                        cs: beatmap.cs,
+                        hp: beatmap.hp,
+                        od: beatmap.od,
+                    },
+                    {
+                        mods: getModsEnum(recent_raw.mods.map(x => x.acronym)),
+                        clockRate: speed,
+                        n100: recent_raw.statistics.ok ?? 0,
+                        n50: recent_raw.statistics.meh ?? 0,
+                        ar: beatmap.ar,
+                        cs: beatmap.cs,
+                        hp: beatmap.hp,
+                        od: beatmap.od,
                     }
-                })
+                ]
             }
 
-            let diff_settings = calculateCsArOdHp(beatmap.cs, beatmap.ar, beatmap.accuracy, beatmap.drain, recent.mods);
+            const plays = rosu.calculate(rosu_arg)
+            const play = plays[0]
+            const fc_play = plays[1]
 
-            let speed = 1;
+            recent = Object.assign({
+                approved: beatmapset.status,
+                beatmapset_id: beatmapset.id,
+                artist: beatmapset.artist,
+                title: beatmapset.title,
+                version: beatmap.version,
+                bpm_min: beatmap.bpm_min * speed,
+                bpm_max: beatmap.bpm_max * speed,
+                max_combo: play.maxCombo,
+                bpm: beatmap.bpm * speed,
+                creator: beatmapset.creator,
+                creator_id: beatmapset.user_id,
+                approved_date: beatmapset.ranked_date,
+                cs: diff_settings.cs,
+                ar: diff_settings.ar,
+                od: diff_settings.od,
+                hp: diff_settings.hp,
+                duration: beatmap.total_length,
+                fail_percent: fail_percent
+            }, recent);
 
-            if (recent.mods.map(x => x.acronym).includes("DT") || recent.mods.map(x => x.acronym).includes("NC")) {
-                speed *= recent.mods.filter(mod => mod.acronym == "DT" || mod.acronym == "NC")[0].settings.speed_change ?? 1.5;
-            } else if (recent.mods.map(x => x.acronym).includes("HT") || recent.mods.map(x => x.acronym).includes("DC")) {
-                speed *= recent.mods.filter(mod => mod.acronym == "HT" || mod.acronym == "DC")[0].settings.speed_change ?? 0.75;
+            recent = Object.assign({
+                stars: play.stars,
+                pp_fc: fc_play.pp,
+                acc: recent_raw.accuracy * 100,
+                acc_fc: calculateAccuracy({ 
+                    great: recent_raw.statistics.great ?? 0,
+                    ok: recent_raw.statistics.ok ?? 0,
+                    meh: recent_raw.statistics.meh ?? 0,
+                }),
+            }, recent);
+
+            if(recent.pp == null)
+                recent.pp = play.pp;
+
+            let strains_bar;
+
+            if(await helper.fileExists(beatmap_path)){
+                strains_bar = await module.exports.get_strains_bar(beatmap_path, recent.mods.map(mod => mod.acronym).join(''), recent.fail_percent);
+
+                if(strains_bar)
+                    recent.strains_bar = true;
             }
 
-            let fail_percent = 1;
+            if(replay && await helper.fileExists(beatmap_path)){
+                let ur_promise = new Promise((resolve, reject) => {
+                    if(config.debug)
+                        helper.log('getting ur');
 
-            if(!recent_raw.passed)
-                fail_percent = (recent.count300 + recent.count100 + recent.count50 + recent.countmiss) / (beatmap.count_spinners + beatmap.count_sliders + beatmap.count_circles);
+                    ur_calc.get_ur(
+                        {
+                            access_token: access_token,
+                            player: recent_raw.user_id,
+                            beatmap_id: recent_raw.beatmap.id,
+                            mods_enabled: getModsEnum(recent_raw.mods.map(x => x.acronym)),
+                            score_id: recent.score_id,
+                            mods: recent.mods.map(x => x.acronym)
+                        }).then(response => {
+                            recent.ur = response.ur;
 
-            let diff = {
-                aim: attributes.aim_difficulty,
-                speed: attributes.speed_difficulty,
-                fl: attributes.flashlight_difficulty,
-                total: attributes.star_rating,
-                slider_factor: attributes.slider_factor,
-                max_combo: attributes.max_combo,
-                ar: attributes.approach_rate,
-                od: attributes.overall_difficulty,
-                count_circles: beatmap.count_circles,
-                count_sliders: beatmap.count_sliders,
-                count_spinners: beatmap.count_spinners
-            }
+                            if(recent.countmiss == (response.miss || 0) 
+                            && recent.count100 == (response['100'] || 0)
+                            && recent.count50 == (response['50'] || 0))
+                                recent.countsb = response.sliderbreak;
 
-            let perf = {
-                beatmap_id: recent_raw.beatmap.id,
-                count300: recent_raw.statistics.great ?? 0,
-                count100: recent_raw.statistics.ok ?? 0,
-                count50: recent_raw.statistics.meh ?? 0,
-                countmiss: recent_raw.statistics.miss ?? 0,
-                maxcombo: recent_raw.max_combo,
-                enabled_mods: getModsEnum(recent_raw.mods.map(x => x.acronym))
-            }
+                            if(recent.mods.map(x => x.acronym).includes("DT") || recent.mods.map(x => x.acronym).includes("NC"))
+                                recent.cvur = response.ur / 1.5;
+                            else if(recent.mods.map(x => x.acronym).includes("HT"))
+                                recent.cvur = response.ur * 1.5;
 
-            const play = new std_ppv2().setPerformance(perf).setDifficulty(diff);
-
-            Promise.all([play.compute(), play.compute(true)]).then(results => {
-                const pp = results[0];
-                const pp_fc = results[1];
-                recent = Object.assign({
-                    approved: beatmapset.status,
-                    beatmapset_id: beatmapset.id,
-                    artist: beatmapset.artist,
-                    title: beatmapset.title,
-                    version: beatmap.version,
-                    bpm_min: beatmap.bpm_min * speed,
-                    bpm_max: beatmap.bpm_max * speed,
-                    max_combo: attributes.max_combo,
-                    bpm: beatmap.bpm * speed,
-                    creator: beatmapset.creator,
-                    creator_id: beatmapset.user_id,
-                    approved_date: beatmapset.ranked_date,
-                    cs: diff_settings.cs,
-                    ar: play.map.ar,
-                    od: play.map.od,
-                    hp: diff_settings.hp,
-                    duration: beatmap.total_length,
-                    fail_percent: fail_percent
-                }, recent);
-  
-                recent = Object.assign({
-                    stars: play.diff.total,
-                    pp_fc: pp_fc.total,
-                    acc: pp.computed_accuracy,
-                    acc_fc: pp_fc.computed_accuracy
-                }, recent);
-
-                if(recent.pp == null)
-                    recent.pp = pp.total;
-
-                helper.downloadBeatmap(recent_raw.beatmap.id).finally(async () => {
-                    let beatmap_path = path.resolve(config.osu_cache_path, `${recent_raw.beatmap.id}.osu`);
-    
-                    let strains_bar;
-    
-                    if(await helper.fileExists(beatmap_path)){
-                        strains_bar = await module.exports.get_strains_bar(beatmap_path, recent.mods.join(''), recent.fail_percent);
-    
-                        if(strains_bar)
-                            recent.strains_bar = true;
-                    }
-    
-                    if(replay && await helper.fileExists(beatmap_path)){
-                        let ur_promise = new Promise((resolve, reject) => {
-                            if(config.debug)
-                                helper.log('getting ur');
-    
-                            ur_calc.get_ur(
-                                {
-                                    access_token: access_token,
-                                    player: recent_raw.user_id,
-                                    beatmap_id: recent_raw.beatmap.id,
-                                    mods_enabled: getModsEnum(recent_raw.mods.map(x => x.acronym)),
-                                    score_id: recent.score_id,
-                                    mods: recent.mods.map(x => x.acronym)
-                                }).then(response => {
-                                    recent.ur = response.ur;
-    
-                                    if(recent.countmiss == (response.miss || 0) 
-                                    && recent.count100 == (response['100'] || 0)
-                                    && recent.count50 == (response['50'] || 0))
-                                        recent.countsb = response.sliderbreak;
-    
-                                    if(recent.mods.map(x => x.acronym).includes("DT") || recent.mods.map(x => x.acronym).includes("NC"))
-                                        recent.cvur = response.ur / 1.5;
-                                    else if(recent.mods.map(x => x.acronym).includes("HT"))
-                                        recent.cvur = response.ur * 1.5;
-    
-                                    resolve(recent);
-                                });
+                            resolve(recent);
                         });
-    
-                        recent.ur = -1;
-                        if(recent.mods.map(mod => mod.acronym).includes("DT") || recent.mods.map(mod => mod.acronym).includes("HT"))
-                            recent.cvur = -1;
-                        cb(null, recent, strains_bar, ur_promise);
-                    }else{
-                        cb(null, recent, strains_bar);
-                    }
-                }).catch(helper.error);                
-            }).catch(error => {
-                cb('🤡 Something went wrong when trying to calculate Difficulty. 🤡');
-                return;
-            });
-        }).catch(err => {
-            cb("Couldn't reach osu!api. 💀");
-            helper.log(err);
-            return;
-        });
+                });
+
+                recent.ur = -1;
+                if(recent.mods.map(mod => mod.acronym).includes("DT") || recent.mods.map(mod => mod.acronym).includes("HT"))
+                    recent.cvur = -1;
+                cb(null, recent, strains_bar, ur_promise);
+            }else{
+                cb(null, recent, strains_bar);
+            }
+        }).catch(helper.error);
     }).catch(err => {
         cb("Couldn't reach osu!api. 💀");
         helper.log(err);
