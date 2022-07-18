@@ -1598,8 +1598,10 @@ module.exports = {
             const { beatmap, difficulty } = data.find(a => a.beatmap.beatmap_id == top.beatmap.id);
 
             top.accuracy = (top.accuracy * 100).toFixed(2);
+            const mods = top.mods.map(mod => mod.acronym)
+            if (mods.includes("NC")) mods.push("DT")
 
-            const diff = difficulty[getModsEnum(top.mods.map(mod => mod.acronym).filter(mod => DIFF_MODS.includes(mod)))];
+            const diff = difficulty[getModsEnum(mods.filter(mod => DIFF_MODS.includes(mod)))];
 
             top.stars = diff.total;
 
@@ -1658,8 +1660,10 @@ module.exports = {
             const { beatmap, difficulty } = data.find(a => a.beatmap.beatmap_id == pin.beatmap.id);
 
             pin.accuracy = (pin.accuracy * 100).toFixed(2);
+            const mods = top.mods.map(mod => mod.acronym)
+            if (mods.includes("NC")) mods.push("DT")
 
-            const diff = difficulty[getModsEnum(pin.mods.map(mod => mod.acronym).filter(mod => DIFF_MODS.includes(mod)))];
+            const diff = difficulty[getModsEnum(mods.filter(mod => DIFF_MODS.includes(mod)))];
 
             pin.stars = diff.total;
 
