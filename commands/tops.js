@@ -69,7 +69,7 @@ module.exports = {
 
                             name += ` ${top.accuracy}%`;
 
-                            let value = `[🔗](https://osu.ppy.sh/b/${top.beatmap.id}) `;
+                            let value = `[🔗](https://osu.ppy.sh/b/${top.beatmap.beatmap_id}) `;
 
                             if(Number(top.max_combo) < top.beatmap.max_combo && top.pp_fc > top.pp)
                                 value += `**${Number(top.pp).toFixed(2)}pp** ➔ ${top.pp_fc.toFixed(2)}pp for ${top.acc_fc}% FC${helper.sep}`;
