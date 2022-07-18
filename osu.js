@@ -368,9 +368,9 @@ function calculateCsArOdHp(cs_raw, ar_raw, od_raw, hp_raw, mods_enabled){
         speed *= mods_enabled.filter(mod => mod.acronym == "HT" || mod.acronym == "DC")[0].settings.speed_change ?? 0.75;
     }
 
-	if(mods_enabled.includes("HR")){
+	if(mods.includes("HR")){
 		ar_multiplier *= 1.4;
-	}else if(mods_enabled.includes("EZ")){
+	}else if(mods.includes("EZ")){
 		ar_multiplier *= 0.5;
 	}
 
@@ -389,9 +389,9 @@ function calculateCsArOdHp(cs_raw, ar_raw, od_raw, hp_raw, mods_enabled){
 
 	var cs, cs_multiplier = 1;
 
-	if(mods_enabled.includes("HR")){
+	if(mods.includes("HR")){
 		cs_multiplier *= 1.3;
-	}else if(mods_enabled.includes("EZ")){
+	}else if(mods.includes("EZ")){
 		cs_multiplier *= 0.5;
 	}
 
@@ -401,9 +401,9 @@ function calculateCsArOdHp(cs_raw, ar_raw, od_raw, hp_raw, mods_enabled){
 
 	var od, odms, od_multiplier = 1;
 
-	if(mods_enabled.includes("HR")){
+	if(mods.includes("HR")){
 		od_multiplier *= 1.4;
-	}else if(mods_enabled.includes("EZ")){
+	}else if(mods.includes("EZ")){
 		od_multiplier *= 0.5;
 	}
 
@@ -417,9 +417,9 @@ function calculateCsArOdHp(cs_raw, ar_raw, od_raw, hp_raw, mods_enabled){
 
     var hp, hp_multiplier = 1;
 
-    if(mods_enabled.includes("HR")){
+    if(mods.includes("HR")){
 		hp_multiplier *= 1.4;
-	}else if(mods_enabled.includes("EZ")){
+	}else if(mods.includes("EZ")){
 		hp_multiplier *= 0.5;
 	}
 
