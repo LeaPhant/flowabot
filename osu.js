@@ -268,11 +268,12 @@ function sanitizeMods(mods_raw){
         return_array.splice(mods.indexOf("DT"), 1);
     if(mods.includes("PF") && mods.includes("SD"))
         return_array.splice(mods.indexOf("SD"), 1);
-
-    return_array.forEach((mod, index) => {
-        if (mod == "DT" || mod == "HT" || mod == "NC" || mod == "DC")
-            mods[index] += `(${speed_change}x)`
-    })
+    if (speed_change) {
+        return_array.forEach((mod, index) => {
+            if (mod == "DT" || mod == "HT" || mod == "NC" || mod == "DC")
+                mods[index] += `(${speed_change}x)`
+        })
+    }
 
     return return_array;
 }
