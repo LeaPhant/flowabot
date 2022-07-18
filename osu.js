@@ -1232,7 +1232,7 @@ module.exports = {
         lines[0] += `${+recent.acc.toFixed(2)}%${helper.sep}`;
         lines[0] += `<t:${DateTime.fromISO(recent.date).toSeconds()}:R>`;
 
-        if(recent.pp_fc > recent.pp)
+        if(recent.pp_fc.toFixed(2) != recent.pp.toFixed(2))
             lines[1] += `**${recent.unsubmitted ? '*' : ''}${+recent.pp.toFixed(2)}pp**${recent.unsubmitted ? '*' : ''} ➔ ${+recent.pp_fc.toFixed(2)}pp for ${+recent.acc_fc.toFixed(2)}% FC${helper.sep}`;
         else
             lines[1] += `**${+recent.pp.toFixed(2)}pp**${helper.sep}`
