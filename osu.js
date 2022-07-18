@@ -1242,7 +1242,7 @@ module.exports = {
         else
             lines[1] += `${recent.max_combo}x`;
 
-        if(recent.pp_fc > recent.pp)
+        if(recent.pp_fc.toFixed(2) != recent.pp.toFixed(2))
             lines[1] += `\n`;
         else if(recent.ur || recent.count100 || recent.count50 || recent.countmiss)
             lines[1] += helper.sep;
