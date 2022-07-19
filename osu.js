@@ -1665,7 +1665,7 @@ module.exports = {
             const { beatmap, difficulty } = data.find(a => a.beatmap.beatmap_id == pin.beatmap.id);
 
             pin.accuracy = (pin.accuracy * 100).toFixed(2);
-            const mods = top.mods.map(mod => mod.acronym)
+            const mods = pin.mods.map(mod => mod.acronym)
             if (mods.includes("NC")) mods.push("DT")
 
             const diff = difficulty[getModsEnum(mods.filter(mod => DIFF_MODS.includes(mod)))];
