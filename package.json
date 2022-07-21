@@ -40,6 +40,7 @@
         "node-osr": "^1.2.1",
         "object-path": "^0.11.5",
         "ojsama": "^2.2.0",
+        "openweather-apis": "^4.4.2",
         "osu-parser": "git+https://github.com/LeaPhant/osu-parser.git",
         "readline-sync": "^1.4.10",
         "rosu-pp": "^0.7.0",
