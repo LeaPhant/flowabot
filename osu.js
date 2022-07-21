@@ -797,6 +797,7 @@ async function updateAccessToken(){
     });
 
     setTimeout(updateAccessToken, 60 * 1000)
+    return
 }
 
 function updateTrackedUsers(){
@@ -934,10 +935,8 @@ module.exports = {
 		last_beatmap = _last_beatmap;
 
 		if(client_id && client_secret){
-            
-            updateAccessToken();
-			updateTrackedUsers();
-            
+            await updateAccessToken();
+            updateTrackedUsers();
 		}
 
         if(api_key){
