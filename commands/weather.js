@@ -1,5 +1,10 @@
 const helper = require('../helper.js');
 const config = require('../config.json');
+const weather = require('openweather-apis');
+
+weather.setLang('en');
+weather.setUnits('metric');
+weather.setAPPID(config.credentials.open_weather_map_api);
 
 module.exports = {
     command: 'weather',
@@ -13,18 +18,15 @@ module.exports = {
     configRequired: ['credentials.open_weather_map_api'],
     call: obj => {
         return new Promise((resolve, reject) => {
-            const weather = require('openweather-apis');
-
-            weather.setLang('en');
-            weather.setUnits('metric');
-            weather.setAPPID(config.credentials.open_weather_map_api);
-
             let { argv, msg } = obj;
             const author = msg.author;
             const avatar_url = `https://cdn.discordapp.com/avatars/${author.id}/${author.avatar}.png?size=256`
 
             argv.shift()
             const city = argv.join(" ");
+
+            weather.setCity("")
+            weather.setCityId("")
 
             if (isNaN(city)) {
                 weather.setCity(city);
