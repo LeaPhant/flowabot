@@ -41,7 +41,7 @@ module.exports = {
                 let date = new Date()
                 date.setSeconds(date.getSeconds() + JSONObj.timezone)
 
-                let date_string = `${date.getUTCHours()}:${date.getUTCMinutes()}, ${date.toLocaleString("en-US", { weekday: "long", timeZone: 'UTC'})}`
+                let date_string = `${date.toLocaleString('en-GB', { timeZone: 'UTC', timeStyle: 'short' })}, ${date.toLocaleString("en-US", { weekday: "long", timeZone: 'UTC'})}`
                 let icon_url = `https://openweathermap.org/img/wn/${JSONObj.weather[0].icon}@2x.png`
 
                 let direction_val = parseInt((JSONObj.wind.deg / 22.5) + .5)
