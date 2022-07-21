@@ -22,7 +22,8 @@ module.exports = {
             const author = msg.author;
             const avatar_url = `https://cdn.discordapp.com/avatars/${author.id}/${author.avatar}.png?size=256`
 
-            const city = argv[1];
+            argv.shift()
+            const city = argv.join(" ");
 
             weather.setCity(city);
             weather.getAllWeather(function(err, JSONObj){
