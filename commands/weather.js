@@ -75,7 +75,7 @@ module.exports = {
                             },
                             {
                                 name: "Wind",
-                                value: `${wind_speed} km/h from the ${wind_direction}`,
+                                value: `${wind_speed.toFixed(1)} km/h from the ${wind_direction}`,
                                 inline: true
                             },
                             
