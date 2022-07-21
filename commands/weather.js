@@ -25,7 +25,11 @@ module.exports = {
             argv.shift()
             const city = argv.join(" ");
 
-            weather.setCity(city);
+            if (isNaN(city)) {
+                weather.setCity(city);
+            } else {
+                weather.setCityId(city);
+            }
             weather.getAllWeather(function(err, JSONObj){
                 if (err) {
                     helper.error(err);
