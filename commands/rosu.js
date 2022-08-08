@@ -303,23 +303,25 @@ module.exports = {
                         fl_pp = `, ${round(result.ppFlashlight)} flashlight pp`
                         fl_stars = `, ${round(result.flashlightRating)} flashlight stars`
                     }
-                    let diff_settings = calculateCsArOdHp(base_cs, base_ar, base_od, base_hp, mods, clock_rate)
+                    //let diff_settings = calculateCsArOdHp(base_cs, base_ar, base_od, base_hp, mods, clock_rate)
 
-                    //console.log(diff_settings)
-                    //console.log(result)
-
-                    ar = round(diff_settings.ar)
-                    od = round(diff_settings.od)
-                    if(base_cs <= 10) {
-                        cs = round(diff_settings.cs)
-                    } else {
-                        cs = base_cs
-                    }
-                    if(base_hp <= 10) {
-                        hp = round(diff_settings.hp)
-                    } else {
-                        hp = base_hp
-                    }
+                    // ar = round(diff_settings.ar)
+                    // od = round(diff_settings.od)
+                    // if(base_cs <= 10) {
+                    //     cs = round(diff_settings.cs)
+                    // } else {
+                    //     cs = base_cs
+                    // }
+                    // if(base_hp <= 10) {
+                    //     hp = round(diff_settings.hp)
+                    // } else {
+                    //     hp = base_hp
+                    // }
+                    
+                    ar = round(result.ar)
+                    od = round(result.od)
+                    cs = round(result.cs)
+                    hp = round(result.hp)
 
                     output += `\`\`\`\n${pp}pp (${aim_pp} aim pp, ${speed_pp} speed pp, ${acc_pp} acc pp${fl_pp})\n`
                     output += `${stars}★ (${aim_stars} aim stars, ${speed_stars} speed stars${fl_stars})\n`
