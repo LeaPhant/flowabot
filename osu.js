@@ -1580,7 +1580,7 @@ module.exports = {
         if(error) { cb("Couldn't reach osu!api. 💀") }
 
 		let requests = [
-	        api.get(`/users/${user_id}/scores/best`, { params: { limit: options.count } }),
+	        api.get(`/users/${user_id}/scores/best`, { params: { limit: options.count, mode: "osu" } }),
 	        api.get(`/users/${user_id}/osu`)
         ];
         
@@ -1640,7 +1640,7 @@ module.exports = {
         if(error) { cb("Couldn't reach osu!api. 💀") }
 
         let requests = [
-	        api.get(`/users/${user_id}/scores/pinned`, { params: { limit: options.count } }),
+	        api.get(`/users/${user_id}/scores/pinned`, { params: { limit: options.count, mode: "osu" } }),
 	        api.get(`/users/${user_id}/osu`)
         ];
         
@@ -1702,7 +1702,7 @@ module.exports = {
         if(error) { cb("Couldn't reach osu!api. 💀") }
 
 		let requests = [
-	        api.get(`/users/${user_id}/scores/best`, { params: { limit: 100 } })
+	        api.get(`/users/${user_id}/scores/best`, { params: { limit: 100, mode: "osu" } })
         ];
         
         const results = await Promise.all(requests);
