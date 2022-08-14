@@ -2,7 +2,7 @@ const axios = require('axios');
 const https = require('https');
 const helper = require('../helper.js');
 const FormData = require('form-data')
-const formData = new FormData()
+
 
 module.exports = {
     command: ['burningtext', 'flametext', 'cooltext'],
@@ -21,6 +21,8 @@ module.exports = {
             args.shift()
 
             const text = args.join(" ")
+
+            const formData = new FormData()
 
             formData.append("LogoID", 4)
             formData.append("Text", text)
