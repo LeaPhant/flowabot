@@ -10,7 +10,7 @@ module.exports = {
     argsRequired: 1,
     usage: '<text>',
     example: {
-        run: 'Burning Text',
+        run: 'burningtext Burning Text',
         result: "It burns."
     },
     call: obj => {
