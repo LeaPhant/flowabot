@@ -84,6 +84,25 @@ function newScoringFrame(scoringFrames){
     return scoringFrame;
 }
 
+function calcForObjectAmount(osu_content, amount, params) {
+
+    const tmp_map = "/tmp/tmp.osu"
+    let split = osu_content.split("[HitObjects]")
+    let worker_map = split[0] + "[HitObjects]"
+    let hit_objects = split[1].split(/\r?\n/)
+
+    for (let i = 0; i < amount; i++) {
+        if (!hit_objects[i]) continue
+        worker_map += "\n" + hit_objects[i]
+    }
+
+    fs.writeFileSync(tmp_map, worker_map);
+
+    let results = rosu.calculate({path: tmp_map, params: [params]})
+
+    return results
+}
+
 function getCursorAt(timestamp, replay){
     while(replay.lastCursor < replay.replay_data.length && replay.replay_data[replay.lastCursor].offset < timestamp)
         replay.lastCursor++;
@@ -1379,24 +1398,53 @@ function processBeatmap(osuContents){
     for(const scoringFrame of beatmap.ScoringFrames.filter(a => ['miss', 50, 100, 300].includes(a.result))){
         const hitCount = scoringFrame.countMiss + scoringFrame.count50 + scoringFrame.count100 + scoringFrame.count300;
 
-        parser.map.objects = objects.slice(0, hitCount);
+        //parser.map.objects = objects.slice(0, hitCount);
 
-        const stars = new ojsama.diff().calc({map: parser.map, mods});
+        const params = {
+            mods: mods,
+            n300: scoringFrame.count300,
+            n100: scoringFrame.count100,
+            n50: scoringFrame.count50,
+            nMisses: scoringFrame.countMiss,
+            combo: scoringFrame.maxCombo,
+        }
+
+        let lines = osuContents.split(/\r?\n/)
+        for (let i in lines) {
+            
+            if (lines[i].startsWith("CircleSize:")) {
+                lines[i] = "CircleSize:" + beatmap.CircleSize
+            }
+            if (lines[i].startsWith("OverallDifficulty:")) {
+                lines[i] = "OverallDifficulty:" + beatmap.OverallDifficultyRealtime
+            }
+            if (lines[i].startsWith("ApproachRate:")) {
+                lines[i] = "ApproachRate:" + beatmap.ApproachRateRealtime
+            }
+        }
+        const content = lines.join("\n")
+        
+
+        const rosu_results = calcForObjectAmount(content, hitCount, params)
+        const pp = rosu_results[0].pp
+        const stars = rosu_results[0].stars
+
+        //const stars = new ojsama.diff().calc({map: parser.map, mods});
         //const index = Math.floor((scoringFrame.offset - start_offset) / 400)
         //const rosu_stars = star_strains[index < star_strains.length ? index : star_strains.length - 1]
         //console.log(rosu_stars)
 
-        const pp = ojsama.ppv2({
-            stars,
-            combo: scoringFrame.maxCombo,
-            nmiss: scoringFrame.countMiss,
-            n300: scoringFrame.count300,
-            n100: scoringFrame.count100,
-            n50: scoringFrame.count50
-        });
+        // const pp = ojsama.ppv2({
+        //     stars,
+        //     combo: scoringFrame.maxCombo,
+        //     nmiss: scoringFrame.countMiss,
+        //     n300: scoringFrame.count300,
+        //     n100: scoringFrame.count100,
+        //     n50: scoringFrame.count50
+        // });
 
-        scoringFrame.pp = pp.total;
-        scoringFrame.stars = stars.total;
+        scoringFrame.pp = pp;
+        scoringFrame.stars = stars;
     }
 
     let pp = 0, stars = 0;
