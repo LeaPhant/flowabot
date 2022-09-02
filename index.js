@@ -14,7 +14,7 @@ const chalk = require('chalk');
 const osu = require('./osu.js');
 const helper = require('./helper.js');
 
-const client = new Discord.Client({autoReconnect:true});
+const client = new Discord.Client({autoReconnect:true, disableMentions: "everyone"});
 
 client.on('error', helper.error);
 
