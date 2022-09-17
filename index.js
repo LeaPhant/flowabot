@@ -18,6 +18,11 @@ const client = new Discord.Client({autoReconnect:true, disableMentions: "everyon
 
 client.on('error', helper.error);
 
+process.on('uncaughtException', (err) => {
+    helper.error(err)
+    process.exit(0)
+});
+
 const config = require('./config.json');
 
 let user_ign = {};
