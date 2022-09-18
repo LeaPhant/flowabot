@@ -45,7 +45,7 @@ module.exports = {
                 axios.get(response.data.renderLocation, {httpsAgent: agent, method: "GET", responseType: "stream"}).then(response => {
                     let attachment = [{
                         attachment: response.data,
-                        name: text.substring(0,1024) + '.gif'
+                        name: text.substring(0,1024).replace(/(\r\n|\n|\r)/g,"") + '.gif'
                     }]
 
                     resolve({files: attachment});
