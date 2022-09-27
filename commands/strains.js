@@ -64,9 +64,20 @@ module.exports = {
                 }else if(!beatmap_id && !custom_url){
                     beatmap_id = last_beatmap[msg.channel.id].beatmap_id;
                     download_promise = helper.downloadBeatmap(beatmap_id).catch(helper.error);
-
-                    mods = Array.isArray(last_beatmap[msg.channel.id].mods)
-                    ? last_beatmap[msg.channel.id].mods.map(mod => mod.acronym) : [];
+                    if (!mods) {
+                        mods = last_beatmap[msg.channel.id].mods
+                    }
+                    if (Array.isArray(mods)) {
+                        if (typeof mods[0] === 'object') {
+                            mods = mods.map(mod => mod.acronym)
+                        } else if (typeof mods[0] === 'string') {
+                            mods = mods
+                        } else {
+                            mods = []
+                        }
+                    } else {
+                        mods = []
+                    }
                 }
 
                 let download_path = path.resolve(config.osu_cache_path, `${beatmap_id}.osu`);

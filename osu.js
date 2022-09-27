@@ -52,7 +52,7 @@ if(helper.getItem('top_plays')){
 
 let discord_client, last_beatmap;
 
-const DIFF_MODS = ["HR","EZ","DT","HT","FL"];
+const DIFF_MODS = ["HR","EZ","DT","HT","FL","HD","TD"];
 
 const TIME_MODS = ["DT", "HT"];
 
@@ -1605,7 +1605,10 @@ module.exports = {
             const mods = top.mods.map(mod => mod.acronym)
             if (mods.includes("NC")) mods.push("DT")
 
-            const diff = difficulty[getModsEnum(mods.filter(mod => DIFF_MODS.includes(mod)))];
+            let diffmods = mods
+            if (mods.includes("HD") && !mods.includes("FL")) diffmods = mods.filter(m => m !== "HD")
+
+            const diff = difficulty[getModsEnum(diffmods.filter(mod => DIFF_MODS.includes(mod)))];
 
             top.stars = diff.total;
 
@@ -1667,7 +1670,10 @@ module.exports = {
             const mods = pin.mods.map(mod => mod.acronym)
             if (mods.includes("NC")) mods.push("DT")
 
-            const diff = difficulty[getModsEnum(mods.filter(mod => DIFF_MODS.includes(mod)))];
+            let diffmods = mods
+            if (mods.includes("HD") && !mods.includes("FL")) diffmods = mods.filter(m => m !== "HD")
+
+            const diff = difficulty[getModsEnum(diffmods.filter(mod => DIFF_MODS.includes(mod)))];
 
             pin.stars = diff.total;
 
@@ -1757,7 +1763,10 @@ module.exports = {
             let bpm_min = beatmap.bpm_min * speed;
             let bpm_max = beatmap.bpm_max * speed;
 
-            let diff = response.difficulty[getModsEnum(options.mods.filter(mod => DIFF_MODS.includes(mod)))];
+            let diffmods = options.mods
+            if (options.mods.includes("HD") && !options.mods.includes("FL")) diffmods = options.mods.filter(m => m !== "HD")
+
+            let diff = response.difficulty[getModsEnum(diffmods.filter(mod => DIFF_MODS.includes(mod)))];
 
             if(!diff.aim && !diff.speed){
                 cb('No difficulty data for this map! Please try again later. 😭');
@@ -2227,7 +2236,10 @@ module.exports = {
         let mods = ojsama.modbits.from_string(mods_string || "");
         let mods_array = getMods(mods);
 
-        let mods_filtered = mods_array.filter(mod => DIFF_MODS.includes(mod));
+        let diffmods = mods_array
+        if (mods_array.includes("HD") && !mods_array.includes("FL")) diffmods = mods_array.filter(m => m !== "HD")
+
+        let mods_filtered = diffmods.filter(mod => DIFF_MODS.includes(mod));
 
         if(mods_filtered.length > 0){
             map.version += ' +' + mods_filtered.join('');
