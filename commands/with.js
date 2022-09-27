@@ -47,8 +47,20 @@ module.exports = {
             if(msg.channel.id in last_beatmap && beatmapSet == false){
                 options.beatmap_id = last_beatmap[msg.channel.id].beatmap_id;
 
-                if(!modsSet)
-                    options.mods = last_beatmap[msg.channel.id].mods.map(mod => mod.acronym);
+                if(!modsSet) {
+                    mods = last_beatmap[msg.channel.id].mods
+                    if (Array.isArray(mods)) {
+                        if (typeof mods[0] === 'object') {
+                            options.mods = mods.map(mod => mod.acronym)
+                        } else if (typeof mods[0] === 'string') {
+                            options.mods = mods
+                        } else {
+                            options.mods = []
+                        }
+                    } else {
+                        options.mods = []
+                    }
+                }
 
                 if(!accSet)
                     options.custom_acc = last_beatmap[msg.channel.id].acc;
