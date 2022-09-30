@@ -1743,7 +1743,7 @@ module.exports = {
     get_pp: function(options, cb){
         axios.get(`${config.beatmap_api}/b/${options.beatmap_id}`).then(response => {
             response = response.data;
-            helper.log(response);
+            //helper.log(response);
 
             let beatmap = response.beatmap;
 
@@ -1812,7 +1812,7 @@ module.exports = {
             embed.url = `https://osu.ppy.sh/b/${beatmap.beatmap_id}`;
             embed.description = options.mods.length > 0 ? '+' + options.mods.join('') : 'NOMOD';
 
-            let lines = ['', '', 'Difficulty                Eyup Star Rating', ''];
+            let lines = ['', '', 'Difficulty', ''];
 
             accuracies.forEach((acc, index) => {
                 if(index > 0)
@@ -1853,8 +1853,6 @@ module.exports = {
             lines[3] += ' BPM ~ ';
             lines[3] += `**${+diff.total.toFixed(2)}**★`;
 
-            lines[3] += `   **${beatmap.eyup_star_rating ? beatmap.eyup_star_rating.toFixed(2) + "**★": "Unavailable**"}`
-
             embed.fields = [
                 {
                     name: lines[0],
@@ -1862,12 +1860,23 @@ module.exports = {
                 },
                 {
                     name: lines[2],
-                    value: lines[3]
+                    value: lines[3],
                 },
                 {
-                    name: 'Nomod SS     HDHRDTFL SS',
-                    value: `${beatmap.max_score ? beatmap.max_score.toLocaleString() + " Score" : "Unavailable"}   ${beatmap.max_score_fullmod ? beatmap.max_score_fullmod.toLocaleString() + " Score" : "Unavailable"}`
-                }
+                    name: "Eyup Stars",
+                    value: `**${beatmap.eyup_star_rating ? beatmap.eyup_star_rating.toFixed(2) + "**★": "Unavailable**"}`,
+                    inline: true
+                },
+                {
+                    name: 'Nomod SS',
+                    value: beatmap.max_score ? beatmap.max_score.toLocaleString() + " Score" : "Unavailable",
+                    inline: true
+                },
+                {
+                    name: "HDHRDTFL SS",
+                    value: beatmap.max_score_fullmod ? beatmap.max_score_fullmod.toLocaleString() + " Score" : "Unavailable",
+                    inline: true
+                },
             ];
 
             cb(null, embed);
