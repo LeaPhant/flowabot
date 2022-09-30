@@ -1810,7 +1810,7 @@ module.exports = {
             embed.color = 12277111;
             embed.title = `${beatmap.artist} – ${beatmap.title} [${beatmap.version}]`;
             embed.url = `https://osu.ppy.sh/b/${beatmap.beatmap_id}`;
-            embed.description = options.mods.length > 0 ? '+' + options.mods.join('') : 'NOMOD';
+            embed.description = `**${options.mods.length > 0 ? '+' + options.mods.join('') : 'NOMOD'}**`;
 
             let lines = ['', '', 'Difficulty', ''];
 
