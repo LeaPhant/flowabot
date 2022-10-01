@@ -231,6 +231,33 @@ var settings = {
     api_key: ""
 };
 
+// https://github.com/Francesco149/ojsama/blob/603578e7db3f5cc0325a4fcb73f1050aca20086e/ojsama.js#L1433
+function hitsFromAcc(acc, nobjects, nmiss = 0) {
+    let n300=0, n100=0, n50=0
+    const max300 = nobjects - nmiss
+    n100 = Math.round(
+        -3.0 * ((acc * 0.01 - 1.0) * nobjects + nmiss) * 0.5
+    )
+    
+    if (n100 > max300) {
+        // acc lower than all 100s, use 50s
+        n100 = 0;
+        n50 = Math.round(
+          -6.0 * ((acc_percent * 0.01 - 1.0) * nobjects + nmiss) * 0.5
+        );
+        n50 = Math.min(max300, n50);
+    }
+
+    n300 = nobjects - n100 - n50 - nmiss;
+
+    return {
+        count300: n300,
+        count100: n100,
+        count50: n50,
+        countmiss: nmiss
+    }
+}
+
 function accuracy(count300, count100, count50, countmiss){
 	return (Number(count300) * 300 + Number(count100) * 100 + Number(count50) * 50)
 		/  (Number(count300) * 300 + Number(count100) * 300 + Number(count50) * 300 + Number(countmiss) * 300);
@@ -1740,9 +1767,10 @@ module.exports = {
         getScore(recent_raw, cb);
 },
 
-    get_pp: function(options, cb){
-        axios.get(`${config.beatmap_api}/b/${options.beatmap_id}`).then(response => {
-            response = response.data;
+    get_pp: async function(options, cb){
+        try {
+            const result = await axios.get(`${config.beatmap_api}/b/${options.beatmap_id}`)
+            const response = result.data;
             //helper.log(response);
 
             let beatmap = response.beatmap;
@@ -1773,17 +1801,25 @@ module.exports = {
                 return;
             }
 
-            let pp_calc_obj = {
-                aim_stars: diff.aim,
-                speed_stars: diff.speed,
-                base_ar: beatmap.ar,
-                base_od: beatmap.od,
-                mods: getModsEnum(options.mods),
-                ncircles: beatmap.num_circles,
-                nsliders: beatmap.num_sliders,
-                nobjects: beatmap.hit_objects,
+            const pp_calc_obj = {
+                enabled_mods: getModsEnum(options.mods),
+                maxcombo: beatmap.max_combo,
+            }
+
+            const diff_obj = {
+                aim: diff.aim,
+                speed: diff.speed,
+                fl: diff.fl,
+                total: diff.total,
+                slider_factor: diff.slider_factor,
+                speed_note_count: diff.speed_note_count,
                 max_combo: beatmap.max_combo,
-            };
+                ar: diff.ar,
+                od: diff.od,
+                count_circles: beatmap.num_circles,
+                count_sliders: beatmap.num_sliders,
+                count_spinners: beatmap.num_spinners,
+            }
 
             let accuracies = [90, 95, 97, 98, 99, 99.5, 100];
 
@@ -1800,10 +1836,15 @@ module.exports = {
 
             let pps = [];
 
-            accuracies.forEach(acc => {
-                let pp = ojsama.ppv2(Object.assign(pp_calc_obj, {acc_percent: acc}));
-                pps.push(Math.round(pp.total));
-            });
+            for (acc of accuracies) {
+                const hit_results = hitsFromAcc(acc, beatmap.hit_objects)
+                const pp = new std_ppv2()
+                pp.setDifficulty(diff_obj)
+                pp.setPerformance(Object.assign(pp_calc_obj, hit_results))
+                const pp_result = await pp.compute()
+                console.log(pp_result)
+                pps.push(Math.round(pp_result.total))
+            }
 
             let embed = {};
 
@@ -1880,11 +1921,11 @@ module.exports = {
             ];
 
             cb(null, embed);
-        }).catch(e => {
+        } catch (e) {
             cb('Map not in the database, maps that are too new don\'t work yet. 😐');
             helper.error(e);
             return false;
-        });
+        }
     },
 
     parse_beatmap_url: function(beatmap_url, id_only){
