@@ -50,13 +50,7 @@ module.exports = {
                 if(!modsSet) {
                     mods = last_beatmap[msg.channel.id].mods
                     if (Array.isArray(mods)) {
-                        if (typeof mods[0] === 'object') {
-                            options.mods = mods.map(mod => mod.acronym)
-                        } else if (typeof mods[0] === 'string') {
-                            options.mods = mods
-                        } else {
-                            options.mods = []
-                        }
+                        options.mods = mods
                     } else {
                         options.mods = []
                     }

@@ -1774,25 +1774,32 @@ module.exports = {
             //helper.log(response);
 
             let beatmap = response.beatmap;
-
-            if(!options.mods)
-                options.mods = [];
+            let mods = options.mods.map(mod => mod.acronym)
+            if(!mods)
+                mods = [];
 
             let diff_settings = calculateCsArOdHp(beatmap.cs, beatmap.ar, beatmap.od, beatmap.hp, options.mods);
 
             let speed = 1;
 
-            if(options.mods.includes('DT'))
-                speed *= 1.5;
-            else if(options.mods.includes('HT'))
-                speed *= 0.75;
+            const isDT = options.mods.find(m => {
+                return m.acronym === "DT"
+            })
+            const isHT = options.mods.find(m => {
+                return m.acronym === "HT"
+            })
+
+            if(isDT)
+                speed *= isDT.settings?.speed_change ?? 1.5;
+            else if(isHT)
+                speed *= isHT.settings?.speed_change ?? 0.75;;
 
             let bpm = beatmap.bpm * speed;
             let bpm_min = beatmap.bpm_min * speed;
             let bpm_max = beatmap.bpm_max * speed;
 
-            let diffmods = options.mods
-            if (options.mods.includes("HD") && !options.mods.includes("FL")) diffmods = options.mods.filter(m => m !== "HD")
+            let diffmods = mods
+            if (mods.includes("HD") && !mods.includes("FL")) diffmods = options.mods.filter(m => m !== "HD")
 
             let diff = response.difficulty[getModsEnum(diffmods.filter(mod => DIFF_MODS.includes(mod)))];
 
@@ -1802,7 +1809,7 @@ module.exports = {
             }
 
             const pp_calc_obj = {
-                enabled_mods: getModsEnum(options.mods),
+                enabled_mods: getModsEnum(mods),
                 maxcombo: beatmap.max_combo,
             }
 
@@ -1851,7 +1858,7 @@ module.exports = {
             embed.color = 12277111;
             embed.title = `${beatmap.artist} – ${beatmap.title} [${beatmap.version}]`;
             embed.url = `https://osu.ppy.sh/b/${beatmap.beatmap_id}`;
-            embed.description = `**${options.mods.length > 0 ? '+' + options.mods.join('') : 'NOMOD'}**`;
+            embed.description = `**${mods.length > 0 ? '+' + mods.join('') : 'NOMOD'}**`;
 
             let lines = ['', '', 'Difficulty', ''];
 
