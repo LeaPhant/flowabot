@@ -1799,7 +1799,7 @@ module.exports = {
             let bpm_max = beatmap.bpm_max * speed;
 
             let diffmods = mods
-            if (mods.includes("HD") && !mods.includes("FL")) diffmods = options.mods.filter(m => m !== "HD")
+            if (mods.includes("HD") && !mods.includes("FL")) diffmods = mods.filter(m => m !== "HD")
 
             let diff = response.difficulty[getModsEnum(diffmods.filter(mod => DIFF_MODS.includes(mod)))];
 
