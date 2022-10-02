@@ -33,7 +33,7 @@ module.exports = {
 
             argv.slice(1).forEach(arg => {
                 if(arg.startsWith('+')){
-                    options.mods = arg.toUpperCase().substr(1).match(/.{1,2}/g);
+                    options.mods = arg.toUpperCase().substr(1).match(/.{1,2}/g).map(mod => ({ "acronym": mod }));
                     modsSet = true;
                 }else if(arg.endsWith('%')){
                     options.custom_acc = parseFloat(arg);

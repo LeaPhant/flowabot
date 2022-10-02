@@ -399,9 +399,9 @@ function calculateCsArOdHp(cs_raw, ar_raw, od_raw, hp_raw, mods_enabled){
     let mods = mods_enabled.map(x => x.acronym)
 
     if (mods.includes("DT") || mods.includes("NC")) {
-        speed *= mods_enabled.filter(mod => mod.acronym == "DT" || mod.acronym == "NC")[0].settings.speed_change ?? 1.5;
+        speed *= mods_enabled.filter(mod => mod.acronym == "DT" || mod.acronym == "NC")[0].settings?.speed_change ?? 1.5;
     } else if (mods.includes("HT") || mods.includes("DC")) {
-        speed *= mods_enabled.filter(mod => mod.acronym == "HT" || mod.acronym == "DC")[0].settings.speed_change ?? 0.75;
+        speed *= mods_enabled.filter(mod => mod.acronym == "HT" || mod.acronym == "DC")[0].settings?.speed_change ?? 0.75;
     }
 
 	if(mods.includes("HR")){
@@ -1846,10 +1846,11 @@ module.exports = {
             for (acc of accuracies) {
                 const hit_results = hitsFromAcc(acc, beatmap.hit_objects)
                 const pp = new std_ppv2()
+
                 pp.setDifficulty(diff_obj)
                 pp.setPerformance(Object.assign(pp_calc_obj, hit_results))
+
                 const pp_result = await pp.compute()
-                console.log(pp_result)
                 pps.push(Math.round(pp_result.total))
             }
 
