@@ -243,7 +243,7 @@ function hitsFromAcc(acc, nobjects, nmiss = 0) {
         // acc lower than all 100s, use 50s
         n100 = 0;
         n50 = Math.round(
-          -6.0 * ((acc_percent * 0.01 - 1.0) * nobjects + nmiss) * 0.5
+            -6.0 * ((acc * 0.01 - 1.0) * nobjects + nmiss) * 0.5
         );
         n50 = Math.min(max300, n50);
     }
