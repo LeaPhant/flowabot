@@ -41,10 +41,10 @@ module.exports = {
 
                     let output = ""
                     output += `\`\`\`\n`
-                    output += `Top 1s :\t${counts.top1s}\n`
-                    output += `Top 8s :\t${counts.top8s}\n`
-                    output += `Top 25s:\t${counts.top25s}\n`
-                    output += `Top 50s:\t${counts.top50s}\n`
+                    output += `Top 1s :\t${counts.top1s ?? 0}\n`
+                    output += `Top 8s :\t${counts.top8s ?? 0}\n`
+                    output += `Top 25s:\t${counts.top25s ?? 0}\n`
+                    output += `Top 50s:\t${counts.top50s ?? 0}\n`
                     output += `\`\`\``
 
                     embed.fields = []
