@@ -978,6 +978,10 @@ module.exports = {
 
     },
 
+    get_user_id: async function (username) {
+        return await getUserId(username)
+    },
+
     get_mode_name: function(mode){
         switch(mode){
             case 0:
