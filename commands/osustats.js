@@ -52,7 +52,7 @@ module.exports = {
 
                     embed.fields = []
                     embed.footer = {
-                        text: `Last update: ${DateTime.fromISO(last_update).toRelative()}${helper.sep}${last_update.replaceAll("T", " ").split(".")[0]} UTC`
+                        text: `Last update: ${DateTime.fromISO(last_update).toRelative()}${helper.sep}${last_update.replace(/T/g, " ").split(".")[0]} UTC`
                     }
                     embed.description = output
 
