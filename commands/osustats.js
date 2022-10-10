@@ -1,6 +1,7 @@
 const osu = require('../osu.js');
 const helper = require('../helper.js');
 const axios = require('axios');
+const { DateTime } = require('luxon')
 
 module.exports = {
     command: ['osustatscounts', 'osustats', 'osc'],
@@ -30,6 +31,8 @@ module.exports = {
 
             const res = await axios.get(`https://osustats.respektive.pw/counts/${user_id}`)
             const counts = res.data
+            const res2 = await axios.get("https://osustats.respektive.pw/last_update")
+            const last_update = res2.data.last_update
 
             if (counts) {
                 osu.get_user({ u: osu_user }, (err, embed) => {
@@ -48,7 +51,9 @@ module.exports = {
                     output += `\`\`\``
 
                     embed.fields = []
-                    embed.footer = {}
+                    embed.footer = {
+                        text: `Last update: ${DateTime.fromISO(last_update).toRelative()}${helper.sep}${last_update.replaceAll("T", " ").split(".")[0]} UTC`
+                    }
                     embed.description = output
 
                     resolve({ embed: embed });
