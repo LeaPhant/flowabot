@@ -54,10 +54,14 @@ module.exports = {
                     search["star_rating"] = argv[i + 1]
                 } else {
                     let stars = ""
-                    if (arg == "-min")
+                    if (arg == "-min") {
                         stars += argv[i + 1] + "-"
+                    }
                     if (arg == "-max")
-                        stars += argv[i + 1]
+                        if (stars.endsWith("-"))
+                            stars += argv[i + 1]
+                        else
+                            stars += "-" + argv[i + 1]
                     if (stars.length > 0) {
                         if (stars.startsWith("-")) {
                             stars = "0" + stars
