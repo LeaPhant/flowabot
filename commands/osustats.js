@@ -62,6 +62,9 @@ module.exports = {
                         if (stars.startsWith("-")) {
                             stars = "0" + stars
                         }
+                        if (stars.endsWith("-")) {
+                            stars = stars + "99"
+                        }
                         search["star_rating"] = stars
                     }
                 }
