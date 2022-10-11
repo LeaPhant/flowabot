@@ -43,6 +43,7 @@ module.exports = {
             const { user_id } = await osu.get_user_id(osu_user)
 
             let search = {}
+            let stars = ""
             for (const [i, arg] of argv.entries()) {
                 if (arg == "-start" || arg == "-from")
                     search["from"] = argv[i + 1]
@@ -53,7 +54,6 @@ module.exports = {
                 if (arg == "-stars") {
                     search["star_rating"] = argv[i + 1]
                 } else {
-                    let stars = ""
                     if (arg == "-min") {
                         stars += argv[i + 1] + "-"
                     }
@@ -62,15 +62,6 @@ module.exports = {
                             stars += argv[i + 1]
                         else
                             stars += "-" + argv[i + 1]
-                    if (stars.length > 0) {
-                        if (stars.startsWith("-")) {
-                            stars = "0" + stars
-                        }
-                        if (stars.endsWith("-")) {
-                            stars = stars + "99"
-                        }
-                        search["star_rating"] = stars
-                    }
                 }
                 if (arg == "-length-min")
                     search["length_min"] = argv[i + 1]
@@ -80,6 +71,15 @@ module.exports = {
                     search["spinners_min"] = argv[i + 1]
                 if (arg == "-spinners-max")
                     search["spinners_max"] = argv[i + 1]
+            }
+            if (stars.length > 0) {
+                if (stars.startsWith("-")) {
+                    stars = "0" + stars
+                }
+                if (stars.endsWith("-")) {
+                    stars += "99"
+                }
+                search["star_rating"] = stars
             }
 
             let searchParamsString = "";
