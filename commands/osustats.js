@@ -23,7 +23,7 @@ module.exports = {
         return new Promise(async (resolve, reject) => {
             let { argv, msg, user_ign } = obj;
             let filteredArgv = argv
-            if (ARGS.includes(argv[1]) || argv[1].startsWith("+")) {
+            if (argv[1] && (ARGS.includes(argv[1]) || argv[1].startsWith("+"))) {
                 filteredArgv = argv.splice(0, 1)
             } else {
                 filteredArgv = argv.splice(0, 2)
