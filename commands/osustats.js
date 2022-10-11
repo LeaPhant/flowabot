@@ -3,7 +3,7 @@ const helper = require('../helper.js');
 const axios = require('axios');
 const { DateTime } = require('luxon')
 
-const ARGS = ["-start", "-from", "-end", "-to", "-tags", "-min", "-max", "-stars", "-length-min", "-length-max", "-spinners-min", "-spinners-max"]
+const ARGS = ["-start", "-from", "-end", "-to", "-tags", "-min", "-max", "-stars", "-length-min", "-length-max", "-spinners-min", "-spinners-max", "-mods", "-m"]
 
 module.exports = {
     command: ['osustatscounts', 'osustats', 'osc'],
@@ -72,8 +72,8 @@ module.exports = {
                     search["spinners_min"] = argv[i + 1]
                 if (arg == "-spinners-max")
                     search["spinners_max"] = argv[i + 1]
-                if (arg.startsWith("+")) {
-                    const modString = arg.replace(/\+/g, "")
+                if (arg == "-mods" || arg == "-m") {
+                    const modString = argv[i + 1].replace(/\+/g, "")
                     modString.toUpperCase().match(/.{2}/g).forEach(m => {
                         mods_array.push(m)
                     })
