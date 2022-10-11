@@ -3,6 +3,8 @@ const helper = require('../helper.js');
 const axios = require('axios');
 const { DateTime } = require('luxon')
 
+const ARGS = ["-start", "-from", "-end", "-to", "-tags", "-min", "-max", "-stars", "-length-min", "-length-max", "-spinners-min", "-spinners-max"]
+
 module.exports = {
     command: ['osustatscounts', 'osustats', 'osc'],
     description: "Get leaderboard position counts",
@@ -12,11 +14,22 @@ module.exports = {
             run: "osc xasuma",
             result: "Returns the leaderboard positions for xasuma."
         },
+        {
+            run: "osc wubwoofwolf -length-max 300 -min 1 -max 5 -start 2010-01-01 -end 2013-01-01",
+            result: "Returns the leaderboard positions for WubWoofWolf with the given parameters."
+        }
     ],
     call: obj => {
         return new Promise(async (resolve, reject) => {
             let { argv, msg, user_ign } = obj;
-            let osu_user = helper.getUsername(argv, msg, user_ign);
+            let filteredArgv = argv
+            if (ARGS.includes(argv[1])) {
+                filteredArgv = argv.splice(0, 1)
+            } else {
+                filteredArgv = argv.splice(0, 2)
+            }
+
+            let osu_user = helper.getUsername(filteredArgv, msg, user_ign);
 
             if (!osu_user) {
                 if (user_ign[msg.author.id] == undefined)
@@ -29,7 +42,46 @@ module.exports = {
 
             const { user_id } = await osu.get_user_id(osu_user)
 
-            const res = await axios.get(`https://osustats.respektive.pw/counts/${user_id}`)
+            let search = {}
+            for (const [i, arg] of argv.entries()) {
+                if (arg == "-start" || arg == "-from")
+                    search["from"] = argv[i + 1]
+                if (arg == "-end" || arg == "-to")
+                    search["to"] = argv[i + 1]
+                if (arg == "-tags")
+                    search["tags"] = argv[i + 1]
+                if (arg == "-stars") {
+                    search["star_rating"] = argv[i + 1]
+                } else {
+                    let stars = ""
+                    if (arg == "-min")
+                        stars += argv[i + 1] + "-"
+                    if (arg == "-max")
+                        stars += argv[i + 1]
+                    if (stars.length > 0) {
+                        if (stars.startsWith("-")) {
+                            stars = "0" + stars
+                        }
+                        search["star_rating"] = stars
+                    }
+                }
+                if (arg == "-length-min")
+                    search["length_min"] = argv[i + 1]
+                if (arg == "-length-max")
+                    search["length_max"] = argv[i + 1]
+                if (arg == "-spinners-min")
+                    search["spinners_min"] = argv[i + 1]
+                if (arg == "-spinners-max")
+                    search["spinners_max"] = argv[i + 1]
+            }
+
+            let searchParamsString = "";
+            if (Object.keys(search).length != 0) {
+                const params = new URLSearchParams(search)
+                searchParamsString = "?" + params.toString()
+            }
+
+            const res = await axios.get(`https://osustats.respektive.pw/counts/${user_id}${searchParamsString}`)
             const counts = res.data
             const res2 = await axios.get("https://osustats.respektive.pw/last_update")
             const last_update = res2.data.last_update
