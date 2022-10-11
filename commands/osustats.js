@@ -23,7 +23,7 @@ module.exports = {
         return new Promise(async (resolve, reject) => {
             let { argv, msg, user_ign } = obj;
             let filteredArgv = argv
-            if (ARGS.includes(argv[1])) {
+            if (ARGS.includes(argv[1]) || argv[1].startsWith("+")) {
                 filteredArgv = argv.splice(0, 1)
             } else {
                 filteredArgv = argv.splice(0, 2)
@@ -43,6 +43,7 @@ module.exports = {
             const { user_id } = await osu.get_user_id(osu_user)
 
             let search = {}
+            let mods_array = []
             let stars = ""
             for (const [i, arg] of argv.entries()) {
                 if (arg == "-start" || arg == "-from")
@@ -71,7 +72,22 @@ module.exports = {
                     search["spinners_min"] = argv[i + 1]
                 if (arg == "-spinners-max")
                     search["spinners_max"] = argv[i + 1]
+                if (arg.startsWith("+")) {
+                    const modString = arg.replace(/\+/g, "")
+                    modString.toUpperCase().match(/.{2}/g).forEach(m => {
+                        mods_array.push(m)
+                    })
+                }
             }
+            if (mods_array.length > 0) {
+                if (mods_array.includes("NC") && !mods_array.includes("DT"))
+                    mods_array.push("DT")
+                if (mods_array.includes("PF") && !mods_array.includes("SD"))
+                    mods_array.push("SD")
+
+                search["mods"] = mods_array.join("")
+            }
+
             if (stars.length > 0) {
                 if (stars.startsWith("-")) {
                     stars = "0" + stars
