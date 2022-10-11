@@ -15,7 +15,7 @@ module.exports = {
             result: "Returns the leaderboard positions for xasuma."
         },
         {
-            run: "osc wubwoofwolf -length-min 60 -length-max 300 -min 1 -max 5 -start 2010-01-01 -end 2013-01-01",
+            run: "osc wubwoofwolf -length-min 60 -length-max 300 -min 1 -max 5 -start 2010-01-01 -end 2013-01-01 -spinners-min 1 -spinners-max 3",
             result: "Returns the leaderboard positions for WubWoofWolf with the given parameters."
         }
     ],
