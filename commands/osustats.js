@@ -105,6 +105,7 @@ module.exports = {
                     output += `\`\`\`\n`
                     output += `Top 1s :\t${counts.top1s ?? 0}\n`
                     output += `Top 8s :\t${counts.top8s ?? 0}\n`
+                    output += `Top 15s:\t${counts.top15s ?? 0}\n`
                     output += `Top 25s:\t${counts.top25s ?? 0}\n`
                     output += `Top 50s:\t${counts.top50s ?? 0}\n`
                     output += `\`\`\``
