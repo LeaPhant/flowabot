@@ -108,12 +108,13 @@ module.exports = {
 
                 let output = ""
 
-                const longest = Math.max(...(rankings.map(el => el.username.length)));
+                const biggest_count = Math.max(...(rankings.map(el => el[type].toString().length)));
+                const longest_name = Math.max(...(rankings.map(el => el.username.length)));
                 for (const user of rankings) {
                     output += `\`#${user.rank}${user.rank < 10 ? " " : ""}\``
                     output += `:flag_${user.country.toLowerCase()}:\``
-                    output += `${user.username}${" ".repeat(longest - user.username.length)}\``
-                    output += ` \`${user[type].toLocaleString()}\`\n`
+                    output += `${user.username}${" ".repeat(longest_name - user.username.length)}\``
+                    output += ` \`${user[type].toLocaleString()}${" ".repeat(biggest_count - user[type].toString().length)}\`\n`
                 }
 
                 embed.description = output
