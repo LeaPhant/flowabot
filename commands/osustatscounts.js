@@ -3,7 +3,11 @@ const helper = require('../helper.js');
 const axios = require('axios');
 const { DateTime } = require('luxon')
 
-const ARGS = ["-start", "-from", "-end", "-to", "-tags", "-min", "-max", "-stars", "-length-min", "-length-max", "-spinners-min", "-spinners-max", "-mods", "-m"]
+const ARGS = [
+    "-start", "-from", "-end", "-to", "-tags", "-min", "-max",
+    "-stars", "-length-min", "-length-max", "-spinners-min",
+    "-spinners-max", "-mods", "-m", "-is", "-isnot", "-not"
+]
 
 module.exports = {
     command: ['osustatscounts', 'osc'],
@@ -44,6 +48,8 @@ module.exports = {
 
             let search = {}
             let mods_array = []
+            let mods_include_array = []
+            let mods_exclude_array = []
             let stars = ""
             for (const [i, arg] of argv.entries()) {
                 if (arg == "-start" || arg == "-from")
@@ -78,6 +84,18 @@ module.exports = {
                         mods_array.push(m)
                     })
                 }
+                if (arg == "-is") {
+                    const modString = argv[i + 1].replace(/\+/g, "")
+                    modString.toUpperCase().match(/.{2}/g).forEach(m => {
+                        mods_include_array.push(m)
+                    })
+                }
+                if (arg == "-isnot" || arg == "-not") {
+                    const modString = argv[i + 1].replace(/\+/g, "")
+                    modString.toUpperCase().match(/.{2}/g).forEach(m => {
+                        mods_exclude_array.push(m)
+                    })
+                }
             }
             if (mods_array.length > 0) {
                 if (mods_array.includes("NC") && !mods_array.includes("DT"))
@@ -87,7 +105,22 @@ module.exports = {
 
                 search["mods"] = mods_array.join("")
             }
+            if (mods_include_array.length > 0) {
+                if (mods_include_array.includes("NC") && !mods_include_array.includes("DT"))
+                    mods_include_array.push("DT")
+                if (mods_include_array.includes("PF") && !mods_include_array.includes("SD"))
+                    mods_include_array.push("SD")
 
+                search["mods_include"] = mods_include_array.join("")
+            }
+            if (mods_exclude_array.length > 0) {
+                if (mods_exclude_array.includes("NC") && !mods_exclude_array.includes("DT"))
+                    mods_exclude_array.push("DT")
+                if (mods_exclude_array.includes("PF") && !mods_exclude_array.includes("SD"))
+                    mods_exclude_array.push("SD")
+
+                search["mods_exclude"] = mods_exclude_array.join("")
+            }
             if (stars.length > 0) {
                 if (stars.startsWith("-")) {
                     stars = "0" + stars

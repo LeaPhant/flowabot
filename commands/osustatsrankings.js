@@ -30,6 +30,8 @@ module.exports = {
                 "page": 1,
             }
             let mods_array = []
+            let mods_include_array = []
+            let mods_exclude_array = []
             let stars = ""
             for (const [i, arg] of argv.entries()) {
                 if (arg == "-page" || arg == "-p")
@@ -66,6 +68,18 @@ module.exports = {
                         mods_array.push(m)
                     })
                 }
+                if (arg == "-is") {
+                    const modString = argv[i + 1].replace(/\+/g, "")
+                    modString.toUpperCase().match(/.{2}/g).forEach(m => {
+                        mods_include_array.push(m)
+                    })
+                }
+                if (arg == "-isnot" || arg == "-not") {
+                    const modString = argv[i + 1].replace(/\+/g, "")
+                    modString.toUpperCase().match(/.{2}/g).forEach(m => {
+                        mods_exclude_array.push(m)
+                    })
+                }
             }
             if (mods_array.length > 0) {
                 if (mods_array.includes("NC") && !mods_array.includes("DT"))
@@ -74,6 +88,22 @@ module.exports = {
                     mods_array.push("SD")
 
                 search["mods"] = mods_array.join("")
+            }
+            if (mods_include_array.length > 0) {
+                if (mods_include_array.includes("NC") && !mods_include_array.includes("DT"))
+                    mods_include_array.push("DT")
+                if (mods_include_array.includes("PF") && !mods_include_array.includes("SD"))
+                    mods_include_array.push("SD")
+
+                search["mods_include"] = mods_include_array.join("")
+            }
+            if (mods_exclude_array.length > 0) {
+                if (mods_exclude_array.includes("NC") && !mods_exclude_array.includes("DT"))
+                    mods_exclude_array.push("DT")
+                if (mods_exclude_array.includes("PF") && !mods_exclude_array.includes("SD"))
+                    mods_exclude_array.push("SD")
+
+                search["mods_exclude"] = mods_exclude_array.join("")
             }
 
             if (stars.length > 0) {
