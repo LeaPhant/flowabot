@@ -151,7 +151,7 @@ module.exports = {
                 if (user) {
                     const res = await axios.get(`https://osustats.respektive.pw/counts/${user}${searchParamsString}`)
                     user_row = res.data
-                    if (user_row[type] > rankings[0][type]) {
+                    if (user_row && user_row.username && user_row[type] > rankings[0][type]) {
                         output += `\`#${user_row[`${type}_rank`]}${user_row[`${type}_rank`] < 10 ? " " : ""}\``
                         let country_code = user_row.country?.toLowerCase() ?? null
                         output += country_code ? `:flag_${country_code}:` : ":pirate_flag:"
@@ -168,7 +168,7 @@ module.exports = {
                     output += ` \`${user[type].toLocaleString()}${" ".repeat(biggest_count - user[type].toString().length)}\`\n`
                 }
 
-                if (user && user_row[type] < rankings[rankings.length - 1][type]) {
+                if (user_row && user_row.username && user_row[type] < rankings[rankings.length - 1][type]) {
                     output += `\`#${user_row[`${type}_rank`] ?? "??"}${user_row[`${type}_rank`] < 10 ? " " : ""}\``
                     let country_code = user_row.country?.toLowerCase() ?? null
                     output += country_code ? `:flag_${country_code}:` : ":pirate_flag:"
