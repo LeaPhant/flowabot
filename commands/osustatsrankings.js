@@ -33,7 +33,10 @@ module.exports = {
             let mods_include_array = []
             let mods_exclude_array = []
             let stars = ""
+            let user = Object.values(user_ign)[0] ?? null
             for (const [i, arg] of argv.entries()) {
+                if (arg == "-u" || arg == "-user")
+                    user = argv[i + 1]
                 if (arg == "-page" || arg == "-p")
                     search["page"] = argv[i + 1]
                 if (arg == "-start" || arg == "-from")
@@ -127,6 +130,11 @@ module.exports = {
             const res2 = await axios.get("https://osustats.respektive.pw/last_update")
             const last_update = res2.data.last_update
 
+            if (user && isNaN(user)) {
+                const { user_id } = await osu.get_user_id(user)
+                user = user_id
+            }
+
             if (rankings) {
                 let embed = {
                     color: 12277111,
@@ -135,16 +143,34 @@ module.exports = {
                     },
                     title: title(type)
                 }
-
-                let output = ""
-
                 const biggest_count = Math.max(...(rankings.map(el => el[type].toString().length)));
                 const longest_name = Math.max(...(rankings.map(el => el.username.length)));
+                let output = ""
+
+                let user_row
+                if (user) {
+                    const res = await axios.get(`https://osustats.respektive.pw/counts/${user}${searchParamsString}`)
+                    user_row = res.data
+                    if (user_row[type] > rankings[0][type]) {
+                        output += `\`#${user_row[`${type}_rank`]}${user_row[`${type}_rank`] < 10 ? " " : ""}\``
+                        output += `:flag_${user_row.country.toLowerCase()}:\``
+                        output += `${user_row.username}${" ".repeat(longest_name - user_row.username.length)}\``
+                        output += ` \`${user_row[type].toLocaleString()}${" ".repeat(biggest_count - user_row[type].toString().length)}\`\n`
+                    }
+                }
+
                 for (const user of rankings) {
                     output += `\`#${user.rank}${user.rank < 10 ? " " : ""}\``
                     output += `:flag_${user.country.toLowerCase()}:\``
                     output += `${user.username}${" ".repeat(longest_name - user.username.length)}\``
                     output += ` \`${user[type].toLocaleString()}${" ".repeat(biggest_count - user[type].toString().length)}\`\n`
+                }
+
+                if (user && user_row[type] < rankings[rankings.length - 1][type]) {
+                    output += `\`#${user_row[`${type}_rank`] ?? "??"}${user_row[`${type}_rank`] < 10 ? " " : ""}\``
+                    output += `:flag_${user_row.country.toLowerCase()}:\``
+                    output += `${user_row.username}${" ".repeat(longest_name - user_row.username.length)}\``
+                    output += ` \`${user_row[type].toLocaleString()}${" ".repeat(biggest_count - user_row[type].toString().length)}\`\n`
                 }
 
                 embed.description = output
