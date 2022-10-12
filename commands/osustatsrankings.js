@@ -157,7 +157,7 @@ module.exports = {
                         let country_code = user_row.country?.toLowerCase() ?? null
                         output += country_code ? `:flag_${country_code}:` : ":pirate_flag:"
                         output += `\`${user_row.username}${" ".repeat(clamp(longest_name - (user_row.username?.length ?? 4), 0, longest_name))}\``
-                        output += ` \`${user_row[type].toLocaleString()}${" ".repeat(clamp(biggest_count - user_row[type].toString().length, 0, biggest_count))}\`\n`
+                        output += ` \`${user_row[type].toLocaleString()}${" ".repeat(clamp(biggest_count - user_row[type].toLocaleString().length, 0, biggest_count))}\`\n`
                     }
                 }
 
@@ -166,7 +166,7 @@ module.exports = {
                     let country_code = user.country?.toLowerCase() ?? null
                     output += country_code ? `:flag_${country_code}:` : ":pirate_flag:"
                     output += `\`${user.username}${" ".repeat(clamp(longest_name - (user.username?.length ?? 4), 0, longest_name))}\``
-                    output += ` \`${user[type].toLocaleString()}${" ".repeat(clamp(biggest_count - user[type].toString().length, 0, biggest_count))}\`\n`
+                    output += ` \`${user[type].toLocaleString()}${" ".repeat(clamp(biggest_count - user[type].toLocaleString().length, 0, biggest_count))}\`\n`
                 }
 
                 if (user_row && user_row.username && user_row[type] < (rankings[rankings.length - 1][type] ?? 0)) {
@@ -174,7 +174,7 @@ module.exports = {
                     let country_code = user_row.country?.toLowerCase() ?? null
                     output += country_code ? `:flag_${country_code}:` : ":pirate_flag:"
                     output += `\`${user_row.username}${" ".repeat(clamp(longest_name - (user_row.username?.length ?? 4), 0, longest_name))}\``
-                    output += ` \`${user_row[type].toLocaleString()}${" ".repeat(clamp(biggest_count - user_row[type].toString().length, 0, biggest_count))}\`\n`
+                    output += ` \`${user_row[type].toLocaleString()}${" ".repeat(clamp(biggest_count - user_row[type].toLocaleString().length, 0, biggest_count))}\`\n`
                 }
 
                 embed.description = output
