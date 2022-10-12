@@ -144,7 +144,7 @@ module.exports = {
                     },
                     title: title(type)
                 }
-                const biggest_count = isFinite(Math.max(...(rankings.map(el => el[type].toString().length)))) ? Math.max(...(rankings.map(el => el[type].toString().length))) : 0
+                const biggest_count = isFinite(Math.max(...(rankings.map(el => el[type].toLocaleString().length)))) ? Math.max(...(rankings.map(el => el[type].toLocaleString().length))) : 0
                 const longest_name = isFinite(Math.max(...(rankings.map(el => el.username?.length ?? 0)))) ? Math.max(...(rankings.map(el => el.username?.length ?? 0))) : 0
                 let output = ""
 
