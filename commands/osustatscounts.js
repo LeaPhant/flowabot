@@ -6,8 +6,8 @@ const { DateTime } = require('luxon')
 const ARGS = ["-start", "-from", "-end", "-to", "-tags", "-min", "-max", "-stars", "-length-min", "-length-max", "-spinners-min", "-spinners-max", "-mods", "-m"]
 
 module.exports = {
-    command: ['osustatscounts', 'osustats', 'osc'],
-    description: "Get leaderboard position counts",
+    command: ['osustatscounts', 'osc'],
+    description: "Get leaderboard position counts for osu!",
     usage: '[username]',
     example: [
         {
