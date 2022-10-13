@@ -144,37 +144,44 @@ module.exports = {
                     },
                     title: title(type)
                 }
-                const biggest_count = isFinite(Math.max(...(rankings.map(el => el[type].toLocaleString().length)))) ? Math.max(...(rankings.map(el => el[type].toLocaleString().length))) : 0
-                const longest_name = isFinite(Math.max(...(rankings.map(el => el.username?.length ?? 0)))) ? Math.max(...(rankings.map(el => el.username?.length ?? 0))) : 0
+                let biggest_count = isFinite(Math.max(...(rankings.map(el => el[type].toLocaleString().length)))) ? Math.max(...(rankings.map(el => el[type].toLocaleString().length))) : 0
+                let longest_name = isFinite(Math.max(...(rankings.map(el => el.username?.length ?? 0)))) ? Math.max(...(rankings.map(el => el.username?.length ?? 0))) : 0
+                let longest_rank = isFinite(Math.max(...(rankings.map(el => el.rank?.toString().length ?? 0)))) ? Math.max(...(rankings.map(el => el.rank?.toString().length ?? 0))) : 0
                 let output = ""
 
                 let user_row
                 if (user) {
-                    const res = await axios.get(`https://osustats.respektive.pw/counts/${user}${searchParamsString}`)
+                    const res = await axios.get(`https://osustats.respektive.pw/counts/${user}${searchParamsString.replace("limit=10&page=1", "")}`)
                     user_row = res.data
+                    if (user_row[type] && user_row[type].toLocaleString().length > biggest_count)
+                        biggest_count = user_row[type].toLocaleString().length
+                    if (user_row.username && user_row.username.length > longest_name)
+                        longest_name = user_row.username.length
+                    if (user_row[`${type}_rank`] && user_row[`${type}_rank`].toString().length > longest_rank)
+                        longest_rank = user_row[`${type}_rank`].toString().length
                     if (user_row && user_row.username && user_row[type] > (rankings[0][type] ?? 0)) {
-                        output += `\`#${user_row[`${type}_rank`] ?? "??"}${user_row[`${type}_rank`] < 10 ? " " : ""}\``
+                        output += `\`#${user_row[`${type}_rank`] ?? ""}${user_row[`${type}_rank`] ? " ".repeat(clamp(longest_rank - user_row[`${type}_rank`].toString().length, 0, longest_rank)) : "?".repeat(longest_rank)}\``
                         let country_code = user_row.country?.toLowerCase() ?? null
                         output += country_code ? `:flag_${country_code}:` : ":pirate_flag:"
                         output += `\`${user_row.username}${" ".repeat(clamp(longest_name - (user_row.username?.length ?? 4), 0, longest_name))}\``
-                        output += ` \`${user_row[type].toLocaleString()}${" ".repeat(clamp(biggest_count - user_row[type].toLocaleString().length, 0, biggest_count))}\`\n`
+                        output += ` \`${" ".repeat(clamp(biggest_count - user_row[type].toLocaleString().length, 0, biggest_count))}${user_row[type].toLocaleString()}\`\n`
                     }
                 }
 
                 for (const user of rankings) {
-                    output += `\`#${user.rank}${user.rank < 10 ? " " : ""}\``
+                    output += `\`#${user.rank}${" ".repeat(clamp(longest_rank - user.rank.toString().length, 0, longest_rank))}\``
                     let country_code = user.country?.toLowerCase() ?? null
                     output += country_code ? `:flag_${country_code}:` : ":pirate_flag:"
                     output += `\`${user.username}${" ".repeat(clamp(longest_name - (user.username?.length ?? 4), 0, longest_name))}\``
-                    output += ` \`${user[type].toLocaleString()}${" ".repeat(clamp(biggest_count - user[type].toLocaleString().length, 0, biggest_count))}\`\n`
+                    output += ` \`${" ".repeat(clamp(biggest_count - user[type].toLocaleString().length, 0, biggest_count))}${user[type].toLocaleString()}\`\n`
                 }
 
                 if (user_row && user_row.username && user_row[type] < (rankings[rankings.length - 1][type] ?? 0)) {
-                    output += `\`#${user_row[`${type}_rank`] ?? "??"}${user_row[`${type}_rank`] < 10 ? " " : ""}\``
+                    output += `\`#${user_row[`${type}_rank`] ?? ""}${user_row[`${type}_rank`] ? " ".repeat(clamp(longest_rank - user_row[`${type}_rank`].toString().length, 0, longest_rank)) : "?".repeat(longest_rank)}\``
                     let country_code = user_row.country?.toLowerCase() ?? null
                     output += country_code ? `:flag_${country_code}:` : ":pirate_flag:"
                     output += `\`${user_row.username}${" ".repeat(clamp(longest_name - (user_row.username?.length ?? 4), 0, longest_name))}\``
-                    output += ` \`${user_row[type].toLocaleString()}${" ".repeat(clamp(biggest_count - user_row[type].toLocaleString().length, 0, biggest_count))}\`\n`
+                    output += ` \`${" ".repeat(clamp(biggest_count - user_row[type].toLocaleString().length, 0, biggest_count))}${user_row[type].toLocaleString()}\`\n`
                 }
 
                 embed.description = output
