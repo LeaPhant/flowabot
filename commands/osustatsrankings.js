@@ -34,7 +34,7 @@ module.exports = {
             let mods_include_array = []
             let mods_exclude_array = []
             let stars = ""
-            let user = Object.values(user_ign)[0] ?? null
+            let user = user_ign[msg.author.id]
             for (const [i, arg] of argv.entries()) {
                 if (arg == "-u" || arg == "-user")
                     user = argv[i + 1]
