@@ -151,7 +151,7 @@ module.exports = {
 
                 let user_row
                 if (user) {
-                    const res = await axios.get(`https://osustats.respektive.pw/counts/${user}${searchParamsString.replace("limit=10&page=1", "")}`)
+                    const res = await axios.get(`https://osustats.respektive.pw/counts/${user}${searchParamsString}`)
                     user_row = res.data
                     if (user_row[type] && user_row[type].toLocaleString().length > biggest_count)
                         biggest_count = user_row[type].toLocaleString().length
