@@ -152,11 +152,11 @@ module.exports = {
 
                     let output = ""
                     output += `\`\`\`\n`
-                    output += `Top 1s :\t${counts.top1s ?? 0}\n`
-                    output += `Top 8s :\t${counts.top8s ?? 0}\n`
-                    output += `Top 15s:\t${counts.top15s ?? 0}\n`
-                    output += `Top 25s:\t${counts.top25s ?? 0}\n`
-                    output += `Top 50s:\t${counts.top50s ?? 0}\n`
+                    output += `Top 1s : ${counts.top1s.toLocaleString().padStart(7) ?? "0".padStart(7)}\t${counts.top1s_rank ? "#" + counts.top1s_rank.toLocaleString() : ""}\n`
+                    output += `Top 8s : ${counts.top8s.toLocaleString().padStart(7) ?? "0".padStart(7) ?? 0}\t${counts.top8s_rank ? "#" + counts.top8s_rank.toLocaleString() : ""}\n`
+                    output += `Top 15s: ${counts.top15s.toLocaleString().padStart(7) ?? "0".padStart(7) ?? 0}\t${counts.top15s_rank ? "#" + counts.top15s_rank.toLocaleString() : ""}\n`
+                    output += `Top 25s: ${counts.top25s.toLocaleString().padStart(7) ?? "0".padStart(7) ?? 0}\t${counts.top25s_rank ? "#" + counts.top25s_rank.toLocaleString() : ""}\n`
+                    output += `Top 50s: ${counts.top50s.toLocaleString().padStart(7) ?? "0".padStart(7) ?? 0}\t${counts.top50s_rank ? "#" + counts.top50s_rank.toLocaleString() : ""}\n`
                     output += `\`\`\``
 
                     embed.fields = []
