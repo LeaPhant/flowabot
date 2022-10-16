@@ -66,6 +66,8 @@ module.exports = {
                     search["spinners_min"] = argv[i + 1]
                 if (arg == "-spinners-max")
                     search["spinners_max"] = argv[i + 1]
+                if (arg == "-country")
+                    search["country"] = argv[i + 1]
                 if (arg == "-mods" || arg == "-m") {
                     const modString = argv[i + 1].replace(/\+/g, "")
                     modString.toUpperCase().match(/.{2}/g).forEach(m => {
