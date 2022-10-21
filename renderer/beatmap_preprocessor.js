@@ -1382,18 +1382,20 @@ function processBeatmap(osuContents){
 
     beatmap.ScoringFrames = beatmap.ScoringFrames.sort((a, b) => a.offset - b.offset);
 
-    const parser = new ojsama.parser().feed(osuContents);
+    // const parser = new ojsama.parser().feed(osuContents);
+    const tmp_map = "/tmp/tmp.osu"
+    fs.writeFileSync(tmp_map, osuContents)
 
-    const objects = parser.map.objects.slice();
+    // const objects = parser.map.objects.slice();
     const mods = ojsama.modbits.from_string(enabled_mods.filter(a => ["HR", "EZ"].includes(a) == false).join(""));
     //const strains = rosu.strains(beatmap_path, mods)
     //const star_strains = osu.get_stars_from_strains(strains, enabled_mods);
     //const start_offset = beatmap.ScoringFrames[0].offset
     //console.log(star_strains)
 
-    parser.map.cs = beatmap.CircleSize;
-    parser.map.od = beatmap.OverallDifficultyRealtime;
-    parser.map.ar = beatmap.ApproachRateRealtime;
+    // parser.map.cs = beatmap.CircleSize;
+    // parser.map.od = beatmap.OverallDifficultyRealtime;
+    // parser.map.ar = beatmap.ApproachRateRealtime;
     
     for(const scoringFrame of beatmap.ScoringFrames.filter(a => ['miss', 50, 100, 300].includes(a.result))){
         const hitCount = scoringFrame.countMiss + scoringFrame.count50 + scoringFrame.count100 + scoringFrame.count300;
@@ -1407,25 +1409,27 @@ function processBeatmap(osuContents){
             n50: scoringFrame.count50,
             nMisses: scoringFrame.countMiss,
             combo: scoringFrame.maxCombo,
+            passedObjects: hitCount,
         }
 
-        let lines = osuContents.split(/\r?\n/)
-        for (let i in lines) {
+        // let lines = osuContents.split(/\r?\n/)
+        // for (let i in lines) {
             
-            if (lines[i].startsWith("CircleSize:")) {
-                lines[i] = "CircleSize:" + beatmap.CircleSize
-            }
-            if (lines[i].startsWith("OverallDifficulty:")) {
-                lines[i] = "OverallDifficulty:" + beatmap.OverallDifficultyRealtime
-            }
-            if (lines[i].startsWith("ApproachRate:")) {
-                lines[i] = "ApproachRate:" + beatmap.ApproachRateRealtime
-            }
-        }
-        const content = lines.join("\n")
+        //     if (lines[i].startsWith("CircleSize:")) {
+        //         lines[i] = "CircleSize:" + beatmap.CircleSize
+        //     }
+        //     if (lines[i].startsWith("OverallDifficulty:")) {
+        //         lines[i] = "OverallDifficulty:" + beatmap.OverallDifficultyRealtime
+        //     }
+        //     if (lines[i].startsWith("ApproachRate:")) {
+        //         lines[i] = "ApproachRate:" + beatmap.ApproachRateRealtime
+        //     }
+        // }
+        // const content = lines.join("\n")
         
+        //const rosu_results = calcForObjectAmount(content, hitCount, params)
 
-        const rosu_results = calcForObjectAmount(content, hitCount, params)
+        const rosu_results = rosu.calculate({path: tmp_map, params: [params]})
         const pp = rosu_results[0].pp
         const stars = rosu_results[0].stars
 
