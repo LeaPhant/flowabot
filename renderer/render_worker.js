@@ -61,11 +61,11 @@ process.on('message', async obj => {
 
                 const flSize = sizeRelative * PLAYFIELD_HEIGHT * scale_multiplier / 2;
 
-                const gradient = 
+                const gradient =
                     flCtx.createRadialGradient(
-                        flCanvas.width / 2, flCanvas.height / 2, 
-                        flSize * 0.9, 
-                        flCanvas.width / 2, flCanvas.height / 2, 
+                        flCanvas.width / 2, flCanvas.height / 2,
+                        flSize * 0.9,
+                        flCanvas.width / 2, flCanvas.height / 2,
                         flSize);
 
                 gradient.addColorStop(0, 'rgba(0,0,0,1)');
@@ -299,10 +299,10 @@ process.on('message', async obj => {
 
                     if(options.hidden){
                         const fadeOutStartTime = hitObject.startTime - beatmap.TimePreempt + beatmap.TimeFadein;
-    
+
                         if(time >= fadeOutStartTime)
                             sliderOpacity = 1 - (time - fadeOutStartTime) / (hitObject.endTime - fadeOutStartTime);
-    
+
                         if(sliderOpacity < 0)
                             sliderOpacity = 0;
                     }
@@ -825,7 +825,7 @@ process.on('message', async obj => {
 
                 ctx.font = `${21 * scale_multiplier}px monospace`;
                 ctx.fillText(`★${stars.toFixed(2)}`, 15, 47 + 26 * scale_multiplier);
-                
+
                 let accuracy = 100;
 
                 const totalHits = currentFrame.count50 * 300 + currentFrame.count100 * 300 + currentFrame.count300 * 300 + currentFrame.countMiss * 300;
@@ -942,7 +942,7 @@ process.on('message', async obj => {
 
                 if(scoringFrame.result == 'miss'){
                     position[1] += (time - scoringFrame.offset) / 750 * 35;
-                    
+
                     ctx.fillStyle = "#f56767";
 
                     ctx.fillText('X', ...playfieldPosition(...position));
@@ -1004,8 +1004,8 @@ process.on('message', async obj => {
                 if(frame.offset > time)
                     continue;
 
-                if(time - frame.offset > 5000)
-                    break;
+                // if(time - frame.offset > 5000)
+                //     break;
 
                 ctx.lineWidth = 1;
                 ctx.strokeStyle = "rgba(255,255,255,0.7)";
@@ -1050,7 +1050,7 @@ process.on('message', async obj => {
                         ctx.stroke();
                         smokeActive = false;
                     }
-                    
+
                     continue;
                 }
 
@@ -1089,12 +1089,12 @@ process.on('message', async obj => {
                     ctx.fillStyle = M2 ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.3)';
                     ctx.fillRect(canvas.width - 30, keyOverlayTop + KEY_OVERLAY_SIZE * 3 + KEY_OVERLAY_PADDING * 3, KEY_OVERLAY_SIZE, KEY_OVERLAY_SIZE);
                 }
-                
+
                 if(Array.isArray(replay_point.previous) && !options.analyze){
                     ctx.globalAlpha = .35;
 
                     ctx.beginPath();
-                    
+
                     for(const [index, previousFrame] of replay_point.previous.entries()){
                         let position = playfieldPosition(previousFrame.x, previousFrame.y);
 
