@@ -288,7 +288,7 @@ function sanitizeMods(mods_raw){
     let return_array = mods;
 
     if (mods.includes("DT") || mods.includes("HT") || mods.includes("NC") || mods.includes("DC")) {
-        speed_change = mods_raw.filter(mod => mod.acronym == "DT" || mod.acronym == "HT" || mod.acronym == "NC" || mod.acronym == "DC")[0].settings.speed_change ?? undefined;
+        speed_change = mods_raw.filter(mod => mod.acronym == "DT" || mod.acronym == "HT" || mod.acronym == "NC" || mod.acronym == "DC")[0].settings?.speed_change ?? undefined;
     }
 
     if(mods.includes("NC") && mods.includes("DT"))
@@ -625,9 +625,9 @@ async function getScore(recent_raw, cb){
         let speed = 1;
 
         if (recent.mods.map(x => x.acronym).includes("DT") || recent.mods.map(x => x.acronym).includes("NC")) {
-            speed *= recent.mods.filter(mod => mod.acronym == "DT" || mod.acronym == "NC")[0].settings.speed_change ?? 1.5;
+            speed *= recent.mods.filter(mod => mod.acronym == "DT" || mod.acronym == "NC")[0].settings?.speed_change ?? 1.5;
         } else if (recent.mods.map(x => x.acronym).includes("HT") || recent.mods.map(x => x.acronym).includes("DC")) {
-            speed *= recent.mods.filter(mod => mod.acronym == "HT" || mod.acronym == "DC")[0].settings.speed_change ?? 0.75;
+            speed *= recent.mods.filter(mod => mod.acronym == "HT" || mod.acronym == "DC")[0].settings?.speed_change ?? 0.75;
         }
 
         let fail_percent = 1;
