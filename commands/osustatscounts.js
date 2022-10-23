@@ -52,13 +52,16 @@ module.exports = {
             let mods_include_array = []
             let mods_exclude_array = []
             let stars = ""
+            let custom_rank
             for (const [i, arg] of argv.entries()) {
                 if (arg == "-start" || arg == "-from")
                     search["from"] = argv[i + 1]
                 if (arg == "-end" || arg == "-to")
                     search["to"] = argv[i + 1]
-                if (arg == "-rank")
+                if (arg == "-rank") {
                     search["rank"] = argv[i + 1]
+                    custom_rank = argv[i + 1]
+                }
                 if (arg == "-tags")
                     search["tags"] = argv[i + 1]
                 if (arg == "-stars") {
@@ -155,6 +158,9 @@ module.exports = {
 
                     let output = ""
                     output += `\`\`\`\n`
+
+                    if (custom_rank && counts[`rank_${custom_rank}`])
+                        output += `Rank ${custom_rank}`.padEnd(7) + `: ${counts["rank_" + custom_rank].toLocaleString().padStart(7) ?? 0}\n`
                     output += `Top 1s : ${counts.top1s.toLocaleString().padStart(7) ?? "0".padStart(7)}\t${counts.top1s_rank ? "#" + counts.top1s_rank.toLocaleString() : ""}\n`
                     output += `Top 8s : ${counts.top8s.toLocaleString().padStart(7) ?? "0".padStart(7) ?? 0}\t${counts.top8s_rank ? "#" + counts.top8s_rank.toLocaleString() : ""}\n`
                     output += `Top 15s: ${counts.top15s.toLocaleString().padStart(7) ?? "0".padStart(7) ?? 0}\t${counts.top15s_rank ? "#" + counts.top15s_rank.toLocaleString() : ""}\n`
