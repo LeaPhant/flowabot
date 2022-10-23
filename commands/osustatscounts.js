@@ -56,6 +56,8 @@ module.exports = {
                     search["from"] = argv[i + 1]
                 if (arg == "-end" || arg == "-to")
                     search["to"] = argv[i + 1]
+                if (arg == "-rank")
+                    search["rank"] = argv[i + 1]
                 if (arg == "-tags")
                     search["tags"] = argv[i + 1]
                 if (arg == "-stars") {
