@@ -6,7 +6,8 @@ const { DateTime } = require('luxon')
 const ARGS = [
     "-start", "-from", "-end", "-to", "-tags", "-min", "-max",
     "-stars", "-length-min", "-length-max", "-spinners-min",
-    "-spinners-max", "-mods", "-m", "-is", "-isnot", "-not"
+    "-spinners-max", "-mods", "-m", "-is", "-isnot", "-not",
+    "-rank"
 ]
 
 module.exports = {
