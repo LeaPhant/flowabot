@@ -1,7 +1,7 @@
 const axios = require('axios');
 const ojsama = require('ojsama');
 const { std_ppv2 } = require('booba');
-const rosu = require('rosu-pp')
+const { Beatmap, Calculator } = require('rosu-pp')
 
 const osuBeatmapParser = require('osu-parser');
 const path = require('path');
@@ -638,38 +638,33 @@ async function getScore(recent_raw, cb){
         helper.downloadBeatmap(recent_raw.beatmap.id).finally(async () => {
             let beatmap_path = path.resolve(config.osu_cache_path, `${recent_raw.beatmap.id}.osu`);
 
-            let rosu_arg = {
-                path: beatmap_path,
-                params: [
-                    {
-                        mods: getModsEnum(recent_raw.mods.map(x => x.acronym)),
-                        n300: recent_raw.statistics.great ?? 0,
-                        n100: recent_raw.statistics.ok ?? 0,
-                        n50: recent_raw.statistics.meh ?? 0,
-                        nMisses: recent_raw.statistics.miss ?? 0,
-                        combo: recent_raw.max_combo,
-                        clockRate: speed,
-                        ar: beatmap.ar,
-                        cs: beatmap.cs,
-                        hp: beatmap.hp,
-                        od: beatmap.od,
-                    },
-                    {
-                        mods: getModsEnum(recent_raw.mods.map(x => x.acronym)),
-                        clockRate: speed,
-                        n100: recent_raw.statistics.ok ?? 0,
-                        n50: recent_raw.statistics.meh ?? 0,
-                        ar: beatmap.ar,
-                        cs: beatmap.cs,
-                        hp: beatmap.hp,
-                        od: beatmap.od,
-                    }
-                ]
+            const play_params = {
+                mods: getModsEnum(recent_raw.mods.map(x => x.acronym)),
+                n300: recent_raw.statistics.great ?? 0,
+                n100: recent_raw.statistics.ok ?? 0,
+                n50: recent_raw.statistics.meh ?? 0,
+                nMisses: recent_raw.statistics.miss ?? 0,
+                combo: recent_raw.max_combo,
+                clockRate: speed,
+                ar: beatmap.ar,
+                cs: beatmap.cs,
+                hp: beatmap.hp,
+                od: beatmap.od,
+            }
+            const fc_play_params = {
+                mods: getModsEnum(recent_raw.mods.map(x => x.acronym)),
+                clockRate: speed,
+                n100: recent_raw.statistics.ok ?? 0,
+                n50: recent_raw.statistics.meh ?? 0,
+                ar: beatmap.ar,
+                cs: beatmap.cs,
+                hp: beatmap.hp,
+                od: beatmap.od,
             }
 
-            const plays = rosu.calculate(rosu_arg)
-            const play = plays[0]
-            const fc_play = plays[1]
+            const rosu_map = new Beatmap({ path: beatmap_path })
+            const play = new Calculator(play_params).performance(rosu_map)
+            const fc_play = new Calculator(fc_play_params).performance(rosu_map)
 
             recent = Object.assign({
                 approved: beatmapset.status,
@@ -679,7 +674,7 @@ async function getScore(recent_raw, cb){
                 version: beatmap.version,
                 bpm_min: beatmap.bpm_min * speed,
                 bpm_max: beatmap.bpm_max * speed,
-                max_combo: play.maxCombo,
+                max_combo: play.difficulty.maxCombo,
                 bpm: beatmap.bpm * speed,
                 creator: beatmapset.creator,
                 creator_id: beatmapset.user_id,
@@ -693,7 +688,7 @@ async function getScore(recent_raw, cb){
             }, recent);
 
             recent = Object.assign({
-                stars: play.stars,
+                stars: play.difficulty.stars,
                 pp_fc: fc_play.pp,
                 acc: recent_raw.accuracy * 100,
                 acc_fc: calculateAccuracy({ 
@@ -2315,33 +2310,26 @@ module.exports = {
         if(mods_array.includes("HT"))
             speed_multiplier *= 0.75;
 
-        //let stars = new ojsama.diff().calc({map: map, mods: mods});
-        //console.log(stars)
-        let rosu_stars = rosu.calculate({path: osu_file_path, mods: mods})[0]
-        //console.log(rosu_stars)
-        let rosu_strains = rosu.strains(osu_file_path, mods)
-        //console.log(rosu_strains)
+        const rosu_map = new Beatmap({ path: osu_file_path })
+        const rosu_calc = new Calculator({ mods: mods })
+
+        const rosu_stars = rosu_calc.difficulty(rosu_map)
+        const rosu_strains = rosu_calc.strains(rosu_map)
 
         let total = rosu_stars.stars;
 
         if(type == 'aim')
-            total = rosu_stars.aimStrain;
+            total = rosu_stars.aim;
 
         if(type == 'flashlight')
-            total = rosu_stars.flashlightRating;
+            total = rosu_stars.flashlight;
 
         if(type == 'speed')
-            total = rosu_stars.speedStrain;
+            total = rosu_stars.speed;
 
-        //let aim_strains = calculateStrains(1, stars.objects, speed_multiplier).map(a => a = Math.sqrt(a * 9.9999) * STAR_SCALING_FACTOR);
-        //let speed_strains = calculateStrains(0, stars.objects, speed_multiplier).map(a => a = Math.sqrt(a * 9.9999) * STAR_SCALING_FACTOR);
-
-        //let aim_strains = rosu_strains.aim.map((e, i) => e = Math.sqrt(calculateDifficultyValue(rosu_strains.aim.slice(i-2,i+2))) * STAR_SCALING_FACTOR)
         let aim_strains = rosu_strains.aim.map(a => a = Math.sqrt(a * 9.9999) * STAR_SCALING_FACTOR)
         let speed_strains = rosu_strains.speed.map(a => a = Math.sqrt(a * 9.9999) * STAR_SCALING_FACTOR)
-        let flashligh_strains = rosu_strains.flashlight.map((e, i) => e = Math.sqrt(calculateFlashlightDifficultyValue(rosu_strains.flashlight.slice(i-1,i)))) //.map(a => a = Math.sqrt(a * 9.9999) * STAR_SCALING_FACTOR)
-        
-        //console.log(Math.sqrt(calculateDifficultyValue(rosu_strains.aim)) * STAR_SCALING_FACTOR)
+        let flashligh_strains = rosu_strains.flashlight.map((e, i) => e = Math.sqrt(calculateFlashlightDifficultyValue(rosu_strains.flashlight.slice(i - 1, i)))) //.map(a => a = Math.sqrt(a * 9.9999) * STAR_SCALING_FACTOR)
 
         let star_strains = [];
 

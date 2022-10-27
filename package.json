@@ -44,7 +44,7 @@
         "openweather-apis": "^4.4.2",
         "osu-parser": "git+https://github.com/LeaPhant/osu-parser.git",
         "readline-sync": "^1.4.10",
-        "rosu-pp": "^0.8.0",
+        "rosu-pp": "^0.9.1",
         "semver": "^7.3.5",
         "table": "^6.7.5",
         "tcp-ping": "^0.1.1",

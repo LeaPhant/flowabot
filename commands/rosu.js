@@ -2,7 +2,7 @@ const fs = require('fs').promises;
 const path = require('path');
 const os = require('os');
 const URL = require('url');
-const rosu = require('rosu-pp');
+const { Beatmap, Calculator } = require('rosu-pp');
 
 const helper = require('../helper.js');
 const osu = require('../osu.js');
@@ -241,43 +241,47 @@ module.exports = {
                         });
                     }
 
-                    let args = {
+                    let beatmap_params = {
                         path: beatmap_path,
                     }
 
+                    let params = {
+                        mode: 0,
+                    }
+
+                    if (od)
+                        beatmap_params.od = od;
+
+                    if (ar)
+                        beatmap_params.ar = ar;
+
+                    if (hp)
+                        beatmap_params.hp = hp;
+
+                    if (cs)
+                        beatmap_params.cs = cs;
+
                     if(mods.length > 0){
-                        args.mods = getModsEnum(mods);
+                        params.mods = getModsEnum(mods);
                     }
 
                     if(combo)
-                        args.combo = combo;
+                        params.combo = combo;
 
                     if(n100)
-                        args.n100 = n100;
+                        params.n100 = n100;
 
                     if(n50)
-                        args.n50 = n50;
+                        params.n50 = n50;
 
                     if(nmiss)
-                        args.nMisses = nmiss;
-
-                    if(od)
-                        args.od = od;
-
-                    if(ar)
-                        args.ar = ar;
-
-                    if(hp)
-                        args.hp = hp;
-
-                    if(cs)
-                        args.cs = cs;
+                        params.nMisses = nmiss;
 
                     if(acc_percent)
-                        args.acc = acc_percent;
+                        params.acc = acc_percent;
 
                     if(clock_rate)
-                        args.clockRate = clock_rate;
+                        params.clockRate = clock_rate;
 
                     if(beatmap_id){
                         helper.updateLastBeatmap({
@@ -288,40 +292,31 @@ module.exports = {
                         }, msg.channel.id, last_beatmap);
                     }
 
-                    let result = rosu.calculate(args)[0];
-                    let pp = round(result.pp)
-                    let aim_pp = round(result.ppAim)
-                    let speed_pp = round(result.ppSpeed)
-                    let acc_pp = round(result.ppAcc)
+                    const map = new Beatmap(beatmap_params)
+                    const calc = new Calculator(params)
+
+                    const mapAttr = calc.mapAttributes(map)
+                    const perf = calc.performance(map)
+
+                    let pp = round(perf.pp)
+                    let aim_pp = round(perf.ppAim)
+                    let speed_pp = round(perf.ppSpeed)
+                    let acc_pp = round(perf.ppAcc)
                     let fl_pp = ''
                     let fl_stars = ''
-                    let aim_stars = round(result.aimStrain)
-                    let speed_stars = round(result.speedStrain)
-                    let bpm = round(result.bpm)
-                    let stars = round(result.stars)
+                    let aim_stars = round(perf.difficulty.aim)
+                    let speed_stars = round(perf.difficulty.speed)
+                    let bpm = round(mapAttr.bpm)
+                    let stars = round(perf.difficulty.stars)
                     if(mods.includes('fl')) {
-                        fl_pp = `, ${round(result.ppFlashlight)} flashlight pp`
-                        fl_stars = `, ${round(result.flashlightRating)} flashlight stars`
+                        fl_pp = `, ${round(perf.ppFlashlight)} flashlight pp`
+                        fl_stars = `, ${round(perf.difficulty.flashlight)} flashlight stars`
                     }
-                    //let diff_settings = calculateCsArOdHp(base_cs, base_ar, base_od, base_hp, mods, clock_rate)
-
-                    // ar = round(diff_settings.ar)
-                    // od = round(diff_settings.od)
-                    // if(base_cs <= 10) {
-                    //     cs = round(diff_settings.cs)
-                    // } else {
-                    //     cs = base_cs
-                    // }
-                    // if(base_hp <= 10) {
-                    //     hp = round(diff_settings.hp)
-                    // } else {
-                    //     hp = base_hp
-                    // }
                     
-                    ar = round(result.ar)
-                    od = round(result.od)
-                    cs = round(result.cs)
-                    hp = round(result.hp)
+                    ar = round(mapAttr.ar)
+                    od = round(mapAttr.od)
+                    cs = round(mapAttr.cs)
+                    hp = round(mapAttr.hp)
 
                     output += `\`\`\`\n${pp}pp (${aim_pp} aim pp, ${speed_pp} speed pp, ${acc_pp} acc pp${fl_pp})\n`
                     output += `${stars}★ (${aim_stars} aim stars, ${speed_stars} speed stars${fl_stars})\n`

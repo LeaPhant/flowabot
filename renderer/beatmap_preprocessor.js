@@ -6,7 +6,7 @@ const osu = require('../osu');
 const osr = require('node-osr');
 const lzma = require('lzma-native');
 const ojsama = require('ojsama');
-const rosu = require('rosu-pp')
+const { Beatmap, Calculator } = require('rosu-pp')
 const axios = require('axios');
 const _ = require('lodash');
 const helper = require('../helper.js');
@@ -82,25 +82,6 @@ function newScoringFrame(scoringFrames){
     scoringFrame.previousCombo = scoringFrame.combo;
 
     return scoringFrame;
-}
-
-function calcForObjectAmount(osu_content, amount, params) {
-
-    const tmp_map = "/tmp/tmp.osu"
-    let split = osu_content.split("[HitObjects]")
-    let worker_map = split[0] + "[HitObjects]"
-    let hit_objects = split[1].split(/\r?\n/)
-
-    for (let i = 0; i < amount; i++) {
-        if (!hit_objects[i]) continue
-        worker_map += "\n" + hit_objects[i]
-    }
-
-    fs.writeFileSync(tmp_map, worker_map);
-
-    let results = rosu.calculate({path: tmp_map, params: [params]})
-
-    return results
 }
 
 function getCursorAt(timestamp, replay){
@@ -1382,10 +1363,6 @@ function processBeatmap(osuContents){
 
     beatmap.ScoringFrames = beatmap.ScoringFrames.sort((a, b) => a.offset - b.offset);
 
-    // const parser = new ojsama.parser().feed(osuContents);
-    const tmp_map = "/tmp/tmp.osu"
-    fs.writeFileSync(tmp_map, osuContents)
-
     // const objects = parser.map.objects.slice();
     const mods = ojsama.modbits.from_string(enabled_mods.filter(a => ["HR", "EZ"].includes(a) == false).join(""));
     //const strains = rosu.strains(beatmap_path, mods)
@@ -1401,7 +1378,6 @@ function processBeatmap(osuContents){
         const hitCount = scoringFrame.countMiss + scoringFrame.count50 + scoringFrame.count100 + scoringFrame.count300;
 
         //parser.map.objects = objects.slice(0, hitCount);
-
         const params = {
             mods: mods,
             n300: scoringFrame.count300,
@@ -1412,26 +1388,13 @@ function processBeatmap(osuContents){
             passedObjects: hitCount,
         }
 
-        // let lines = osuContents.split(/\r?\n/)
-        // for (let i in lines) {
-            
-        //     if (lines[i].startsWith("CircleSize:")) {
-        //         lines[i] = "CircleSize:" + beatmap.CircleSize
-        //     }
-        //     if (lines[i].startsWith("OverallDifficulty:")) {
-        //         lines[i] = "OverallDifficulty:" + beatmap.OverallDifficultyRealtime
-        //     }
-        //     if (lines[i].startsWith("ApproachRate:")) {
-        //         lines[i] = "ApproachRate:" + beatmap.ApproachRateRealtime
-        //     }
-        // }
-        // const content = lines.join("\n")
-        
-        //const rosu_results = calcForObjectAmount(content, hitCount, params)
+        const rosu_map = new Beatmap({ content: osuContents })
+        const rosu_calc = new Calculator(params)
 
-        const rosu_results = rosu.calculate({path: tmp_map, params: [params]})
-        const pp = rosu_results[0].pp
-        const stars = rosu_results[0].stars
+        const rosu_perf = rosu_calc.performance(rosu_map)
+
+        const pp = rosu_perf.pp
+        const stars = rosu_perf.difficulty.stars
 
         //const stars = new ojsama.diff().calc({map: parser.map, mods});
         //const index = Math.floor((scoringFrame.offset - start_offset) / 400)
