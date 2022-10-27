@@ -2338,7 +2338,7 @@ module.exports = {
         //let _strain_step = STRAIN_STEP * speed_multiplier;
 
         //let strain_offset = Math.floor(map.objects[0].time / _strain_step) * _strain_step - _strain_step
-        let strain_offset = rosu_strains.section_length
+        let strain_offset = rosu_strains.sectionLength
         //console.log(strain_offset)
 
         let max_strain_time = strain_offset;
