@@ -1364,7 +1364,7 @@ function processBeatmap(osuContents){
     beatmap.ScoringFrames = beatmap.ScoringFrames.sort((a, b) => a.offset - b.offset);
 
     // const objects = parser.map.objects.slice();
-    const mods = ojsama.modbits.from_string(enabled_mods.filter(a => ["HR", "EZ"].includes(a) == false).join(""));
+    const mods = ojsama.modbits.from_string(enabled_mods.join(""));
     //const strains = rosu.strains(beatmap_path, mods)
     //const star_strains = osu.get_stars_from_strains(strains, enabled_mods);
     //const start_offset = beatmap.ScoringFrames[0].offset
