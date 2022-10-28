@@ -1363,21 +1363,11 @@ function processBeatmap(osuContents){
 
     beatmap.ScoringFrames = beatmap.ScoringFrames.sort((a, b) => a.offset - b.offset);
 
-    // const objects = parser.map.objects.slice();
     const mods = ojsama.modbits.from_string(enabled_mods.join(""));
-    //const strains = rosu.strains(beatmap_path, mods)
-    //const star_strains = osu.get_stars_from_strains(strains, enabled_mods);
-    //const start_offset = beatmap.ScoringFrames[0].offset
-    //console.log(star_strains)
 
-    // parser.map.cs = beatmap.CircleSize;
-    // parser.map.od = beatmap.OverallDifficultyRealtime;
-    // parser.map.ar = beatmap.ApproachRateRealtime;
-    
     for(const scoringFrame of beatmap.ScoringFrames.filter(a => ['miss', 50, 100, 300].includes(a.result))){
         const hitCount = scoringFrame.countMiss + scoringFrame.count50 + scoringFrame.count100 + scoringFrame.count300;
 
-        //parser.map.objects = objects.slice(0, hitCount);
         const params = {
             mods: mods,
             n300: scoringFrame.count300,
@@ -1388,7 +1378,14 @@ function processBeatmap(osuContents){
             passedObjects: hitCount,
         }
 
-        const rosu_map = new Beatmap({ content: osuContents })
+        const beatmap_params = {
+            content: osuContents,
+            ar: options.ar,
+            cs: options.cs,
+            od: options.od
+        }
+
+        const rosu_map = new Beatmap(beatmap_params)
         const rosu_calc = new Calculator(params)
 
         const rosu_perf = rosu_calc.performance(rosu_map)
