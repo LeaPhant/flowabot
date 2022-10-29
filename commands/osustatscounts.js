@@ -7,7 +7,7 @@ const ARGS = [
     "-start", "-from", "-end", "-to", "-tags", "-min", "-max",
     "-stars", "-length-min", "-length-max", "-spinners-min",
     "-spinners-max", "-mods", "-m", "-is", "-isnot", "-not",
-    "-rank"
+    "-rank", "-played-from", "-played-start", "-played-to", "-played-end",
 ]
 
 module.exports = {
@@ -58,6 +58,10 @@ module.exports = {
                     search["from"] = argv[i + 1]
                 if (arg == "-end" || arg == "-to")
                     search["to"] = argv[i + 1]
+                if (arg == "-played-start" || arg == "-played-from")
+                    search["played_from"] = argv[i + 1]
+                if (arg == "-played-end" || arg == "-played-to")
+                    search["played_to"] = argv[i + 1]
                 if (arg == "-rank") {
                     search["rank"] = argv[i + 1]
                     custom_rank = argv[i + 1]
@@ -148,7 +152,7 @@ module.exports = {
             const res2 = await axios.get("https://osustats.respektive.pw/last_update")
             const last_update = res2.data.last_update
 
-            if (counts) {
+            if (counts && !counts.error) {
                 osu.get_user({ u: osu_user }, (err, embed) => {
                     if (err) {
                         reject(err);
@@ -178,7 +182,7 @@ module.exports = {
                 })
 
             } else {
-                reject("Couldn't find this User");
+                reject("Couldn't find this user or the user has no top50s");
             }
         });
     }
