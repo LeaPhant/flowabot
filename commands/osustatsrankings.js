@@ -148,7 +148,7 @@ module.exports = {
                     footer: {
                         text: `Last update: ${DateTime.fromISO(last_update).toRelative()}${helper.sep}${last_update.replace(/T/g, " ").split(".")[0]} UTC`
                     },
-                    title: title(type)
+                    title: `${title(type)} | ${rankings[0]["beatmaps_amount"].toLocaleString()} beatmaps`
                 }
                 let biggest_count = isFinite(Math.max(...(rankings.map(el => el[type].toLocaleString().length)))) ? Math.max(...(rankings.map(el => el[type].toLocaleString().length))) : 0
                 let longest_name = isFinite(Math.max(...(rankings.map(el => el.username?.length ?? 0)))) ? Math.max(...(rankings.map(el => el.username?.length ?? 0))) : 0

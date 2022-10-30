@@ -160,8 +160,7 @@ module.exports = {
                         return false;
                     }
 
-                    let output = ""
-                    output += `\`\`\`\n`
+                    let output = `\`\`\`\n`
 
                     if (custom_rank && counts[`rank_${custom_rank}`])
                         output += `#${custom_rank}`.padEnd(7) + `: ${counts["rank_" + custom_rank].toLocaleString().padStart(7) ?? 0}\n`
@@ -174,7 +173,7 @@ module.exports = {
 
                     embed.fields = []
                     embed.footer = {
-                        text: `Last update: ${DateTime.fromISO(last_update).toRelative()}${helper.sep}${last_update.replace(/T/g, " ").split(".")[0]} UTC`
+                        text: `Last update: ${DateTime.fromISO(last_update).toRelative()}${helper.sep}${last_update.replace(/T/g, " ").split(".")[0]} UTC${helper.sep}${counts["beatmaps_amount"].toLocaleString()} beatmaps`
                     }
                     embed.description = output
 
