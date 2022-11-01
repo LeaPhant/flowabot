@@ -38,6 +38,8 @@ module.exports = {
             for (const [i, arg] of argv.entries()) {
                 if (arg == "-u" || arg == "-user")
                     user = argv[i + 1]
+                if (arg == "-mode")
+                    search["mode"] = argv[i + 1]
                 if (arg == "-page" || arg == "-p")
                     search["page"] = argv[i + 1]
                 if (arg == "-start" || arg == "-from")
@@ -142,7 +144,7 @@ module.exports = {
                 user = user_id
             }
 
-            if (rankings) {
+            if (rankings.length) {
                 let embed = {
                     color: 12277111,
                     footer: {
@@ -163,19 +165,20 @@ module.exports = {
                     } catch (e) {
                         console.log("user_row user not found")
                     }
-
-                    if (user_row && user_row[type] && user_row[type].toLocaleString().length > biggest_count)
-                        biggest_count = user_row[type].toLocaleString().length
-                    if (user_row && user_row.username && user_row.username.length > longest_name)
-                        longest_name = user_row.username.length
-                    if (user_row && user_row[`${type}_rank`] && user_row[`${type}_rank`].toString().length > longest_rank)
-                        longest_rank = user_row[`${type}_rank`].toString().length
-                    if (user_row && user_row.username && (user_row[type] > (rankings[0][type] ?? 0) || user_row[`${type}_rank`] < (rankings[0].rank ?? 0))) {
-                        output += `\`#${user_row[`${type}_rank`] ?? ""}${user_row[`${type}_rank`] ? " ".repeat(clamp(longest_rank - user_row[`${type}_rank`].toString().length, 0, longest_rank)) : "?".repeat(longest_rank)}\``
-                        let country_code = user_row.country?.toLowerCase() ?? null
-                        output += country_code ? `:flag_${country_code}:` : ":pirate_flag:"
-                        output += `\`${user_row.username}${" ".repeat(clamp(longest_name - (user_row.username?.length ?? 4), 0, longest_name))}\``
-                        output += ` \`${" ".repeat(clamp(biggest_count - user_row[type].toLocaleString().length, 0, biggest_count))}${user_row[type].toLocaleString()}\`\n`
+                    if (user_row && user_row[type] > 0) {
+                        if (user_row && user_row[type] && user_row[type].toLocaleString().length > biggest_count)
+                            biggest_count = user_row[type].toLocaleString().length
+                        if (user_row && user_row.username && user_row.username.length > longest_name)
+                            longest_name = user_row.username.length
+                        if (user_row && user_row[`${type}_rank`] && user_row[`${type}_rank`].toString().length > longest_rank)
+                            longest_rank = user_row[`${type}_rank`].toString().length
+                        if (user_row && user_row.username && (user_row[type] > (rankings[0][type] ?? 0) || user_row[`${type}_rank`] < (rankings[0].rank ?? 0))) {
+                            output += `\`#${user_row[`${type}_rank`] ?? ""}${user_row[`${type}_rank`] ? " ".repeat(clamp(longest_rank - user_row[`${type}_rank`].toString().length, 0, longest_rank)) : "?".repeat(longest_rank)}\``
+                            let country_code = user_row.country?.toLowerCase() ?? null
+                            output += country_code ? `:flag_${country_code}:` : ":pirate_flag:"
+                            output += `\`${user_row.username}${" ".repeat(clamp(longest_name - (user_row.username?.length ?? 4), 0, longest_name))}\``
+                            output += ` \`${" ".repeat(clamp(biggest_count - user_row[type].toLocaleString().length, 0, biggest_count))}${user_row[type].toLocaleString()}\`\n`
+                        }
                     }
                 }
 
@@ -200,7 +203,7 @@ module.exports = {
                 resolve({ embed: embed });
 
             } else {
-                reject("Couldn't find this User");
+                reject("Couldn't reach api, blame respektive");
             }
         });
     }

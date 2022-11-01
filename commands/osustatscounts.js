@@ -8,6 +8,7 @@ const ARGS = [
     "-stars", "-length-min", "-length-max", "-spinners-min",
     "-spinners-max", "-mods", "-m", "-is", "-isnot", "-not",
     "-rank", "-played-from", "-played-start", "-played-to", "-played-end",
+    "-mode",
 ]
 
 module.exports = {
@@ -54,6 +55,8 @@ module.exports = {
             let stars = ""
             let custom_rank
             for (const [i, arg] of argv.entries()) {
+                if (arg == "-mode")
+                    search["mode"] = argv[i + 1]
                 if (arg == "-start" || arg == "-from")
                     search["from"] = argv[i + 1]
                 if (arg == "-end" || arg == "-to")
