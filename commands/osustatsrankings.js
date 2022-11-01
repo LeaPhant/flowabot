@@ -157,13 +157,18 @@ module.exports = {
 
                 let user_row
                 if (user) {
-                    const res = await axios.get(`https://osustats.respektive.pw/counts/${user}${searchParamsString}`)
-                    user_row = res.data
-                    if (user_row[type] && user_row[type].toLocaleString().length > biggest_count)
+                    try {
+                        const res = await axios.get(`https://osustats.respektive.pw/counts/${user}${searchParamsString}`)
+                        user_row = res.data
+                    } catch (e) {
+                        console.log("user_row user not found")
+                    }
+
+                    if (user_row && user_row[type] && user_row[type].toLocaleString().length > biggest_count)
                         biggest_count = user_row[type].toLocaleString().length
-                    if (user_row.username && user_row.username.length > longest_name)
+                    if (user_row && user_row.username && user_row.username.length > longest_name)
                         longest_name = user_row.username.length
-                    if (user_row[`${type}_rank`] && user_row[`${type}_rank`].toString().length > longest_rank)
+                    if (user_row && user_row[`${type}_rank`] && user_row[`${type}_rank`].toString().length > longest_rank)
                         longest_rank = user_row[`${type}_rank`].toString().length
                     if (user_row && user_row.username && (user_row[type] > (rankings[0][type] ?? 0) || user_row[`${type}_rank`] < (rankings[0].rank ?? 0))) {
                         output += `\`#${user_row[`${type}_rank`] ?? ""}${user_row[`${type}_rank`] ? " ".repeat(clamp(longest_rank - user_row[`${type}_rank`].toString().length, 0, longest_rank)) : "?".repeat(longest_rank)}\``
