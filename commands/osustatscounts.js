@@ -146,9 +146,14 @@ module.exports = {
                 const params = new URLSearchParams(search)
                 searchParamsString = "?" + params.toString()
             }
+            let counts
+            try {
+                const res = await axios.get(`https://osustats.respektive.pw/counts/${user_id}${searchParamsString}`)
+                counts = res.data
+            } catch (e) {
+                counts = e.response.data
+            }
 
-            const res = await axios.get(`https://osustats.respektive.pw/counts/${user_id}${searchParamsString}`)
-            const counts = res.data
             const res2 = await axios.get("https://osustats.respektive.pw/last_update")
             const last_update = res2.data.last_update
 
