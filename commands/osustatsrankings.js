@@ -167,7 +167,7 @@ module.exports = {
                 }
 
                 let user_row
-                if (user) {
+                if (user && !search["country"]) {
                     try {
                         const res = await axios.get(`https://osustats.respektive.pw/counts/${user}${searchParamsString}`)
                         user_row = res.data
