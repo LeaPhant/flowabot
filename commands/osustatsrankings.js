@@ -4,7 +4,7 @@ const axios = require('axios');
 const { DateTime } = require('luxon')
 
 const clamp = (num, min, max) => Math.min(Math.max(num, min), max)
-const title = (type) => `Top ${type.replace(/\D/g, "")} Score Count Rankings`
+const title = (type, search) => `${type == "custom" && search["rank"] ? "Rank " + search["rank"] : "Top " + type.replace(/\D/g, "")} Score Count Rankings`
 
 module.exports = {
     command: ['osustatsrankings', 'osr', 'top50s', 'top25s', 'top15s', 'top8s', 'top1s'],
@@ -23,8 +23,6 @@ module.exports = {
     call: obj => {
         return new Promise(async (resolve, reject) => {
             let { argv, msg, user_ign } = obj;
-
-            const type = argv[0] == "osr" || argv[0] == "osustatsrankings" ? "top50s" : argv[0]
 
             let search = {
                 "limit": 10,
@@ -50,6 +48,8 @@ module.exports = {
                     search["played_from"] = argv[i + 1]
                 if (arg == "-played-end" || arg == "-played-to")
                     search["played_to"] = argv[i + 1]
+                if (arg == "-rank")
+                    search["rank"] = argv[i + 1]
                 if (arg == "-tags")
                     search["tags"] = argv[i + 1]
                 if (arg == "-stars") {
@@ -133,6 +133,8 @@ module.exports = {
                 const params = new URLSearchParams(search)
                 searchParamsString = "?" + params.toString()
             }
+            const custom = search["rank"] ? "custom" : "top50s"
+            const type = argv[0] == "osr" || argv[0] == "osustatsrankings" ? custom : argv[0]
 
             const res = await axios.get(`https://osustats.respektive.pw/rankings/${type}${searchParamsString}`)
             const rankings = res.data
@@ -150,12 +152,19 @@ module.exports = {
                     footer: {
                         text: `Last update: ${DateTime.fromISO(last_update).toRelative()}${helper.sep}${last_update.replace(/T/g, " ").split(".")[0]} UTC`
                     },
-                    title: `${title(type)} | ${rankings[0]["beatmaps_amount"].toLocaleString()} beatmaps`
+                    title: `${title(type, search)} | ${rankings[0]["beatmaps_amount"].toLocaleString()} beatmaps`
                 }
                 let biggest_count = isFinite(Math.max(...(rankings.map(el => el[type].toLocaleString().length)))) ? Math.max(...(rankings.map(el => el[type].toLocaleString().length))) : 0
                 let longest_name = isFinite(Math.max(...(rankings.map(el => el.username?.length ?? 0)))) ? Math.max(...(rankings.map(el => el.username?.length ?? 0))) : 0
                 let longest_rank = isFinite(Math.max(...(rankings.map(el => el.rank?.toString().length ?? 0)))) ? Math.max(...(rankings.map(el => el.rank?.toString().length ?? 0))) : 0
                 let output = ""
+
+                let _type
+                if (type == "custom") {
+                    _type = "rank_" + search["rank"]
+                } else {
+                    _type = type
+                }
 
                 let user_row
                 if (user) {
@@ -165,19 +174,20 @@ module.exports = {
                     } catch (e) {
                         console.log("user_row user not found")
                     }
-                    if (user_row && user_row[type] > 0) {
-                        if (user_row && user_row[type] && user_row[type].toLocaleString().length > biggest_count)
-                            biggest_count = user_row[type].toLocaleString().length
+
+                    if (user_row && user_row[_type] > 0) {
+                        if (user_row && user_row[_type] && user_row[_type].toLocaleString().length > biggest_count)
+                            biggest_count = user_row[_type].toLocaleString().length
                         if (user_row && user_row.username && user_row.username.length > longest_name)
                             longest_name = user_row.username.length
-                        if (user_row && user_row[`${type}_rank`] && user_row[`${type}_rank`].toString().length > longest_rank)
-                            longest_rank = user_row[`${type}_rank`].toString().length
-                        if (user_row && user_row.username && (user_row[type] > (rankings[0][type] ?? 0) || user_row[`${type}_rank`] < (rankings[0].rank ?? 0))) {
-                            output += `\`#${user_row[`${type}_rank`] ?? ""}${user_row[`${type}_rank`] ? " ".repeat(clamp(longest_rank - user_row[`${type}_rank`].toString().length, 0, longest_rank)) : "?".repeat(longest_rank)}\``
+                        if (user_row && user_row[`${_type}_rank`] && user_row[`${_type}_rank`].toString().length > longest_rank)
+                            longest_rank = user_row[`${_type}_rank`].toString().length
+                        if (user_row && user_row.username && (user_row[_type] > (rankings[0][type] ?? 0) || user_row[`${_type}_rank`] < (rankings[0].rank ?? 0))) {
+                            output += `\`#${user_row[`${_type}_rank`] ?? ""}${user_row[`${_type}_rank`] ? " ".repeat(clamp(longest_rank - user_row[`${_type}_rank`].toString().length, 0, longest_rank)) : "?".repeat(longest_rank)}\``
                             let country_code = user_row.country?.toLowerCase() ?? null
                             output += country_code ? `:flag_${country_code}:` : ":pirate_flag:"
                             output += `\`${user_row.username}${" ".repeat(clamp(longest_name - (user_row.username?.length ?? 4), 0, longest_name))}\``
-                            output += ` \`${" ".repeat(clamp(biggest_count - user_row[type].toLocaleString().length, 0, biggest_count))}${user_row[type].toLocaleString()}\`\n`
+                            output += ` \`${" ".repeat(clamp(biggest_count - user_row[_type].toLocaleString().length, 0, biggest_count))}${user_row[_type].toLocaleString()}\`\n`
                         }
                     }
                 }
@@ -189,13 +199,13 @@ module.exports = {
                     output += `\`${user.username}${" ".repeat(clamp(longest_name - (user.username?.length ?? 4), 0, longest_name))}\``
                     output += ` \`${" ".repeat(clamp(biggest_count - user[type].toLocaleString().length, 0, biggest_count))}${user[type].toLocaleString()}\`\n`
                 }
-                if (user_row && user_row[type] > 0) {
-                    if (user_row && user_row.username && (user_row[type] < (rankings[rankings.length - 1][type] ?? 0) || user_row[`${type}_rank`] > (rankings[rankings.length - 1].rank ?? 0))) {
-                        output += `\`#${user_row[`${type}_rank`] ?? ""}${user_row[`${type}_rank`] ? " ".repeat(clamp(longest_rank - user_row[`${type}_rank`].toString().length, 0, longest_rank)) : "?".repeat(longest_rank)}\``
+                if (user_row && user_row[_type] > 0) {
+                    if (user_row && user_row.username && (user_row[_type] < (rankings[rankings.length - 1][type] ?? 0) || user_row[`${_type}_rank`] > (rankings[rankings.length - 1].rank ?? 0))) {
+                        output += `\`#${user_row[`${_type}_rank`] ?? ""}${user_row[`${_type}_rank`] ? " ".repeat(clamp(longest_rank - user_row[`${_type}_rank`].toString().length, 0, longest_rank)) : "?".repeat(longest_rank)}\``
                         let country_code = user_row.country?.toLowerCase() ?? null
                         output += country_code ? `:flag_${country_code}:` : ":pirate_flag:"
                         output += `\`${user_row.username}${" ".repeat(clamp(longest_name - (user_row.username?.length ?? 4), 0, longest_name))}\``
-                        output += ` \`${" ".repeat(clamp(biggest_count - user_row[type].toLocaleString().length, 0, biggest_count))}${user_row[type].toLocaleString()}\`\n`
+                        output += ` \`${" ".repeat(clamp(biggest_count - user_row[_type].toLocaleString().length, 0, biggest_count))}${user_row[_type].toLocaleString()}\`\n`
                     }
                 }
 
