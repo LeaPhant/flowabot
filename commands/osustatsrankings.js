@@ -40,6 +40,8 @@ module.exports = {
                     search["mode"] = argv[i + 1]
                 if (arg == "-page" || arg == "-p")
                     search["page"] = argv[i + 1]
+                if (arg == "-limit" || arg == "-l")
+                    search["limit"] = argv[i + 1]
                 if (arg == "-start" || arg == "-from")
                     search["from"] = argv[i + 1]
                 if (arg == "-end" || arg == "-to")
