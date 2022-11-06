@@ -8,7 +8,7 @@ const ARGS = [
     "-stars", "-length-min", "-length-max", "-spinners-min",
     "-spinners-max", "-mods", "-m", "-is", "-isnot", "-not",
     "-rank", "-played-from", "-played-start", "-played-to", "-played-end",
-    "-mode",
+    "-mode", "-u", "-user",
 ]
 
 module.exports = {
@@ -37,17 +37,6 @@ module.exports = {
 
             let osu_user = helper.getUsername(filteredArgv, msg, user_ign);
 
-            if (!osu_user) {
-                if (user_ign[msg.author.id] == undefined)
-                    reject(helper.commandHelp('ign-set'));
-                else
-                    reject(helper.commandHelp('osu'));
-
-                return false;
-            }
-
-            const { user_id } = await osu.get_user_id(osu_user)
-
             let search = {}
             let mods_array = []
             let mods_include_array = []
@@ -55,6 +44,8 @@ module.exports = {
             let stars = ""
             let custom_rank
             for (const [i, arg] of argv.entries()) {
+                if (arg == "-u" || arg == "-user")
+                    osu_user = argv[i + 1]
                 if (arg == "-mode")
                     search["mode"] = argv[i + 1]
                 if (arg == "-start" || arg == "-from")
@@ -149,6 +140,18 @@ module.exports = {
                 const params = new URLSearchParams(search)
                 searchParamsString = "?" + params.toString()
             }
+
+            if (!osu_user) {
+                if (user_ign[msg.author.id] == undefined)
+                    reject(helper.commandHelp('ign-set'));
+                else
+                    reject(helper.commandHelp('osu'));
+
+                return false;
+            }
+
+            const { user_id } = await osu.get_user_id(osu_user)
+
             let counts
             try {
                 const res = await axios.get(`https://osustats.respektive.pw/counts/${user_id}${searchParamsString}`)
