@@ -174,12 +174,13 @@ module.exports = {
                     let output = `\`\`\`\n`
 
                     if (custom_rank && counts[`rank_${custom_rank}`])
-                        output += `#${custom_rank}`.padEnd(7) + `: ${counts["rank_" + custom_rank].toLocaleString().padStart(7) ?? 0}\n`
-                    output += `Top 1s : ${counts.top1s.toLocaleString().padStart(7) ?? "0".padStart(7)}\t${counts.top1s_rank ? "#" + counts.top1s_rank.toLocaleString() : ""}\n`
-                    output += `Top 8s : ${counts.top8s.toLocaleString().padStart(7) ?? "0".padStart(7) ?? 0}\t${counts.top8s_rank ? "#" + counts.top8s_rank.toLocaleString() : ""}\n`
-                    output += `Top 15s: ${counts.top15s.toLocaleString().padStart(7) ?? "0".padStart(7) ?? 0}\t${counts.top15s_rank ? "#" + counts.top15s_rank.toLocaleString() : ""}\n`
-                    output += `Top 25s: ${counts.top25s.toLocaleString().padStart(7) ?? "0".padStart(7) ?? 0}\t${counts.top25s_rank ? "#" + counts.top25s_rank.toLocaleString() : ""}\n`
-                    output += `Top 50s: ${counts.top50s.toLocaleString().padStart(7) ?? "0".padStart(7) ?? 0}\t${counts.top50s_rank ? "#" + counts.top50s_rank.toLocaleString() : ""}\n`
+                        output += `#${custom_rank}`.padEnd(8) + `: ${counts["rank_" + custom_rank].toLocaleString().padStart(7) ?? 0}\n`
+                    output += `Top 1s  : ${counts.top1s.toLocaleString().padStart(7) ?? "0".padStart(7)}\t${counts.top1s_rank ? "#" + counts.top1s_rank.toLocaleString() : ""}\n`
+                    output += `Top 8s  : ${counts.top8s.toLocaleString().padStart(7) ?? "0".padStart(7) ?? 0}\t${counts.top8s_rank ? "#" + counts.top8s_rank.toLocaleString() : ""}\n`
+                    output += `Top 15s : ${counts.top15s.toLocaleString().padStart(7) ?? "0".padStart(7) ?? 0}\t${counts.top15s_rank ? "#" + counts.top15s_rank.toLocaleString() : ""}\n`
+                    output += `Top 25s : ${counts.top25s.toLocaleString().padStart(7) ?? "0".padStart(7) ?? 0}\t${counts.top25s_rank ? "#" + counts.top25s_rank.toLocaleString() : ""}\n`
+                    output += `Top 50s : ${counts.top50s.toLocaleString().padStart(7) ?? "0".padStart(7) ?? 0}\t${counts.top50s_rank ? "#" + counts.top50s_rank.toLocaleString() : ""}\n`
+                    output += `Top 100s: ${counts.top100s.toLocaleString().padStart(7) ?? "0".padStart(7) ?? 0}\t${counts.top100s_rank ? "#" + counts.top100s_rank.toLocaleString() : ""}\n`
                     output += `\`\`\``
 
                     embed.fields = []

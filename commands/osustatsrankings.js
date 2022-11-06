@@ -7,7 +7,7 @@ const clamp = (num, min, max) => Math.min(Math.max(num, min), max)
 const title = (type, search) => `${type == "custom" && search["rank"] ? "Rank " + search["rank"] : "Top " + type.replace(/\D/g, "")} Score Count Rankings`
 
 module.exports = {
-    command: ['osustatsrankings', 'osr', 'top50s', 'top25s', 'top15s', 'top8s', 'top1s'],
+    command: ['osustatsrankings', 'osr', 'top100s', 'top50s', 'top25s', 'top15s', 'top8s', 'top1s'],
     description: "Get leaderboard position rankings for osu!",
     usage: '[username]',
     example: [
