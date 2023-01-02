@@ -2134,7 +2134,7 @@ module.exports = {
                     },
                     {
                         name: 'Level',
-                        value: (+Number(data.statistics.level.current + '.' + data.statistics.level.progress).toFixed(2)).toString(),
+                        value: (+Number(data.statistics.level.current + '.' + String(data.statistics.level.progress).padStart(2, "0")).toFixed(2)).toString(),
                         inline: true
                     },
                     {
