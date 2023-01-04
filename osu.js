@@ -1033,7 +1033,7 @@ module.exports = {
             let fixing_score = "";
 
             json.forEach(function(value, index){
-                let current_pp = parseFloat(value.pp);
+                let current_pp = parseFloat(value.pp || 0);
                 let current_factor = Math.pow(0.95, index);
                 let current_pp_weighted = current_pp * current_factor;
 
@@ -1044,7 +1044,7 @@ module.exports = {
                 let differences_array = [];
                 json.forEach(function(value, index){
                     if(index >= 90){
-                        differences_array.push(parseFloat(json[index-1].pp) - parseFloat(json[index].pp));
+                        differences_array.push(parseFloat(json[index-1].pp || 0) - parseFloat(json[index].pp || 0));
                     }
                 });
 
@@ -1054,7 +1054,7 @@ module.exports = {
                 });
 
                 let avg = sum / differences_array.length;
-                let current_pp = parseFloat(json[99].pp);
+                let current_pp = parseFloat(json[99].pp || 0);
 
                 for(let x = 0; x < 100; x++){
                     current_pp -= avg;
@@ -1102,7 +1102,7 @@ module.exports = {
 
             setTimeout(function(){
                 pp_array.forEach(function(value, index){
-                    let current_pp = parseFloat(value.pp);
+                    let current_pp = parseFloat(value.pp || 0);
                     let current_factor = Math.pow(0.95, index);
                     let current_pp_weighted = current_pp * current_factor;
 
