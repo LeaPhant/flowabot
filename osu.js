@@ -638,6 +638,14 @@ async function getScore(recent_raw, cb){
         helper.downloadBeatmap(recent_raw.beatmap.id).finally(async () => {
             let beatmap_path = path.resolve(config.osu_cache_path, `${recent_raw.beatmap.id}.osu`);
 
+            const beatmap_params = {
+                path: beatmap_path,
+                ar: beatmap.ar,
+                cs: beatmap.cs,
+                hp: beatmap.drain,
+                od: beatmap.accuracy,
+            }
+
             const play_params = {
                 mods: getModsEnum(recent_raw.mods.map(x => x.acronym)),
                 n300: recent_raw.statistics.great ?? 0,
@@ -646,23 +654,15 @@ async function getScore(recent_raw, cb){
                 nMisses: recent_raw.statistics.miss ?? 0,
                 combo: recent_raw.max_combo,
                 clockRate: speed,
-                ar: beatmap.ar,
-                cs: beatmap.cs,
-                hp: beatmap.hp,
-                od: beatmap.od,
             }
             const fc_play_params = {
                 mods: getModsEnum(recent_raw.mods.map(x => x.acronym)),
                 clockRate: speed,
                 n100: recent_raw.statistics.ok ?? 0,
                 n50: recent_raw.statistics.meh ?? 0,
-                ar: beatmap.ar,
-                cs: beatmap.cs,
-                hp: beatmap.hp,
-                od: beatmap.od,
             }
 
-            const rosu_map = new Beatmap({ path: beatmap_path })
+            const rosu_map = new Beatmap(beatmap_params)
             const play = new Calculator(play_params).performance(rosu_map)
             const fc_play = new Calculator(fc_play_params).performance(rosu_map)
 
@@ -680,8 +680,8 @@ async function getScore(recent_raw, cb){
                 creator_id: beatmapset.user_id,
                 approved_date: beatmapset.ranked_date,
                 cs: diff_settings.cs,
-                ar: diff_settings.ar,
-                od: diff_settings.od,
+                ar: play.difficulty.ar,
+                od: play.difficulty.od,
                 hp: diff_settings.hp,
                 duration: beatmap.total_length,
                 fail_percent: fail_percent
