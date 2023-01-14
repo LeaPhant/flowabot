@@ -139,9 +139,9 @@ module.exports = {
             const type = argv[0] == "osr" || argv[0] == "osustatsrankings" ? custom : argv[0]
 
             const res = await axios.get(`https://osustats.respektive.pw/rankings/${type}${searchParamsString}`)
-            const rankings = res.data
-            const res2 = await axios.get("https://osustats.respektive.pw/last_update")
-            const last_update = res2.data.last_update
+            const rankings = res.data.leaderboard
+            const last_update = res.data.last_update
+            const beatmaps_amount = res.data.beatmaps_amount
 
             if (user && isNaN(user)) {
                 const { user_id } = await osu.get_user_id(user)
@@ -152,9 +152,9 @@ module.exports = {
                 let embed = {
                     color: 12277111,
                     footer: {
-                        text: `Last update: ${DateTime.fromISO(last_update).toRelative()}${helper.sep}${last_update.replace(/T/g, " ").split(".")[0]} UTC`
+                        text: `Last update: ${DateTime.fromISO(last_update).toRelative()}${helper.sep}${last_update.replace(/T/g, " ").replace("Z", "")} UTC`
                     },
-                    title: `${title(type, search)} | ${rankings[0]["beatmaps_amount"].toLocaleString()} beatmaps`
+                    title: `${title(type, search)} | ${beatmaps_amount.toLocaleString()} beatmaps`
                 }
                 let biggest_count = isFinite(Math.max(...(rankings.map(el => el[type].toLocaleString().length)))) ? Math.max(...(rankings.map(el => el[type].toLocaleString().length))) : 0
                 let longest_name = isFinite(Math.max(...(rankings.map(el => el.username?.length ?? 0)))) ? Math.max(...(rankings.map(el => el.username?.length ?? 0))) : 0

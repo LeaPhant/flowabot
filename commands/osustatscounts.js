@@ -160,8 +160,7 @@ module.exports = {
                 counts = e.response.data
             }
 
-            const res2 = await axios.get("https://osustats.respektive.pw/last_update")
-            const last_update = res2.data.last_update
+            const last_update = counts.last_update
 
             if (counts && !counts.error) {
                 osu.get_user({ u: osu_user }, (err, embed) => {
@@ -185,7 +184,7 @@ module.exports = {
 
                     embed.fields = []
                     embed.footer = {
-                        text: `Last update: ${DateTime.fromISO(last_update).toRelative()}${helper.sep}${last_update.replace(/T/g, " ").split(".")[0]} UTC${helper.sep}${counts["beatmaps_amount"].toLocaleString()} beatmaps`
+                        text: `Last update: ${DateTime.fromISO(last_update).toRelative()}${helper.sep}${last_update.replace(/T/g, " ").replace("Z", "")} UTC${helper.sep}${counts["beatmaps_amount"].toLocaleString()} beatmaps`
                     }
                     embed.description = output
 
