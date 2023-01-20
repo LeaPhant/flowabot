@@ -658,8 +658,11 @@ async function getScore(recent_raw, cb){
             const fc_play_params = {
                 mods: getModsEnum(recent_raw.mods.map(x => x.acronym)),
                 clockRate: speed,
-                n100: recent_raw.statistics.ok ?? 0,
-                n50: recent_raw.statistics.meh ?? 0,
+                acc: calculateAccuracy({ 
+                    great: recent_raw.statistics.great ?? 0,
+                    ok: recent_raw.statistics.ok ?? 0,
+                    meh: recent_raw.statistics.meh ?? 0,
+                })
             }
 
             const rosu_map = new Beatmap(beatmap_params)
