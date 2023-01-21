@@ -1628,36 +1628,43 @@ module.exports = {
         const { data } = await axios(`${config.beatmap_api}/b/${tops.map(a => a.beatmap.id).join(",")}`);
 
         for(const top of tops){
-            const { beatmap, difficulty } = data.find(a => a.beatmap.beatmap_id == top.beatmap.id);
+            const { beatmap } = data.find(a => a.beatmap.beatmap_id == top.beatmap.id);
 
             top.accuracy = (top.accuracy * 100).toFixed(2);
-            const mods = top.mods.map(mod => mod.acronym)
-            if (mods.includes("NC")) mods.push("DT")
 
-            let diffmods = mods
-            if (mods.includes("HD") && !mods.includes("FL")) diffmods = mods.filter(m => m !== "HD")
+            let speed = 1;
 
-            const diff = difficulty[getModsEnum(diffmods.filter(mod => DIFF_MODS.includes(mod)))];
+            if (top.mods.map(x => x.acronym).includes("DT") || top.mods.map(x => x.acronym).includes("NC")) {
+                speed *= top.mods.filter(mod => mod.acronym == "DT" || mod.acronym == "NC")[0].settings?.speed_change ?? 1.5;
+            } else if (top.mods.map(x => x.acronym).includes("HT") || top.mods.map(x => x.acronym).includes("DC")) {
+                speed *= top.mods.filter(mod => mod.acronym == "HT" || mod.acronym == "DC")[0].settings?.speed_change ?? 0.75;
+            }
 
-            top.stars = diff.total;
+            await helper.downloadBeatmap(beatmap.beatmap_id)
+            const beatmap_path = path.resolve(config.osu_cache_path, `${beatmap.beatmap_id}.osu`);
 
-            const pp_fc = ojsama.ppv2({
-                aim_stars: diff.aim,
-                speed_stars: diff.speed,
-                base_ar: beatmap.ar,
-                base_od: beatmap.od,
+            const beatmap_params = {
+                path: beatmap_path,
+                ar: beatmap.ar,
+                cs: beatmap.cs,
+                hp: beatmap.hp,
+                od: beatmap.od,
+            }
+
+            const play_params = {
+                mods: getModsEnum(top.mods.map(x => x.acronym)),
                 n300: Number(top.statistics.great ?? 0 + top.statistics.miss ?? 0),
                 n100: Number(top.statistics.ok ?? 0),
                 n50: Number(top.statistics.meh ?? 0),
-                mods: Number(getModsEnum(top.mods.map(mod => mod.acronym))),
-                ncircles: beatmap.num_circles,
-                nsliders: beatmap.num_sliders,
-                nobjects: beatmap.hit_objects,
-                max_combo: beatmap.max_combo,
-            });
+                clockRate: speed,
+            }
 
-            top.pp_fc = pp_fc.total;
-            top.acc_fc = (pp_fc.computed_accuracy.value() * 100).toFixed(2);
+            const rosu_map = new Beatmap(beatmap_params)
+            const pp_fc = new Calculator(play_params).performance(rosu_map)
+
+            top.stars = pp_fc.difficulty.stars;
+            top.pp_fc = pp_fc.pp;
+            top.acc_fc = calculateAccuracy({great: play_params.n300, ok: play_params.n100, meh: play_params.n50}).toFixed(2);
             top.rank_emoji = getRankEmoji(top.rank);
 
             top.beatmap = beatmap;
@@ -1693,36 +1700,43 @@ module.exports = {
         }
 
         for(const pin of pins){
-            const { beatmap, difficulty } = data.find(a => a.beatmap.beatmap_id == pin.beatmap.id);
+            const { beatmap } = data.find(a => a.beatmap.beatmap_id == pin.beatmap.id);
 
             pin.accuracy = (pin.accuracy * 100).toFixed(2);
-            const mods = pin.mods.map(mod => mod.acronym)
-            if (mods.includes("NC")) mods.push("DT")
 
-            let diffmods = mods
-            if (mods.includes("HD") && !mods.includes("FL")) diffmods = mods.filter(m => m !== "HD")
+            let speed = 1;
 
-            const diff = difficulty[getModsEnum(diffmods.filter(mod => DIFF_MODS.includes(mod)))];
+            if (pin.mods.map(x => x.acronym).includes("DT") || pin.mods.map(x => x.acronym).includes("NC")) {
+                speed *= pin.mods.filter(mod => mod.acronym == "DT" || mod.acronym == "NC")[0].settings?.speed_change ?? 1.5;
+            } else if (pin.mods.map(x => x.acronym).includes("HT") || pin.mods.map(x => x.acronym).includes("DC")) {
+                speed *= pin.mods.filter(mod => mod.acronym == "HT" || mod.acronym == "DC")[0].settings?.speed_change ?? 0.75;
+            }
 
-            pin.stars = diff.total;
+            await helper.downloadBeatmap(beatmap.beatmap_id)
+            const beatmap_path = path.resolve(config.osu_cache_path, `${beatmap.beatmap_id}.osu`);
 
-            const pp_fc = ojsama.ppv2({
-                aim_stars: diff.aim,
-                speed_stars: diff.speed,
-                base_ar: beatmap.ar,
-                base_od: beatmap.od,
+            const beatmap_params = {
+                path: beatmap_path,
+                ar: beatmap.ar,
+                cs: beatmap.cs,
+                hp: beatmap.hp,
+                od: beatmap.od,
+            }
+
+            const play_params = {
+                mods: getModsEnum(pin.mods.map(x => x.acronym)),
                 n300: Number(pin.statistics.great ?? 0 + pin.statistics.miss ?? 0),
                 n100: Number(pin.statistics.ok ?? 0),
                 n50: Number(pin.statistics.meh ?? 0),
-                mods: Number(getModsEnum(pin.mods.map(mod => mod.acronym))),
-                ncircles: beatmap.num_circles,
-                nsliders: beatmap.num_sliders,
-                nobjects: beatmap.hit_objects,
-                max_combo: beatmap.max_combo,
-            });
+                clockRate: speed,
+            }
 
-            pin.pp_fc = pp_fc.total;
-            pin.acc_fc = (pp_fc.computed_accuracy.value() * 100).toFixed(2);
+            const rosu_map = new Beatmap(beatmap_params)
+            const pp_fc = new Calculator(play_params).performance(rosu_map)
+
+            pin.stars = pp_fc.difficulty.stars;
+            pin.pp_fc = pp_fc.pp;
+            pin.acc_fc = calculateAccuracy({great: play_params.n300, ok: play_params.n100, meh: play_params.n50}).toFixed(2);
             pin.rank_emoji = getRankEmoji(pin.rank);
 
             pin.beatmap = beatmap;
