@@ -12,11 +12,11 @@ module.exports = {
     example: [
         {
             run: "pins",
-            result: "Returns your pin 5 pinned plays."
+            result: "Returns your top 5 pinned plays."
         },
         {
             run: "pins7 vaxei",
-            result: "Returns Vaxei's pin 7 pinned plays."
+            result: "Returns Vaxei's top 7 pinned plays."
         }
     ],
     configRequired: ['credentials.client_id', 'credentials.client_secret'],
