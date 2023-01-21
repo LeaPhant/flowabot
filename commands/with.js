@@ -2,7 +2,7 @@ const osu = require('../osu.js');
 const helper = require('../helper.js');
 
 module.exports = {
-    command: 'with',
+    command: ['with', 'map'],
     description: "Show pp values of a beatmap with several accuracies or a specified accuracy.",
     usage: '[beatmap url] [+mods] [98.34%]',
     example: [

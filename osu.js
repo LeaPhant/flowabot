@@ -1861,7 +1861,7 @@ module.exports = {
             const response = result.data;
             //helper.log(response);
 
-            let beatmap = response.beatmap;
+            const beatmap = response.beatmap;
             let mods = options.mods.map(mod => mod.acronym)
             if(!mods)
                 mods = [];
@@ -1886,35 +1886,20 @@ module.exports = {
             let bpm_min = beatmap.bpm_min * speed;
             let bpm_max = beatmap.bpm_max * speed;
 
-            let diffmods = mods
-            if (mods.includes("HD") && !mods.includes("FL")) diffmods = mods.filter(m => m !== "HD")
+            await helper.downloadBeatmap(beatmap.beatmap_id)
+            const beatmap_path = path.resolve(config.osu_cache_path, `${beatmap.beatmap_id}.osu`);
 
-            let diff = response.difficulty[getModsEnum(diffmods.filter(mod => DIFF_MODS.includes(mod)))];
-
-            if(!diff.aim && !diff.speed){
-                cb('No difficulty data for this map! Please try again later. 😭');
-                return;
+            const beatmap_params = {
+                path: beatmap_path,
+                ar: beatmap.ar,
+                cs: beatmap.cs,
+                hp: beatmap.hp,
+                od: beatmap.od,
             }
 
-            const pp_calc_obj = {
-                enabled_mods: getModsEnum(mods),
-                maxcombo: beatmap.max_combo,
-            }
+            const rosu_map = new Beatmap(beatmap_params)
 
-            const diff_obj = {
-                aim: diff.aim,
-                speed: diff.speed,
-                fl: diff.fl,
-                total: diff.total,
-                slider_factor: diff.slider_factor,
-                speed_note_count: diff.speed_note_count,
-                max_combo: beatmap.max_combo,
-                ar: diff.ar,
-                od: diff.od,
-                count_circles: beatmap.num_circles,
-                count_sliders: beatmap.num_sliders,
-                count_sfirstners: beatmap.num_sfirstners,
-            }
+            let diff = new Calculator().difficulty(rosu_map)
 
             let accuracies = [90, 95, 97, 98, 99, 99.5, 100];
 
@@ -1932,14 +1917,17 @@ module.exports = {
             let pps = [];
 
             for (acc of accuracies) {
-                const hit_results = hitsFromAcc(acc, beatmap.hit_objects)
-                const pp = new std_ppv2()
 
-                pp.setDifficulty(diff_obj)
-                pp.setPerformance(Object.assign(pp_calc_obj, hit_results))
 
-                const pp_result = await pp.compute()
-                pps.push(Math.round(pp_result.total))
+                const play_params = {
+                    mods: getModsEnum(mods),
+                    clockRate: speed,
+                    acc: acc,
+                }
+
+                const pp_result = new Calculator(play_params).performance(rosu_map)
+
+                pps.push(Math.round(pp_result.pp))
             }
 
             let embed = {};
@@ -1973,7 +1961,7 @@ module.exports = {
                     lines[1] += '**';
             });
 
-            lines[3] = `CS**${+diff_settings.cs.toFixed(1)}** AR**${+diff_settings.ar.toFixed(1)}** OD**${+diff_settings.od.toFixed(1)}** HP**${+diff_settings.hp.toFixed(1)}** - `;
+            lines[3] = `CS**${+diff_settings.cs.toFixed(1)}** AR**${+diff.ar.toFixed(1)}** OD**${+diff.od.toFixed(1)}** HP**${+diff_settings.hp.toFixed(1)}** - `;
 
             if(bpm_min != bpm_max)
                 lines[3] += `${+bpm_min.toFixed(1)}-${+bpm_max.toFixed(1)} (**`;
@@ -1988,7 +1976,7 @@ module.exports = {
                 lines[3] += '**';
 
             lines[3] += ' BPM ~ ';
-            lines[3] += `**${+diff.total.toFixed(2)}**★`;
+            lines[3] += `**${+diff.stars.toFixed(2)}**★`;
 
             embed.fields = [
                 {
