@@ -633,7 +633,7 @@ async function getScore(recent_raw, cb){
         let fail_percent = 1;
 
         if(!recent_raw.passed)
-        fail_percent = (recent.count300 + recent.count100 + recent.count50 + recent.countmiss) / (beatmap.count_sfirstners + beatmap.count_sliders + beatmap.count_circles);
+        fail_percent = (recent.count300 + recent.count100 + recent.count50 + recent.countmiss) / (beatmap.count_spinners + beatmap.count_sliders + beatmap.count_circles);
 
         helper.downloadBeatmap(recent_raw.beatmap.id).finally(async () => {
             let beatmap_path = path.resolve(config.osu_cache_path, `${recent_raw.beatmap.id}.osu`);
@@ -1673,43 +1673,43 @@ module.exports = {
         cb(null, { user, tops });
 	},
 
-    get_firsts: async function(options, cb){
+    get_pins: async function(options, cb){
 
         let { user_id, error } = await getUserId(options.user);
         if(error) { cb("Couldn't reach osu!api. 💀") }
 
         let requests = [
-	        api.get(`/users/${user_id}/scores/firstned`, { params: { limit: options.count, mode: "osu" } }),
+	        api.get(`/users/${user_id}/scores/pinned`, { params: { limit: options.count, mode: "osu" } }),
 	        api.get(`/users/${user_id}/osu`)
         ];
         
         const results = await Promise.all(requests);
 
-        let firsts = results[0].data;
+        let pins = results[0].data;
         let user = results[1].data;
 
-        if(firsts.length < 1){
-            cb(`No firsts found for ${user.username}. 😔`);   
+        if(pins.length < 1){
+            cb(`No pins found for ${user.username}. 😔`);   
             return;
         }
 
-        let { data } = await axios(`${config.beatmap_api}/b/${firsts.map(a => a.beatmap.id).join(",")}`)
+        let { data } = await axios(`${config.beatmap_api}/b/${pins.map(a => a.beatmap.id).join(",")}`)
         
         if(Array.isArray(data) == false){
             data = [data]
         }
 
-        for(const first of firsts){
-            const { beatmap } = data.find(a => a.beatmap.beatmap_id == first.beatmap.id);
+        for(const pin of pins){
+            const { beatmap } = data.find(a => a.beatmap.beatmap_id == pin.beatmap.id);
 
-            first.accuracy = (first.accuracy * 100).toFixed(2);
+            pin.accuracy = (pin.accuracy * 100).toFixed(2);
 
             let speed = 1;
 
-            if (first.mods.map(x => x.acronym).includes("DT") || first.mods.map(x => x.acronym).includes("NC")) {
-                speed *= first.mods.filter(mod => mod.acronym == "DT" || mod.acronym == "NC")[0].settings?.speed_change ?? 1.5;
-            } else if (first.mods.map(x => x.acronym).includes("HT") || first.mods.map(x => x.acronym).includes("DC")) {
-                speed *= first.mods.filter(mod => mod.acronym == "HT" || mod.acronym == "DC")[0].settings?.speed_change ?? 0.75;
+            if (pin.mods.map(x => x.acronym).includes("DT") || pin.mods.map(x => x.acronym).includes("NC")) {
+                speed *= pin.mods.filter(mod => mod.acronym == "DT" || mod.acronym == "NC")[0].settings?.speed_change ?? 1.5;
+            } else if (pin.mods.map(x => x.acronym).includes("HT") || pin.mods.map(x => x.acronym).includes("DC")) {
+                speed *= pin.mods.filter(mod => mod.acronym == "HT" || mod.acronym == "DC")[0].settings?.speed_change ?? 0.75;
             }
 
             await helper.downloadBeatmap(beatmap.beatmap_id)
@@ -1724,25 +1724,25 @@ module.exports = {
             }
 
             const play_params = {
-                mods: getModsEnum(first.mods.map(x => x.acronym)),
-                n300: Number(first.statistics.great ?? 0 + first.statistics.miss ?? 0),
-                n100: Number(first.statistics.ok ?? 0),
-                n50: Number(first.statistics.meh ?? 0),
+                mods: getModsEnum(pin.mods.map(x => x.acronym)),
+                n300: Number(pin.statistics.great ?? 0 + pin.statistics.miss ?? 0),
+                n100: Number(pin.statistics.ok ?? 0),
+                n50: Number(pin.statistics.meh ?? 0),
                 clockRate: speed,
             }
 
             const rosu_map = new Beatmap(beatmap_params)
             const pp_fc = new Calculator(play_params).performance(rosu_map)
 
-            first.stars = pp_fc.difficulty.stars;
-            first.pp_fc = pp_fc.pp;
-            first.acc_fc = calculateAccuracy({great: play_params.n300, ok: play_params.n100, meh: play_params.n50}).toFixed(2);
-            first.rank_emoji = getRankEmoji(first.rank);
+            pin.stars = pp_fc.difficulty.stars;
+            pin.pp_fc = pp_fc.pp;
+            pin.acc_fc = calculateAccuracy({great: play_params.n300, ok: play_params.n100, meh: play_params.n50}).toFixed(2);
+            pin.rank_emoji = getRankEmoji(pin.rank);
 
-            first.beatmap = beatmap;
+            pin.beatmap = beatmap;
         }
         
-        cb(null, { user, firsts });
+        cb(null, { user, pins });
 	},
 
     get_firsts: async function(options, cb){
