@@ -1899,7 +1899,7 @@ module.exports = {
 
             const rosu_map = new Beatmap(beatmap_params)
 
-            let diff = new Calculator().difficulty(rosu_map)
+            let diff = new Calculator({ mods: getModsEnum(mods), clockRate: speed }).difficulty(rosu_map)
 
             let accuracies = [90, 95, 97, 98, 99, 99.5, 100];
 
