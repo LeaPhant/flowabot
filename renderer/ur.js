@@ -5,6 +5,7 @@ const path = require('path');
 const os = require('os');
 const { fork } = require('child_process');
 const config = require('../config.json');
+const { calculate_ur } = require("./ur_processor");
 
 function calculateUr(options){
 	return new Promise(async (resolve, reject) => {
@@ -23,26 +24,13 @@ function calculateUr(options){
 		await fs.mkdir(path.resolve(os.tmpdir(), 'replays'), { recursive: true });
 		await fs.writeFile(path.resolve(os.tmpdir(), 'replays', `${options.score_id}`), replay_raw, { encoding: 'binary' });
 
-		const worker = fork(path.resolve(__dirname, 'beatmap_preprocessor.js'), ['--max-old-space-size=512']);
-
-		worker.send({
+		const ur = await calculate_ur({
 			beatmap_path: path.resolve(config.osu_cache_path, `${options.beatmap_id}.osu`),
 			options,
 			enabled_mods: options.mods
-		});
-
-		worker.on('close', code => {
-			if(code > 0){
-				cb("Error processing beatmap");
-				return false;
-			}
-		});
-
-		worker.on('message', beatmap => {
-			const { HitResults } = beatmap;
-
-			resolve(HitResults);
-		});
+		})
+		
+		resolve({ ur: ur });
 	});
 }
 
