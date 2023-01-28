@@ -687,34 +687,9 @@ function processBeatmap(){
     }    
 
      // Set stacking offset
-     beatmap.hitObjects.forEach((hitObject, i) => {
-
+    beatmap.hitObjects.forEach((hitObject, i) => {
         hitObject.StackOffset = hitObject.StackHeight * beatmap.Scale * -6.4;
         hitObject.position = [hitObject.position[0] + hitObject.StackOffset, hitObject.position[1] + hitObject.StackOffset];
-
-        if(hitObject.objectName == "slider"){
-            hitObject.endPosition = [hitObject.endPosition[0] + hitObject.StackOffset, hitObject.endPosition[1] + hitObject.StackOffset];
-
-            for(let x = 0; x < hitObject.SliderDots.length; x++){
-                if(!Array.isArray(hitObject.SliderDots[x]) || hitObject.SliderDots[x].length != 2)
-                    continue;
-
-                hitObject.SliderDots[x] = [
-                    hitObject.SliderDots[x][0] + hitObject.StackOffset,
-                    hitObject.SliderDots[x][1] + hitObject.StackOffset
-                ];
-            }
-
-            for(let x = 0; x < hitObject.SliderTicks.length; x++){
-                if(!Array.isArray(hitObject.SliderTicks[x].position) || hitObject.SliderTicks[x].position.length != 2)
-                    continue;
-
-                hitObject.SliderTicks[x].position = [
-                    hitObject.SliderTicks[x].position[0] + hitObject.StackOffset,
-                    hitObject.SliderTicks[x].position[1] + hitObject.StackOffset
-                ];
-            }
-        }
     });
     
     const allhits = [];
