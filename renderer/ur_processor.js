@@ -27,48 +27,6 @@ const od_ms_step = 6;
 const od0_ms = 79.5;
 const od10_ms = 19.5;
 
-const keys_enum = {
-    "M1": Math.pow(2,0),
-    "M2": Math.pow(2,1),
-    "K1": Math.pow(2,2),
-    "K2": Math.pow(2,3),
-    "S": Math.pow(2,4)
-}
-
-function parseKeysPressed(num){
-    let keys = Number(num);
-    let output_keys = {
-        K1: false,
-        K2: false,
-        M1: false,
-        M2: false,
-        S: false
-    };
-
-    for(key in keys_enum){
-        output_keys[key] = false;
-        if(keys_enum[key] & keys)
-            output_keys[key] = true;
-    }
-
-    if(output_keys.K1 && output_keys.M1)
-        output_keys.M1 = false;
-
-    if(output_keys.K2 && output_keys.M2)
-        output_keys.M2 = false;
-
-    return output_keys;
-}
-
-function getCursor(replay){
-    replay.lastCursor++;
-
-    return { 
-        previous: replay.replay_data[replay.lastCursor - 1],
-        current: replay.replay_data[replay.lastCursor]
-    };
-}
-
 async function parseReplay(buf, decompress = true){
     let replay_data = buf;
 
@@ -78,8 +36,13 @@ async function parseReplay(buf, decompress = true){
         
     let replay_frames = replay_data.split(",");
 
-    let output_frames = [];
+    const EPSILON = Number.EPSILON;
 
+    const M1 = 1 << 0;
+    const M2 = 1 << 1;
+
+    let output_frames = [];
+    let prevKeys = 0;
     let offset = 0;
 
     for(let i = 0; i < replay_frames.length; i++){
@@ -88,21 +51,29 @@ async function parseReplay(buf, decompress = true){
         if(replay_frame.length < 4)
             continue;
 
-        let output_frame = {
-            offset: Number(replay_frame[0]) + offset,
-            timeSinceLastAction: Number(replay_frame[0]),
-            x: Number(replay_frame[1]),
-            y: Number(replay_frame[2]),
-            keys: parseKeysPressed(replay_frame[3])
-        };
+        offset += Number(replay_frame[0]);
 
-        let keys = parseKeysPressed(replay_frame[3]);
+        let skip = i < 2 && Math.abs(Number(replay_frame[1]) - 256) <= EPSILON && Math.abs(Number(replay_frame[2]) - 500.0) <= EPSILON;
+        let keys = Number(replay_frame[3]);
+        let newKeys = keys & ~prevKeys;
+        let isDoubletap = ((newKeys & (M1 | M2)) === (M1 | M2));
+        prevKeys = keys;
 
-        output_frame = Object.assign(keys, output_frame);
+        if (newKeys > 0 && Number(replay_frame[0]) >= 0 && !skip) {
+            output_frames.push({
+                offset,
+                x: Number(replay_frame[1]),
+                y: Number(replay_frame[2]),
+            })
+        }
 
-        output_frames.push(output_frame);
-
-        offset = output_frames[output_frames.length - 1].offset;
+        if (isDoubletap) {
+            output_frames.push({
+                offset,
+                x: Number(replay_frame[1]),
+                y: Number(replay_frame[2]),
+            })
+        }
     }
 
     return output_frames;
@@ -692,74 +663,37 @@ function processBeatmap(){
         hitObject.position = [hitObject.position[0] + hitObject.StackOffset, hitObject.position[1] + hitObject.StackOffset];
     });
     
-    const allhits = [];
-
+    let allhits = [];
+    let frames = beatmap.Replay.replay_data;
     for(let i = 0; i < beatmap.hitObjects.length; i++){
         const hitObject = beatmap.hitObjects[i];
 
         if(hitObject.objectName == 'spinner')
             continue; // process spinners later
 
-        let nextFrame, previous, current;
+        let prevEndTime = null;
+        if (i > 0 && beatmap.hitObjects[i - 1].objectName == 'slider')
+            prevEndTime = beatmap.hitObjects[i - 1].endTime;
 
-        let currentPresses = 0;
+        const startTime = hitObject.startTime;
 
-        do{
-            nextFrame = getCursor(beatmap.Replay);
+        const timeStart = startTime - beatmap.HitWindow50;
+        const timeEnd = startTime + beatmap.HitWindow50;
 
-            ({ previous, current } = nextFrame);
+        const frameRange = frames.filter(frame => timeStart <= frame.offset && frame.offset < timeEnd);
 
-            if(current != null && current.offset > hitObject.latestHit){
-                beatmap.Replay.lastCursor--;
+        let frameMatch = null;
+        for (const frame of frameRange) {
+            if (withinCircle(frame.x, frame.y, ...hitObject.position, beatmap.Radius) && (prevEndTime == null || prevEndTime < frame.offset)) {
+                frameMatch = frame;
                 break;
             }
+        }
 
-            if(current == null || current.offset < hitObject.startTime - beatmap.HitWindow50)
-                continue;
-
-            if((current.K1 || current.M1) 
-            && previous.K1 == false 
-            && previous.M1 == false)
-                currentPresses++;
-
-            if((current.K2 || current.M2) 
-            && previous.K2 == false 
-            && previous.M2 == false)
-                currentPresses++;
-
-            if(hitObject.objectName == 'circle' || hitObject.objectName == 'slider'){
-                while(currentPresses > 0){
-                    currentPresses--;
-
-                    let offsetRaw = current.offset - hitObject.startTime;
-                    let offset = Math.abs(offsetRaw);
-
-                    if(withinCircle(current.x, current.y, ...hitObject.position, beatmap.Radius)){
-                        let hitResult = 0;
-                        if(offset <= beatmap.HitWindow300)
-                            hitResult = 300;
-                        else if(offset <= beatmap.HitWindow100)
-                            hitResult = 100;
-                        else if(offset <= beatmap.HitWindow50)
-                            hitResult = 50;
-                        else
-                            hitResult = 0;
-
-                        hitObject.hitOffset = offsetRaw;
-
-                        if(hitObject.objectName == 'slider')
-                            hitResult = hitResult > 0 ? 50 : 0;
-
-                        hitObject.hitResult = hitResult;
-                        if(hitResult > 0)
-                            allhits.push(offsetRaw);
-                    }
-                }
-
-                if(hitObject.hitResult != null)
-                    break;
-            }
-        }while(current != null && current.offset < hitObject.latestHit);
+        if (frameMatch) {
+            allhits.push(frameMatch.offset - startTime);
+            frames = frames.slice(frames.indexOf(frameMatch) + 1);
+        }
     }
 
     return variance(allhits) * 10;
