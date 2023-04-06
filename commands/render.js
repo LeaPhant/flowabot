@@ -42,7 +42,7 @@ module.exports = {
 
             let beatmap_id, beatmap_url, beatmap_promise, mods = [], time = 0,
             ar, cs, od, length = 0, percent = 0, custom_url = false,
-            size = [400, 300], type, objects,
+            size = [466, 348], type, objects,
             video_type = 'gif', audio = true, download_promise, osr;
 
             let score_id;
