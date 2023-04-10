@@ -18,7 +18,7 @@ const execFilePromise = util.promisify(execFile);
 const config = require('../config.json');
 const helper = require('../helper.js');
 
-const MAX_SIZE = 25 * 1024 * 1024;
+const MAX_SIZE = 8 * 1024 * 1024;
 
 let enabled_mods = [""];
 
