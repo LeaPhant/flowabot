@@ -788,7 +788,7 @@ module.exports = {
 
 						ffmpeg_args.push(
 							'-filter_complex', `"overlay=(W-w)/2:shortest=1"`,
-							'-pix_fmt', 'yuv420p', '-r', fps, '-c:v', 'libx264', /*'-b:v', `${bitrate}k`*/ '-crf', 23,
+							'-pix_fmt', 'yuv420p', '-r', fps, '-c:v', 'libx264', /*'-b:v', `${bitrate}k`*/ '-crf', 18,
 							'-c:a', 'aac', '-b:a', '164k', '-shortest', '-preset', 'veryfast',
 							'-movflags', 'faststart', '-g', fps, '-force_key_frames', '00:00:00.000', `${file_path}/video.mp4`
 						);
