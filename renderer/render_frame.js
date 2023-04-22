@@ -818,7 +818,18 @@ module.exports = {
                             console.log('size', stat.size / 1024, 'KiB');
                             console.log('max size', MAX_SIZE / 1024, 'KiB');
 
-                            if(msg.guild === null && stat.size < MAX_SIZE_DM || stat.size < MAX_SIZE){
+                            if(stat.size < MAX_SIZE && msg.channel.type == "text"){
+                                resolveRender({files: [{
+                                    attachment: `${file_path}/video.${options.type}`,
+                                    name: `video.${options.type}`
+                                }]}).then(() => {
+                                    fs.promises.rmdir(file_path, { recursive: true }).catch(helper.error);
+                                })
+                                .catch(console.error)
+                                .finally(() => {
+                                    fs.promises.rmdir(file_path, { recursive: true }).catch(helper.error);
+                                });
+                            }else if(stat.size < MAX_SIZE_DM ){
                                 resolveRender({files: [{
                                     attachment: `${file_path}/video.${options.type}`,
                                     name: `video.${options.type}`
