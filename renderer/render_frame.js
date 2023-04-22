@@ -818,7 +818,7 @@ module.exports = {
                             console.log('size', stat.size / 1024, 'KiB');
                             console.log('max size', MAX_SIZE / 1024, 'KiB');
 
-                            if(stat.size < MAX_SIZE || msg.guild === null && stat.size < MAX_SIZE_DM){
+                            if(msg.guild === null && stat.size < MAX_SIZE_DM || stat.size < MAX_SIZE){
                                 resolveRender({files: [{
                                     attachment: `${file_path}/video.${options.type}`,
                                     name: `video.${options.type}`
