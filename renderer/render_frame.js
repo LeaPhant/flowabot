@@ -19,6 +19,7 @@ const config = require('../config.json');
 const helper = require('../helper.js');
 
 const MAX_SIZE = 25 * 1024 * 1024;
+const MAX_SIZE_DM = 8 * 1024 * 1024;
 
 let enabled_mods = [""];
 
@@ -817,7 +818,7 @@ module.exports = {
                             console.log('size', stat.size / 1024, 'KiB');
                             console.log('max size', MAX_SIZE / 1024, 'KiB');
 
-                            if(stat.size < MAX_SIZE){
+                            if(stat.size < MAX_SIZE || msg.guild === null && stat.size < MAX_SIZE_DM){
                                 resolveRender({files: [{
                                     attachment: `${file_path}/video.${options.type}`,
                                     name: `video.${options.type}`
