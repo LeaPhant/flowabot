@@ -180,6 +180,23 @@
 
     default_value = 'none';
 
+    if(config.credentials.osu_api_key)
+        default_value = config.credentials.osu_api_key;
+
+    do{
+        console.log('');
+        console.log(`(Optional) An osu!apiv2 client id and client secret is needed for the osu! commands to work. You can get one here: ${chalk.blueBright('https://osu.ppy.sh/home/account/edit')}, by clicking the button at the very bottom that says "create new oauth2 app".`);
+        let idValue = readline.question(`osu!apiv2 client id [${chalk.green(default_value)}]: `);
+        let secretValue = readline.question(`osu!apiv2 client secret [${chalk.green(default_value)}]: `);
+
+        if(!idValue && !secretValue)
+            config.credentials.client_id = idValue == 'none' ? "" : idValue;
+            config.credentials.client_secret = secretValue == 'none' ? "" : secretValue;  
+
+    }while(idvalue != 'none');
+
+    default_value = 'none';
+
     if(config.credentials.twitch_client_id)
         default_value = config.credentials.twitch_client_id;
 
