@@ -180,20 +180,31 @@
 
     default_value = 'none';
 
-    if(config.credentials.osu_api_key)
-        default_value = config.credentials.osu_api_key;
+    if(config.credentials.client_id)
+        default_value = config.credentials.client_id;
 
-    do{
-        console.log('');
-        console.log(`(Optional) An osu!apiv2 client id and client secret is needed for the osu! commands to work. You can get one here: ${chalk.blueBright('https://osu.ppy.sh/home/account/edit')}, by clicking the button at the very bottom that says "create new oauth2 app".`);
-        let idValue = readline.question(`osu!apiv2 client id [${chalk.green(default_value)}]: `);
-        let secretValue = readline.question(`osu!apiv2 client secret [${chalk.green(default_value)}]: `);
+    console.log('');
+    console.log(`(Optional) An osu! client id is needed for the osu! commands to work. You can get one here: ${chalk.blueBright('https://osu.ppy.sh/home/account/edit')}, at the bottom of the page`);
+    value = readline.question(`oauth2 client id [${chalk.green(default_value)}]: `);
 
-        if(!idValue && !secretValue)
-            config.credentials.client_id = idValue == 'none' ? "" : idValue;
-            config.credentials.client_secret = secretValue == 'none' ? "" : secretValue;  
+    if(!value)
+        value = default_value;
 
-    }while(idvalue != 'none');
+    config.credentials.client_id = value == 'none' ? "" : value;
+
+    default_value = 'none';
+
+        if(config.credentials.client_secret)
+        default_value = config.credentials.client_secret;
+
+    console.log('');
+    console.log(`(Optional) An osu! client secret is needed for the osu! commands to work. You can get one here: ${chalk.blueBright('https://osu.ppy.sh/home/account/edit')}, at the bottom of the page`);
+    value = readline.question(`oauth2 client secret [${chalk.green(default_value)}]: `);
+
+    if(!value)
+        value = default_value;
+
+    config.credentials.client_secret = value == 'none' ? "" : value;
 
     default_value = 'none';
 
