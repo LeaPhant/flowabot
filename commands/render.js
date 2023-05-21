@@ -128,7 +128,7 @@ module.exports = {
                     combo = parseInt(arg);
                 }else if(/^([0-9]+)$/g.test(arg)){
                     time += parseInt(arg) * 1000;
-                }else if(arg.toLowerCase().startsWith('ar')){
+                }else if(/^ar[0-9]+/g.test(arg.toLowerCase())){
                     ar = parseFloat(arg.substr(2));
                 }else if(arg.toLowerCase().startsWith('cs')){
                     cs = parseFloat(arg.substr(2));
