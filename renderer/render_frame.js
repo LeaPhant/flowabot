@@ -92,7 +92,7 @@ function getTimingPoint(timingPoints, offset){
     return timingPoint;
 }
 
-async function processHitsounds(beatmap_path){
+async function processHitsounds(beatmap_path, argon){
 	let hitSoundPath = {};
 
 	let setHitSound = (file, base_path, custom) => {
@@ -107,12 +107,12 @@ async function processHitsounds(beatmap_path){
 			hitSoundPath[hitSoundName] = absolutePath;
 	};
 
-	let defaultFiles = await fs.promises.readdir(path.resolve(resources, 'hitsounds'));
+	let defaultFiles = await fs.promises.readdir(path.resolve(resources, argon ? 'argon' : 'hitsounds'));
 
-	defaultFiles.forEach(file => setHitSound(file, path.resolve(resources, 'hitsounds')));
+	defaultFiles.forEach(file => setHitSound(file, path.resolve(resources, argon ? 'argon' : 'hitsounds')));
 
 	// some beatmaps use custom 1 without having a file for it, set default custom 1 hitsounds
-	defaultFiles.forEach(file => setHitSound(file, path.resolve(resources, 'hitsounds'), true));
+	defaultFiles.forEach(file => setHitSound(file, path.resolve(resources, argon ? 'argon' : 'hitsounds'), true));
 
 	// overwrite default hitsounds with beatmap hitsounds
 	let beatmapFiles = await fs.promises.readdir(beatmap_path);
@@ -122,7 +122,7 @@ async function processHitsounds(beatmap_path){
 	return hitSoundPath;
 }
 
-async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length, modded_length, time_scale, file_path){
+async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length, modded_length, time_scale, file_path, argon){
 	let media = await mediaPromise;
 
 	if(!media)
@@ -143,7 +143,7 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 		//throw "Error trimming beatmap audio";
 	}
 
-	let hitSoundPaths = await processHitsounds(media.beatmap_path);
+	let hitSoundPaths = await processHitsounds(media.beatmap_path, argon);
 
 	let hitObjects = beatmap.hitObjects.filter(a => a.startTime >= start_time && a.startTime < start_time + actual_length * time_scale);
 	let hitSounds = [];
@@ -701,7 +701,7 @@ module.exports = {
                 ];
 
                 let mediaPromise = downloadMedia(options, beatmap, beatmap_path, size, file_path);
-				let audioProcessingPromise = renderHitsounds(mediaPromise, beatmap, start_time, actual_length, modded_length, time_scale, file_path);
+				let audioProcessingPromise = renderHitsounds(mediaPromise, beatmap, start_time, actual_length, modded_length, time_scale, file_path, options.argon);
 
                 if(options.type == 'mp4')
                     bitrate = Math.max(850, Math.min(bitrate, (0.95 * MAX_SIZE) * 8 / (actual_length / 1000) / 1024));
