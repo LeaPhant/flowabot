@@ -849,7 +849,7 @@ module.exports = {
                                             '-s', '-X', 'POST', 'https://pek.li/api/upload',
                                             '-H', 'content-type: multipart/form-data',
                                             '-H', 'accept: application/vnd.chibisafe.json',
-                                            '-H', 'token: ' + config.credentials.pekli_token,
+                                            '-H', 'x-api-key: ' + config.credentials.pekli_token,
                                             '-F', `files[]=@${file_path}/video.${options.type}`
                                         ]);
 
