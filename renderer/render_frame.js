@@ -854,7 +854,7 @@ module.exports = {
 
                                     const json = JSON.parse(response.stdout);
 
-                                    resolveRender(json.url).then(() => {
+                                    resolveRender(json.url + "?embed=true").then(() => {
                                         fs.promises.rmdir(file_path, { recursive: true }).catch(helper.error);
                                     }).catch(console.error)
                                     .finally(() => {
