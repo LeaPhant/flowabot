@@ -824,7 +824,7 @@ async function updateAccessToken(){
     return
 }
 
-function updateTrackedUsers(){
+async function updateTrackedUsers(){
     for(user_id in tracked_users){
         let user = user_id;
 
@@ -884,9 +884,12 @@ function updateTrackedUsers(){
         }).catch(err => {
 			helper.error('Error updating tracking', err);
 		});
+
+        await new Promise(r => setTimeout(r, 1000));
     }
 
-	setTimeout(updateTrackedUsers, 60 * 1000);
+    // every 5 min
+	setTimeout(updateTrackedUsers, 300 * 1000);
 }
 
 // async function getAccessToken(){
