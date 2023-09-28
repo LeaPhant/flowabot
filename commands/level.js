@@ -10,7 +10,7 @@ function calculateLevel(user_stats) {
 		ranked_score: 0.000002,
 		total_score: 0.000002,
 		pp: 250,
-		playtime: 0.02778,
+		playtime: 0.055,
 	};
 
 	let xp = {
