@@ -2282,14 +2282,18 @@ module.exports = {
         if(error) { cb("Couldn't reach osu!api. 💀") }
 
 		let requests = [
-	        api.get(`/users?ids%5B%5D=${user_id}`)
+	        api.get(`/users?ids%5B%5D=${user_id}`),
+            api.get(`/users/${user_id}/osu`)
         ];
         
         const results = await Promise.all(requests);
 
         let users = results[0].data.users;
+        let user = results[1].data;
 
-        cb(null, { users });
+        let medal_count = user.user_achievements.length;
+
+        cb(null, { users, medal_count });
 	},
 
     calculate_strains: calculateStrains,
