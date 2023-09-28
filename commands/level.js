@@ -12,9 +12,6 @@ function calculateLevel(user_stats) {
 		pp: 250,
 		playtime: 0.02778,
 	};
-	const a = 5;
-	const b = 110;
-	const c = -115;
 
 	const xp = {
 		medal_count: 0,
