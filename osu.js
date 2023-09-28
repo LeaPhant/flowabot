@@ -2276,6 +2276,22 @@ module.exports = {
         });
     },
 
+    get_users: async function(options, cb){
+
+        let { user_id, error } = await getUserId(options.user);
+        if(error) { cb("Couldn't reach osu!api. 💀") }
+
+		let requests = [
+	        api.get(`/users?ids%5B%5D=${user_id}`)
+        ];
+        
+        const results = await Promise.all(requests);
+
+        let users = results[0].data.users;
+
+        cb(null, { users });
+	},
+
     calculate_strains: calculateStrains,
 
 	get_strains_bar: async function(osu_file_path, mods_string, progress){
