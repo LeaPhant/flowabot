@@ -137,7 +137,7 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 		for(const scoringFrame of scoringFrames){
 			if(scoringFrame.combo >= scoringFrame.previousCombo || scoringFrame.previousCombo < 30)
 				continue;
-	
+
 			hitSounds.push({
 				offset: (scoringFrame.offset - start_time) / time_scale,
 				sound: 'combobreak',
@@ -156,7 +156,7 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 			if(beatmap.Replay.auto !== true){
 				if(hitObject.hitOffset == null)
 					continue;
-	
+
 				offset += hitObject.hitOffset;
 			}
 
@@ -175,7 +175,7 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 				}
 			}
 		}
-		
+
 		if(hitObject.objectName == 'slider'){
 			hitObject.EdgeHitSounds.forEach((edgeHitSounds, index) => {
 				edgeHitSounds.forEach(hitSound => {
@@ -184,7 +184,7 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 					if(index == 0 && beatmap.Replay.auto !== true){
 						if(hitObject.hitOffset == null)
 							return;
-						
+
 						offset += hitObject.hitOffset;
 					}
 
@@ -306,7 +306,7 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 			await execFilePromise(ffmpeg, mergeArgs, { shell: true });
 
 			resolve(path.resolve(file_path, 'merged.wav'));
-		});
+		}).catch(reject);
 	});
 }
 
@@ -377,7 +377,7 @@ async function downloadMedia(options, beatmap, beatmap_path, size, download_path
 				{ apply: 'shade', params: [80] }
 			])
 			.writeAsync(path.resolve(extraction_path, 'bg.png'));
-	
+
 			output.background_path = path.resolve(extraction_path, 'bg.png');
 		}catch(e){
 			output.background_path = null;
@@ -787,7 +787,7 @@ module.exports = {
 								name: `video.${options.type}`
 							}]}).then(() => {
 								fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
-							}).catch(console.error);					 
+							}).catch(console.error);
 						});
 
 						ffmpegProcess.stderr.on('data', data => {
