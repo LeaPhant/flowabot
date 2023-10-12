@@ -1306,6 +1306,113 @@ module.exports = {
 
         return { user, tops };
 	},
+    
+    get_pins: async function(options, cb){
+
+        const token_url = "https://osu.ppy.sh/oauth/token";
+        
+        let headers = {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+        };
+        
+        let body = {
+            "client_id": config.credentials.client_id,
+            "client_secret": config.credentials.client_secret,
+            "grant_type": "client_credentials",
+            "scope": "public"  
+        }
+        
+        const token_response = await axios(token_url, {
+            method: "POST",
+            headers,
+            data: body,
+        })
+
+        const token_res = await token_response.data;
+        
+        const token = token_res.access_token;
+
+        const user_url = `https://osu.ppy.sh/api/v2/users/${options.user}/osu`;
+
+
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "Authorization": `Bearer ${token}`
+        };
+
+        const user_res = await axios(user_url, {
+                params: {
+                    "key": "username"
+                },
+                method: "GET",
+                headers,
+            })
+        const user = await user_res.data;
+
+        const pinned_url = `https://osu.ppy.sh/api/v2/users/${user.id}/scores/pinned`;
+                
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "Authorization": `Bearer ${token}`
+        };
+
+        const pins_res = await axios(pinned_url, {
+                    params: {
+                        "mode": "osu",
+                        "limit": options.count,
+                    },
+                    method: "GET",
+                    headers,
+                })
+        const pins = await pins_res.data;
+
+        if(pins.length < 1){
+            cb(`No top pins found for ${user.username}`);   
+            return;
+        }
+
+        let { data } = await axios(`${config.beatmap_api}/b/${pins.map(a => a.beatmap.id).join(",")}`)
+        
+        if(Array.isArray(data) == false){
+            data = [data]
+        }
+
+        for(const pin of pins){
+            const { beatmap, difficulty } = data.find(a => a.beatmap.beatmap_id == pin.beatmap.id);
+
+            pin.accuracy = (pin.accuracy * 100).toFixed(2);
+
+            const diff = difficulty[getModsEnum(pin.mods.filter(mod => DIFF_MODS.includes(mod)))];
+
+            pin.stars = diff.total;
+
+            const pp_fc = ojsama.ppv2({
+                aim_stars: diff.aim,
+                speed_stars: diff.speed,
+                base_ar: beatmap.ar,
+                base_od: beatmap.od,
+                n300: Number(pin.statistics.count_300 + pin.statistics.count_miss),
+                n100: Number(pin.statistics.count_100),
+                n50: Number(pin.statistics.count_50),
+                mods: Number(getModsEnum(pin.mods)),
+                ncircles: beatmap.num_circles,
+                nsliders: beatmap.num_sliders,
+                nobjects: beatmap.hit_objects,
+                max_combo: beatmap.max_combo,
+            });
+
+            pin.pp_fc = pp_fc.total;
+            pin.acc_fc = (pp_fc.computed_accuracy.value() * 100).toFixed(2);
+            pin.rank_emoji = getRankEmoji(pin.rank);
+
+            pin.beatmap = beatmap;
+        }
+        
+        return { user, pins };
+	},
 
     get_top: function(options, cb){
         let params = {
