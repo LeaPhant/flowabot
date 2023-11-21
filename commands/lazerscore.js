@@ -1,10 +1,4 @@
-const osu = require('../osu.js');
-const helper = require('../helper.js');
-const config = require('../config.json');
 const axios = require('axios');
-const path = require('path');
-const os = require('os');
-const URL = require('url');
 
 const mods_enum = {
     ''    : 0,
@@ -39,13 +33,6 @@ const mods_enum = {
     'V2'  : 536870912,
 };
 
-function getModsEnum(mods){
-    let return_value = 0;
-    mods.forEach(mod => {
-        return_value |= mods_enum[mod.toUpperCase()];
-    });
-    return return_value;
-}
 
 function modsMultiplier(mods) {
     let multiplier = 1.0;
@@ -87,7 +74,7 @@ module.exports = {
     ],
     call: obj => {
         return new Promise((resolve, reject) => {
-            let { argv, msg, last_beatmap } = obj;
+            let { argv } = obj;
 
             let beatmap_url = argv[1];
             let mods = argv[2];
@@ -129,7 +116,7 @@ module.exports = {
                 let mod_multiplier, output, score;
 
                 mod_multiplier = modsMultiplier(mods.match(/.{1,2}/g));
-                score = parseInt(Math.pow(mod_multiplier * beatmap.hit_objects, 2) * 36);
+                score = parseInt(Math.pow(mod_multiplier * beatmap.hit_objects, 2) * 32.57 + 100000);
                 output = "Max lazer classic score (" + mods + "): " + score.toLocaleString();
 
                 resolve(output);
