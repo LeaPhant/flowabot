@@ -848,8 +848,8 @@ module.exports = {
                                         [
                                             '-s', '-X', 'POST', 'https://pek.li/api/upload',
                                             '-H', 'content-type: multipart/form-data',
-                                            '-H', 'x-api-key: ' + config.credentials.pekli_token,
-                                            '-F', `file[]=@${file_path}/video.${options.type}`
+                                            '-H', 'authorization: ' + config.credentials.pekli_token,
+                                            '-F', `file=@${file_path}/video.${options.type}`
                                         ]);
 
                                     const json = JSON.parse(response.stdout);
