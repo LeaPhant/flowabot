@@ -33,7 +33,7 @@ module.exports = {
 
             Nominatim.get('search', { params: { q } }).then(response => {
                 if(response.data.length > 0){
-                    let place = response.data[0];
+                    let place = response.data.sort((a, b) => b.importance - a.importance)[0];
                     let timezone = tzlookup(Number(place.lat), Number(place.lon));
 
                     const zone = IANAZone.create(timezone);
