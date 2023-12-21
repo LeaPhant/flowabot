@@ -1864,6 +1864,21 @@ module.exports = {
             //helper.log(response);
 
             const beatmap = response.beatmap;
+
+            if(options.speed_change && options.speed_change > 1) {
+                let mod = options.mods.find(m => m.acronym === "DT")
+                if(mod)
+                    mod.settings = { speed_change: options.speed_change};
+                else 
+                    options.mods.push({acronym: "DT", settings: {speed_change: options.speed_change}})
+            } else if(options.speed_change && options.speed_change < 1) {
+                let mod = options.mods.find(m => m.acronym === "HT")
+                if(mod)
+                    mod.settings = { speed_change: options.speed_change};
+                else 
+                    options.mods.push({acronym: "HT", settings: {speed_change: options.speed_change}})
+            }
+
             let mods = options.mods.map(mod => mod.acronym)
             if(!mods)
                 mods = [];
@@ -1937,7 +1952,7 @@ module.exports = {
             embed.color = 12277111;
             embed.title = `${beatmap.artist} – ${beatmap.title} [${beatmap.version}]`;
             embed.url = `https://osu.ppy.sh/b/${beatmap.beatmap_id}`;
-            embed.description = `**${mods.length > 0 ? '+' + mods.join('') : 'NOMOD'}**`;
+            embed.description = `**${mods.length > 0 ? '+' + sanitizeMods(options.mods).join('') : 'NOMOD'}**`;
 
             let lines = ['', '', 'Difficulty', ''];
 
