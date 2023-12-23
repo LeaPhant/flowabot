@@ -68,6 +68,10 @@ function round(num) {
     return Math.round(m) / 100 * Math.sign(num);
 }
 
+function isFloat(value) {
+    return (!isNaN(value) && value.toString().indexOf('.') != -1)
+  } 
+
 function calculateCsArOdHp(cs_raw=5, ar_raw=5, od_raw=5, hp_raw=5, mods_enabled, clock_rate){
 	var speed = 1, ar_multiplier = 1, ar, ar_ms;
 
@@ -183,7 +187,11 @@ module.exports = {
                 else if(argv[i].endsWith("%"))
                     acc_percent = parseFloat(argv[i]);
                 else if(argv[i].endsWith("x"))
-                    combo = parseInt(argv[i]);
+                    if(isFloat(argv[i])) {
+                        clock_rate = parseFloat(argv[i])
+                    } else {
+                        combo = parseInt(argv[i]);
+                    }
                 else if(argv[i].endsWith("x100"))
                     n100 = parseInt(argv[i]);
                 else if(argv[i].endsWith("x50"))
