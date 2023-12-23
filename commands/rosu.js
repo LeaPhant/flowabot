@@ -70,7 +70,7 @@ function round(num) {
 
 function isFloat(value) {
     return (!isNaN(value) && value.toString().indexOf('.') != -1)
-  } 
+} 
 
 module.exports = {
     command: ['rosu', 'rosu-pp', 'rpp', 'pp'],
@@ -109,7 +109,7 @@ module.exports = {
                 else if(argv[i].endsWith("%"))
                     acc_percent = parseFloat(argv[i]);
                 else if(argv[i].endsWith("x"))
-                    if(isFloat(argv[i])) {
+                    if(isFloat(argv[i].slice(0, -1))) {
                         clock_rate = parseFloat(argv[i])
                     } else {
                         combo = parseInt(argv[i]);
