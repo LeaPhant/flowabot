@@ -38,7 +38,7 @@ module.exports = {
                 }else if(arg.endsWith('%')){
                     options.custom_acc = parseFloat(arg);
                     accSet = true;
-                }else if(arg.endsWith('*')) {
+                }else if(arg.endsWith('*') || arg.endsWith('x')) {
                     options.speed_change = parseFloat(arg);
                     speedSet = true;
                 }else{
