@@ -65,7 +65,7 @@ module.exports = {
                             let name = `${top.rank_emoji} ${top.stars.toFixed(2)}★ ${top.beatmap.artist} - ${top.beatmap.title} [${top.beatmap.version}]`;
 
                             if(top.mods.length > 0)
-                                name += ` +${top.mods.map(mod => mod.acronym).join(",")}`;
+                                name += ` +${osu.sanitize_mods(top.mods).join(",")}`;
 
                             name += ` ${top.accuracy}%`;
 

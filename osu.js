@@ -519,6 +519,13 @@ function ordinalSuffix(i) {
     return i + "th";
 }
 
+function getMaxCombo(score) {
+    const great = score?.maximum_statistics?.great ?? 0
+    const large_tick_hit = score?.maximum_statistics?.large_tick_hit ?? 0
+    const legacy_combo_increase = score?.maximum_statistics?.legacy_combo_increase ?? 0
+    return Number(great + large_tick_hit + legacy_combo_increase)
+}
+
 async function getScore(recent_raw, cb){
     let recent = {};
     let best_score;
@@ -527,8 +534,11 @@ async function getScore(recent_raw, cb){
         user_id: recent_raw.user_id,
         beatmap_id: recent_raw.beatmap.id,
         rank: recent_raw.passed ? recent_raw.rank: "F",
+        passed: recent_raw.passed,
         score: Number(recent_raw.total_score),
         combo: Number(recent_raw.max_combo),
+        max_combo: getMaxCombo(recent_raw),
+        legacy_perfect: recent_raw.legacy_perfect,
         count300: Number(recent_raw.statistics.great ?? 0),
         count100: Number(recent_raw.statistics.ok ?? 0),
         count50: Number(recent_raw.statistics.meh ?? 0),
@@ -552,7 +562,7 @@ async function getScore(recent_raw, cb){
     ];
 
     try {
-        const response = await api.get(`/beatmaps/${recent_raw.beatmap.id}/scores/users/${recent_raw.user_id}`, { params: { mods: recent_raw.mods } })
+        const response = await api.get(`/beatmaps/${recent_raw.beatmap.id}/scores/users/${recent_raw.user_id}`, { params: { mods: recent_raw.mods.map(m => m.acronym) } })
         best_score = response.data.score
         best_score.position = response.data.position
     } catch(e) {
@@ -601,7 +611,7 @@ async function getScore(recent_raw, cb){
         if(best_score){
             if(compareScores(best_score, recent_raw)){
                 replay = Number(best_score.replay ? 1 : 0);
-				recent.score_id = best_score.id;
+				recent.score_id = best_score.legacy_score_id ?? best_score.id;
             }else{
                 recent.unsubmitted = true;
 			}
@@ -676,7 +686,7 @@ async function getScore(recent_raw, cb){
                 version: beatmap.version,
                 bpm_min: beatmap.bpm_min * speed,
                 bpm_max: beatmap.bpm_max * speed,
-                max_combo: play.difficulty.maxCombo,
+                legacy_max_combo: play.difficulty.maxCombo,
                 bpm: beatmap.bpm * speed,
                 creator: beatmapset.creator,
                 creator_id: beatmapset.user_id,
@@ -700,7 +710,9 @@ async function getScore(recent_raw, cb){
                 }),
             }, recent);
 
-            if(recent.pp == null)
+            if(recent.pp == null && recent.passed && (recent.approved == "ranked" || recent.approved == "approved"))
+                recent.pp = 0
+            else if(recent.pp == null)
                 recent.pp = play.pp;
 
             let strains_bar;
@@ -816,7 +828,7 @@ async function updateAccessToken(){
         baseURL: 'https://osu.ppy.sh/api/v2',
         headers: {
             Authorization: `Bearer ${access_token}`,
-            "x-api-version": 20220707
+            "x-api-version": 20240124
         }
     });
 
@@ -976,6 +988,10 @@ module.exports = {
 	        });
         }
 
+    },
+
+    sanitize_mods: function(mods) {
+        return sanitizeMods(mods)
     },
 
     get_user_id: async function (username) {
@@ -1247,7 +1263,7 @@ module.exports = {
 
         lines[0] += `${getRankEmoji(recent.rank)}`;
 
-        if(recent.rank == 'F')
+        if(!recent.passed)
             lines[0] += ` @${Math.round(recent.fail_percent * 100)}%`;
 
         lines[0] += helper.sep;
@@ -1267,10 +1283,14 @@ module.exports = {
         else
             lines[1] += `**${+recent.pp.toFixed(2)}pp**${helper.sep}`
 
-        if(recent.combo < recent.max_combo)
+        if(recent.legacy_perfect)
+            lines[1] += `${recent.combo}x`;
+        else if(recent.max_combo == 0)
+            lines[1] += `${recent.combo}/${recent.legacy_max_combo}x`;
+        else if(recent.combo < recent.max_combo)
             lines[1] += `${recent.combo}/${recent.max_combo}x`;
         else
-            lines[1] += `${recent.max_combo}x`;
+            lines[1] += `${recent.combo}x`;
 
         if(recent.pp_fc.toFixed(2) != recent.pp.toFixed(2))
             lines[1] += `\n`;
@@ -1380,7 +1400,7 @@ module.exports = {
 
         if(options.mods) {
             api.get(`/beatmaps/${options.beatmap_id}/scores/users/${user_id}`, { params: { mods: options.mods } }).then(response => {
-                console.log(response);
+                //console.log(response);
                 response = response.data;
     
                 let recent_raw = response.score;
@@ -1529,7 +1549,7 @@ module.exports = {
 
             if(options.mods) {
                 api.get(`/beatmaps/${options.beatmap_id}/scores/users/${user_id}`, { params: { mods: options.mods } }).then(response => {
-                    console.log(response);
+                    //console.log(response);
                     response = response.data;
         
                     let recent_raw = response.score;
