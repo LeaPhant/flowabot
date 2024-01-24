@@ -522,8 +522,10 @@ function ordinalSuffix(i) {
 function getMaxCombo(score) {
     const great = score?.maximum_statistics?.great ?? 0
     const large_tick_hit = score?.maximum_statistics?.large_tick_hit ?? 0
+    // TODO: check if legacy_combo_increase is still used even
     const legacy_combo_increase = score?.maximum_statistics?.legacy_combo_increase ?? 0
-    return Number(great + large_tick_hit + legacy_combo_increase)
+    const ignore_hit = score?.maximum_statistics?.ignore_hit ?? 0
+    return Number(great + large_tick_hit + legacy_combo_increase + ignore_hit)
 }
 
 async function getScore(recent_raw, cb){
