@@ -43,7 +43,7 @@ module.exports = {
                     speedSet = true;
                 }else{
                     options.beatmap_id = osu.parse_beatmap_url_sync(arg, false);
-                    beatmapSet = true;
+                    if (options.beatmap_id) beatmapSet = true;
                 }
             });
 

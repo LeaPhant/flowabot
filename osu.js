@@ -2023,7 +2023,7 @@ module.exports = {
 
             cb(null, embed);
         } catch (e) {
-            cb('Map not in the database, maps that are too new don\'t work yet. 😐');
+            cb('Map not in the database, or invalid beatmap url. 😐');
             helper.error(e);
             return false;
         }
