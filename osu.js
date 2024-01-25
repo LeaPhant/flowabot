@@ -712,9 +712,7 @@ async function getScore(recent_raw, cb){
                 }),
             }, recent);
 
-            if(recent.pp == null && recent.passed && (recent.approved == "ranked" || recent.approved == "approved"))
-                recent.pp = 0
-            else if(recent.pp == null)
+            if(recent.pp == null)
                 recent.pp = play.pp;
 
             let strains_bar;
