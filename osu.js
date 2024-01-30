@@ -528,6 +528,10 @@ function getMaxCombo(score) {
     return Number(great + large_tick_hit + legacy_combo_increase + ignore_hit)
 }
 
+function convertStandardisedToClassic(score, object_count) {
+    return Math.round((Math.pow(object_count, 2) * 32.57 + 100000) * score / 1000000);
+}
+
 async function getScore(recent_raw, cb){
     let recent = {};
     let best_score;
@@ -537,7 +541,8 @@ async function getScore(recent_raw, cb){
         beatmap_id: recent_raw.beatmap.id,
         rank: recent_raw.passed ? recent_raw.rank: "F",
         passed: recent_raw.passed,
-        score: recent_raw.legacy_total_score > 0 ? Number(recent_raw.legacy_total_score) : Number(recent_raw.total_score),
+        score: Number(recent_raw.total_score),
+        legacy_score: Number(recent_raw.legacy_total_score),
         combo: Number(recent_raw.max_combo),
         max_combo: getMaxCombo(recent_raw),
         legacy_perfect: recent_raw.legacy_perfect,
@@ -1272,16 +1277,26 @@ module.exports = {
             lines[0] += `+${sanitizeMods(recent.mods).join(',')}${helper.sep}`;
 
         if(recent.lb > 0)
-            lines[0] += `r#${recent.lb}${helper.sep}`;
+            lines[0] += `#${recent.lb}`;
+        if(recent.mods.length > 0 || recent.lb > 0)
+            lines[0] += "\n"
 
-        lines[0] += `${recent.score.toLocaleString()}${helper.sep}`;
-        lines[0] += `${+recent.acc.toFixed(2)}%${helper.sep}`;
+        if(recent.legacy_score > 0) {
+            let score_string =`${recent.legacy_score.toLocaleString()} (${recent.score.toLocaleString()})`
+            lines[0] += `${score_string}${helper.sep}`;
+        } else {
+            let object_count = recent.count300 + recent.count100 + recent.count50 + recent.countmiss;
+            let score_string = `${convertStandardisedToClassic(recent.score, object_count).toLocaleString()} (${recent.score.toLocaleString()})`;
+            lines[0] += `${score_string}${helper.sep}`;
+        }
+
+        lines[0] += `${+recent.acc.toFixed(2)}%\n`;
         lines[0] += `<t:${DateTime.fromISO(recent.date).toSeconds()}:R>`;
 
         if(recent.pp_fc.toFixed(2) != recent.pp.toFixed(2))
-            lines[1] += `**${recent.unsubmitted ? '*' : ''}${+recent.pp.toFixed(2)}pp**${recent.unsubmitted ? '*' : ''} ➔ ${+recent.pp_fc.toFixed(2)}pp for ${+recent.acc_fc.toFixed(2)}% FC${helper.sep}`;
+            lines[1] += `**${recent.unsubmitted ? '*' : ''}${+recent.pp.toFixed(2)}pp**${recent.unsubmitted ? '*' : ''} ➔ ${+recent.pp_fc.toFixed(2)}pp for ${+recent.acc_fc.toFixed(2)}% FC\n`;
         else
-            lines[1] += `**${+recent.pp.toFixed(2)}pp**${helper.sep}`
+            lines[1] += `**${+recent.pp.toFixed(2)}pp**\n`
 
         if(recent.legacy_perfect)
             lines[1] += `${recent.combo}x`;
@@ -1292,10 +1307,7 @@ module.exports = {
         else
             lines[1] += `${recent.combo}x`;
 
-        if(recent.pp_fc.toFixed(2) != recent.pp.toFixed(2))
-            lines[1] += `\n`;
-        else if(recent.ur || recent.count100 || recent.count50 || recent.countmiss)
-            lines[1] += helper.sep;
+        lines[1] += helper.sep;
 
         if(recent.count100 > 0)
             lines[1] += `${recent.count100}x100`;
