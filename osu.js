@@ -537,7 +537,7 @@ async function getScore(recent_raw, cb){
         beatmap_id: recent_raw.beatmap.id,
         rank: recent_raw.passed ? recent_raw.rank: "F",
         passed: recent_raw.passed,
-        score: Number(recent_raw.total_score),
+        score: recent_raw.legacy_total_score > 0 ? Number(recent_raw.legacy_total_score) : Number(recent_raw.total_score),
         combo: Number(recent_raw.max_combo),
         max_combo: getMaxCombo(recent_raw),
         legacy_perfect: recent_raw.legacy_perfect,
