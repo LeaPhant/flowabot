@@ -569,7 +569,7 @@ async function getScore(recent_raw, cb){
     ];
 
     try {
-        const response = await api.get(`/beatmaps/${recent_raw.beatmap.id}/scores/users/${recent_raw.user_id}`, { params: { mods: recent_raw.mods.map(m => m.acronym) } })
+        const response = await api.get(`/beatmaps/${recent_raw.beatmap.id}/scores/users/${recent_raw.user_id}`)
         best_score = response.data.score
         best_score.position = response.data.position
     } catch(e) {
