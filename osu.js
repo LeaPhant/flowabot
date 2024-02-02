@@ -618,7 +618,7 @@ async function getScore(recent_raw, cb){
         if(best_score){
             if(compareScores(best_score, recent_raw)){
                 replay = Number(best_score.replay ? 1 : 0);
-				recent.score_id = best_score.legacy_score_id ?? best_score.id;
+				recent.score_id = best_score.id;
             }else{
                 recent.unsubmitted = true;
 			}

@@ -10,7 +10,7 @@ const { calculate_ur } = require("./ur_processor");
 function calculateUr(options){
 	return new Promise(async (resolve, reject) => {
 
-		const response = await axios.get(`https://osu.ppy.sh/api/v2/scores/osu/${options.score_id}/download`, {
+		const response = await axios.get(`https://osu.ppy.sh/api/v2/scores/${options.score_id}/download`, {
 			responseType: 'arraybuffer',
 			headers: {
 				'Authorization': 'Bearer ' + options.access_token,
