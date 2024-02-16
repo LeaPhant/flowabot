@@ -629,7 +629,7 @@ async function getScore(recent_raw, cb){
 
         if(recent.mods.map(x => x.acronym).includes('DA')) {
             recent.mods.forEach( mod => {
-                if(mod.acronym == "DA" && Object.entries(mod.settings).length > 0){ 
+                if(mod.acronym == "DA" && Object.entries(mod.settings ?? {}).length > 0){ 
                     beatmap.ar = mod.settings.approach_rate ?? beatmap.ar
                     beatmap.cs = mod.settings.circle_size ?? beatmap.cs
                     beatmap.accuracy = mod.settings.overall_difficulty ?? beatmap.accuracy
