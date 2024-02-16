@@ -1341,7 +1341,13 @@ module.exports = {
 
         lines[2] = 'Beatmap Information';
 
-        let b_info = {};
+        let b_info = {
+            cs: recent.cs.toFixed(1),
+            ar: recent.ar.toFixed(1),
+            od: recent.od.toFixed(1),
+            hp: recent.hp.toFixed(1)
+        };
+
         if (recent.mods.map(m => m.acronym).includes("DA")) {
             recent.mods.forEach(mod => {
                 if (mod.acronym === "DA" && "settings" in mod) {
@@ -1351,11 +1357,6 @@ module.exports = {
                     b_info.hp = `${"drain_rate" in mod.settings ? "__" + recent.hp.toFixed(1) +"__" : recent.hp.toFixed(1)}`;
                 }
             })
-        } else {
-            b_info.cs = recent.cs.toFixed(1);
-            b_info.ar = recent.ar.toFixed(1);
-            b_info.od = recent.od.toFixed(1);
-            b_info.hp = recent.hp.toFixed(1);
         }
 
         lines[3] += `${Duration.fromMillis(recent.duration * 1000).toFormat('mm:ss')} ~ `;
