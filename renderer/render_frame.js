@@ -351,8 +351,8 @@ async function downloadMedia(options, beatmap, beatmap_path, size, download_path
 		beatmapset_id = data[0].beatmapset_id;
 	}
 
-	if(await helper.fileExists(`./maps/${beatmapset_id}`)){
-        let extraction_path = path.resolve(`./maps/${beatmapset_id}`);
+	if(await helper.fileExists(path.resolve(config.maps_path, beatmapset_id))){
+		let extraction_path = path.resolve(config.maps_path, beatmapset_id);
         output.beatmap_path = extraction_path;
 
 		if(options.lagtrain){
@@ -422,7 +422,7 @@ async function downloadMedia(options, beatmap, beatmap_path, size, download_path
 		return false;
 	}
 
-	copyDir(extraction_path, './maps/' + beatmapset_id).catch(helper.error);
+	copyDir(extraction_path, path.resolve(config.maps_path, beatmapset_id)).catch(helper.error);
 
 	return output;
 }
