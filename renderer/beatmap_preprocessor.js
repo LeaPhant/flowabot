@@ -10,6 +10,7 @@ const { Beatmap, Calculator } = require('rosu-pp')
 const axios = require('axios');
 const _ = require('lodash');
 const helper = require('../helper.js');
+const config = require('../config.json');
 
 let options, beatmap_path, enabled_mods, beatmap, speed_override, speed_multiplier = 1;
 
@@ -1444,7 +1445,7 @@ async function prepareBeatmap(){
     let replay;
 
     if(options.score_id){
-        let replay_path = path.resolve(os.tmpdir(), 'replays', `${options.score_id}`);
+        let replay_path = path.resolve(config.replay_path, `${options.score_id}.osr`);
 
         if(fs.existsSync(replay_path))
             replay = {lastCursor: 0, replay_data: await parseReplay(fs.readFileSync(replay_path))};

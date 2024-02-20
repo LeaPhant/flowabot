@@ -76,6 +76,7 @@ build
 osumaps
 commands/disabled
 maps/
+replays
 package-lock.json
 yarn.lock
 .vscode

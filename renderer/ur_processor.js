@@ -5,6 +5,7 @@ const os = require('os');
 const osr = require('node-osr');
 const axios = require('axios');
 const helper = require('../helper.js');
+const config = require('../config.json');
 
 let options, beatmap_path, enabled_mods, beatmap, speed_override;
 
@@ -711,7 +712,7 @@ async function prepareBeatmap(){
     let replay;
 
     if(options.score_id){
-        let replay_path = path.resolve(os.tmpdir(), 'replays', `${options.score_id}`);
+        let replay_path = path.resolve(config.replay_path, `${options.score_id}.osr`);
 
         if(fs.existsSync(replay_path))
             replay = {lastCursor: 0, replay_data: await parseReplay(fs.readFileSync(replay_path))};
