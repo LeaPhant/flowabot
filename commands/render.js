@@ -218,7 +218,7 @@ module.exports = {
                             resolve(null);
 
                             frame.get_frames(download_path, time, length * 1000, mods, size, {
-                                combo
+                                combo,
                                 type: video_type, cs, ar, od, analyze, lagtrain, argon, hidden, flashlight, black: false, osr, score_id, audio, fps, speed,
                                 fill: video_type == 'mp4', noshadow: true, percent, border: false, objects, msg, nointerpolate
                             });
