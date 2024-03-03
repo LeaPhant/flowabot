@@ -65,6 +65,7 @@ module.exports = {
             let hidden = false;
             let flashlight = false;
             let analyze = false;
+			let nointerpolate = false;
             let lagtrain = false;
             let argon = false;
 
@@ -118,6 +119,8 @@ module.exports = {
                     }
                 }else if(arg == 'analyze'){
                     analyze = true;
+				}else if(arg == 'nointerpolate'){
+					nointerpolate = true;
                 }else if(arg == 'lagtrain'){
                     lagtrain = true;
                 }else if(arg == 'argon'){
@@ -215,9 +218,9 @@ module.exports = {
                             resolve(null);
 
                             frame.get_frames(download_path, time, length * 1000, mods, size, {
-                                combo,
+                                combo
                                 type: video_type, cs, ar, od, analyze, lagtrain, argon, hidden, flashlight, black: false, osr, score_id, audio, fps, speed,
-                                fill: video_type == 'mp4', noshadow: true, percent, border: false, objects, msg
+                                fill: video_type == 'mp4', noshadow: true, percent, border: false, objects, msg, nointerpolate
                             });
 						}else{
 							frame.get_frame(download_path, time, mods, [800, 600], {
