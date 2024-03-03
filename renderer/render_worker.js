@@ -122,7 +122,7 @@ process.on('message', async obj => {
         timestamp -= current_start;
         next_start -= current_start;
 
-        let progress = timestamp / next_start;
+        let progress = options.nointerpolate ? 0 : timestamp / next_start;
 
         let distance = vectorDistance(pos_current, pos_next);
 
