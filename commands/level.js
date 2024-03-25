@@ -33,21 +33,17 @@ function calculateLevel(user_stats) {
 	}
 
 	level =
-		0.033333 *
-		(4.6416 *
-			(3 * Math.sqrt(81 * total_xp ** 2 - 775500 * total_xp - 22852800) +
-				27 * total_xp -
-				129250) **
-				(1 / 3) +
-			11914 /
-				(3 *
-					Math.sqrt(
-						81 * total_xp ** 2 - 775500 * total_xp - 22852800
-					) +
-					27 * total_xp -
-					129250) **
-					(1 / 3) -
-			220);
+		(Math.sqrt(total_xp ** 2 - 8100 * total_xp - 2116800) +
+			total_xp -
+			4050) **
+			(1 / 3) /
+			10 ** (1 / 3) +
+		(57 * 10) ** (1 / 3) /
+			(Math.sqrt(total_xp ** 2 - 8100 * total_xp - 2116800) +
+				total_xp -
+				4050) **
+				(1 / 3) -
+		8;
 
 	return { level, total_xp, xp };
 }
