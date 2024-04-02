@@ -1,4 +1,4 @@
-const ud = require('urban-dictionary')
+const ud = require('@dmzoneill/urban-dictionary')
 
 module.exports = {
     command: 'urban',
