@@ -26,7 +26,7 @@ module.exports = {
         run: "oppai https://osu.ppy.sh/b/75 +DT ",
         result: "Calculates pp on this beatmap with DT applied."
     },
-    configRequired: ['pp_path', 'debug', 'osu_cache_path'],
+    configRequired: ['debug', 'osu_cache_path'],
     call: async obj => {
         return new Promise((resolve, reject) => {
             let { argv, msg, last_beatmap } = obj;

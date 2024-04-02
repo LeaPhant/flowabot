@@ -87,7 +87,7 @@ module.exports = {
             result: "Calculates pp on this beatmap with 99% accuracy and a custom speed rate of 1.3*."
         }
     ],
-    configRequired: ['pp_path', 'debug', 'osu_cache_path'],
+    configRequired: ['debug', 'osu_cache_path'],
     call: async obj => {
         return new Promise((resolve, reject) => {
             let { argv, msg, last_beatmap } = obj;
