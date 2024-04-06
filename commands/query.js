@@ -6,7 +6,7 @@ const { table } = require('table');
 
 const databaseConfig = {
   connectionLimit : 10,
-  host: 'localhost',
+  host: '127.0.0.1',
   user: 'flowabot',
   database: 'osu',
   timezone: 'utc',
