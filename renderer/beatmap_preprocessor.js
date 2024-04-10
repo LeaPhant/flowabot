@@ -1366,6 +1366,15 @@ function processBeatmap(osuContents){
 
     const mods = ojsama.modbits.from_string(enabled_mods.filter(a => ["HR", "EZ"].includes(a) == false).join(""));
 
+	const beatmap_params = {
+		content: osuContents,
+		ar: beatmap.ApproachRateRealtime,
+		cs: beatmap.CircleSize,
+		od: beatmap.OverallDifficultyRealtime
+	}
+
+	const rosu_map = new Beatmap(beatmap_params)
+
     for(const scoringFrame of beatmap.ScoringFrames.filter(a => ['miss', 50, 100, 300].includes(a.result))){
         const hitCount = scoringFrame.countMiss + scoringFrame.count50 + scoringFrame.count100 + scoringFrame.count300;
 
@@ -1379,14 +1388,6 @@ function processBeatmap(osuContents){
             passedObjects: hitCount,
         }
 
-        const beatmap_params = {
-            content: osuContents,
-            ar: beatmap.ApproachRateRealtime,
-            cs: beatmap.CircleSize,
-            od: beatmap.OverallDifficultyRealtime
-        }
-
-        const rosu_map = new Beatmap(beatmap_params)
         const rosu_calc = new Calculator(params)
 
         const rosu_perf = rosu_calc.performance(rosu_map)
