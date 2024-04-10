@@ -4,6 +4,7 @@
     const os = require('os');
     const path = require('path');
     const chalk = require('chalk');
+    const crypto = require('crypto');
 
     const Discord = require('discord.js');
     const axios = require('axios');
@@ -272,6 +273,74 @@
     }while(!valid_key && value != 'none');
 
     config.credentials.last_fm_key = value == 'none' ? "" : value;
+
+
+	default_value = {
+		client_id: 'none',
+		client_secret: 'none',
+		bucket_name: 'none',
+		bucket_endpoint: 'none'
+	};
+	let temporary_credentials = {
+		client_id: 'none',
+		client_secret: 'none',
+		bucket_name: 'none',
+		bucket_endpoint: 'none'
+	}
+	const S3_credential_fields = ['client_id', 'client_secret', 'bucket_name', 'bucket_endpoint'];
+
+	if (config.credentials.S3){
+		// console.log("existing S3 credentials found, assigning to default_value");
+		// console.log(config.credentials.S3);
+		default_value = config.credentials.S3;
+	}
+
+	do {
+		console.log('');
+		console.log(`(Optional) An S3 Bucket and access credentials are needed for the \`toS3\` parameter of the ${config.prefix}render command to work.`);
+		valid_key = true;
+
+		for (const field of S3_credential_fields){
+			value = readline.question(`${field} [${chalk.green(default_value[field])}]: `);
+			if(!value){
+				temporary_credentials[field] = default_value[field];
+			}
+			else{
+				temporary_credentials[field] = value;
+			}
+		}
+
+		if (temporary_credentials.client_id !== 'none'){
+			try{
+				const aws = require('aws-sdk');
+				const S3Endpoint = new aws.Endpoint(temporary_credentials.bucket_endpoint);
+				let s3 = new aws.S3({
+					endpoint: S3Endpoint,
+					accessKeyId: temporary_credentials.client_id,
+					secretAccessKey: temporary_credentials.client_secret
+				});
+
+				let test_upload_params = {
+					Bucket: temporary_credentials.bucket_name,
+					Key: crypto.randomBytes(16).toString('hex'),
+					Body: 'test'
+				};
+				await s3.upload(test_upload_params).promise();
+				// console.log(upload_result)
+			} catch(e){
+				console.log(chalk.redBright("Invalid S3 Bucket Credentials!"));
+				valid_key = false;
+				temporary_credentials = default_value;
+			}
+		}
+
+	} while (!valid_key &&
+			temporary_credentials.client_id !== 'none' &&
+			temporary_credentials.client_secret !== 'none' &&
+			temporary_credentials.bucket_name !== 'none' &&
+			temporary_credentials.bucket_endpoint !== 'none');
+
+	config.credentials.S3 = temporary_credentials;
 
     console.log('');
 

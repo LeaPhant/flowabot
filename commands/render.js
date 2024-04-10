@@ -1,8 +1,6 @@
-const { execFileSync } = require('child_process');
 const URL = require('url');
 const path = require('path');
 const os = require('os');
-const { fork } = require('child_process');
 
 const osu = require('../osu.js');
 const helper = require('../helper.js');
@@ -12,7 +10,7 @@ const config = require('../config.json');
 module.exports = {
     command: ['render', 'frame', 'fail'],
     description: "Render picture or gif of a beatmap at a specific time. Videos 10 seconds or longer are automatically rendered as mp4 video with audio and beatmap background.",
-    usage: '[beatmap url] [+mods] [AR8] [CS6] [preview/strains/aim/speed/fail] [HD] [20%] [mp4] [plain] [120fps] [mm:ss] [353x] [4s]',
+    usage: '[beatmap url] [+mods] [AR8] [CS6] [preview/strains/aim/speed/fail] [HD] [20%] [mp4] [plain] [120fps] [mm:ss] [353x] [4s] [highres]',
     example: [
         {
             run: "render strains",
@@ -47,9 +45,9 @@ module.exports = {
 
             let score_id;
 
-            if(argv[0].toLowerCase() == 'fail'){
+            if(argv[0].toLowerCase() === 'fail'){
                 if(msg.channel.id in last_beatmap){
-                    if(last_beatmap[msg.channel.id].rank != 'F'){
+                    if(last_beatmap[msg.channel.id].rank !== 'F'){
                         reject("Last play is not a failed score");
                         return false;
                     }
@@ -65,20 +63,21 @@ module.exports = {
             let hidden = false;
             let flashlight = false;
             let analyze = false;
+            let toS3 = false;
 
             argv.map(arg => arg.toLowerCase());
 
             argv.slice(1).forEach(arg => {
                 if(arg.startsWith('+'))
                     mods = arg.substr(1).toUpperCase().match(/.{1,2}/g);
-                else if(/^([0-9]+)\:([0-9]+)\:([0-9]+)$/g.test(arg)){
+                else if(/^([0-9]+):([0-9]+):([0-9]+)$/g.test(arg)){
                     let parts = arg.split(':');
                     if(parts.length > 2){
                         time += parseInt(parts[2]);
                         time += parseInt(parts[1]) * 1000;
                         time += parseInt(parts[0]) * 1000 * 60;
                     }
-                }else if(/^([0-9]+)\:([0-9]+)$/g.test(arg)){
+                }else if(/^([0-9]+):([0-9]+)$/g.test(arg)){
                     let parts = arg.split(':');
                     if(parts.length > 1){
                         time += parseInt(parts[1]) * 1000;
@@ -86,24 +85,24 @@ module.exports = {
                     }
                 }else if(arg.endsWith('.osr')){
                     osr = arg;
-                }else if(arg == 'strains' || arg == 'aim' || arg == 'speed'){
+                }else if(arg === 'strains' || arg === 'aim' || arg === 'speed'){
                     type = arg;
                     length = 4;
-				}else if(arg == 'preview'){
+				}else if(arg === 'preview'){
                     type = arg
                     length = 9;
                     video_type = 'mp4';
                     audio = true;
-                }else if(arg == 'hd' || arg == 'hidden'){
+                }else if(arg === 'hd' || arg === 'hidden'){
                     hidden = true;
-                }else if(arg == 'fl' || arg == 'flashlight'){
+                }else if(arg === 'fl' || arg === 'flashlight'){
                     flashlight = true;
-                }else if(arg == 'mp4'){
+                }else if(arg === 'mp4'){
                     video_type = 'mp4';
-                }else if(arg == 'audio'){
+                }else if(arg === 'audio'){
                     audio = true;
                     video_type = 'mp4';
-                }else if(arg == 'plain'){
+                }else if(arg === 'plain'){
                     audio = false;
                 }else if(arg.endsWith('%')){
                     speed = parseInt(arg) / 100;
@@ -114,9 +113,10 @@ module.exports = {
                         fps = Math.max(1, Math.min(240, _fps));
                         video_type = 'mp4';
                     }
-                }else if(arg == 'analyze'){
+                }else if(arg === 'analyze'){
                     analyze = true;
-                }else if(arg.endsWith('s')){
+                // }else if(arg.endsWith('s')){
+                }else if(/^[0-9]+(\.[0-9]+)?s$/g.test(arg)){
                     length = parseFloat(arg);
                 }else if(arg.endsWith('x')){
                     combo = parseInt(arg);
@@ -130,9 +130,9 @@ module.exports = {
                     od = parseFloat(arg.substr(2));
                 }else if(arg.startsWith('(') && arg.endsWith(')')){
                     objects = arg.substr(1, arg.length - 1).split(',').length;
-                }else if(arg == 'fail'){
+                }else if(arg === 'fail'){
                     if(msg.channel.id in last_beatmap){
-                        if(last_beatmap[msg.channel.id].fail_percent == 1){
+                        if(last_beatmap[msg.channel.id].fail_percent === 1){
                             reject("Last play is not a failed score");
                             return false;
                         }
@@ -140,8 +140,13 @@ module.exports = {
                         percent = last_beatmap[msg.channel.id].fail_percent;
                         length = 4;
                     }
-                }else{
-                    if(arg.startsWith('http://') || arg.startsWith('https://')){
+                }else if(arg === 'toS3'){
+					toS3 = true;
+				}else if(arg === 'highres'){
+                	size = [1280, 960];
+				}else{
+                    // noinspection HttpUrlsUsage
+					if(arg.startsWith('http://') || arg.startsWith('https://')){
                         beatmap_url = arg;
                         beatmap_promise = osu.parse_beatmap_url(beatmap_url);
                         beatmap_promise.then(response => {
@@ -163,10 +168,10 @@ module.exports = {
                     beatmap_id = _last_beatmap.beatmap_id;
                     download_promise = helper.downloadBeatmap(beatmap_id).catch(helper.error);
 
-                    if(last_beatmap[msg.channel.id].score_id && mods.length == 0)
+                    if(last_beatmap[msg.channel.id].score_id && mods.length === 0)
                         ({ score_id } = last_beatmap[msg.channel.id]);
 
-                    if(mods.length == 0)
+                    if(mods.length === 0)
                         mods = last_beatmap[msg.channel.id].mods;
                 }
 
@@ -181,7 +186,8 @@ module.exports = {
                 if(config.debug)
                     helper.log('specified ar', ar);
 
-                if(!beatmap_id || custom_url){
+				// noinspection DuplicatedCode,JSDeprecatedSymbols
+				if(!beatmap_id || custom_url){
                     let download_url = URL.parse(beatmap_url);
                     download_path = path.resolve(os.tmpdir(), `${Math.floor(Math.random() * 1000000) + 1}.osu`);
 
@@ -192,12 +198,12 @@ module.exports = {
                 let preview_promise;
 
                 Promise.resolve(download_promise).then(async () => {
-                    if(type == 'strains' || type == 'aim' || type == 'speed'){
+                    if(type === 'strains' || type === 'aim' || type === 'speed'){
                         if(config.debug)
                             helper.log('getting strains for mods', mods);
 
                         time = (await osu.get_strains(download_path, mods.join(''), type)).max_strain_time_real - 2000;
-                    }else if(type == 'preview'){
+                    }else if(type === 'preview'){
 						preview_promise = osu.get_preview_point(download_path);
 					}
 
@@ -210,13 +216,38 @@ module.exports = {
 
                             frame.get_frames(download_path, time, length * 1000, mods, size, {
                                 combo,
-                                type: video_type, cs, ar, od, analyze, hidden, flashlight, black: false, osr, score_id, audio, fps, speed,
-                                fill: video_type == 'mp4', noshadow: true, percent, border: false, objects, msg
+                                type: video_type,
+								cs,
+								ar,
+								od,
+								analyze,
+								hidden,
+								flashlight,
+								black: false,
+								osr,
+								score_id,
+								audio,
+								fps,
+								speed,
+                                fill: video_type === 'mp4',
+								noshadow: true,
+								percent,
+								border: false,
+								objects,
+								msg,
+								toS3: toS3,
                             });
 						}else{
 							frame.get_frame(download_path, time, mods, [800, 600], {
                                 combo,
-								cs: cs, ar: ar, score_id, black: true, fill: true, analyze, hidden, percent: percent
+								cs: cs,
+								ar: ar,
+								score_id,
+								black: true,
+								fill: true,
+								analyze,
+								hidden,
+								percent: percent,
 							}, (err, buf) => {
 								if(err)
 									reject(err);
