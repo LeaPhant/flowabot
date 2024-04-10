@@ -106,9 +106,9 @@ const CHART_OPTIONS = {
                 padding: 10
             },
             type: 'time',
-            time: { 
-                unit: 'second', 
-                displayFormats: { second: 'm:ss' } 
+            time: {
+                unit: 'second',
+                displayFormats: { second: 'm:ss' }
             }
         }]
     }
@@ -594,21 +594,21 @@ function getScore(recent_raw, cb){
 
                 helper.downloadBeatmap(recent_raw.beatmap_id).finally(async () => {
                     let beatmap_path = path.resolve(config.osu_cache_path, `${recent_raw.beatmap_id}.osu`);
-    
+
                     let strains_bar;
-    
+
                     if(await helper.fileExists(beatmap_path)){
                         strains_bar = await module.exports.get_strains_bar(beatmap_path, recent.mods.join(''), recent.fail_percent);
-    
+
                         if(strains_bar)
                             recent.strains_bar = true;
                     }
-    
+
                     if(replay && await helper.fileExists(beatmap_path)){
                         let ur_promise = new Promise((resolve, reject) => {
                             if(config.debug)
                                 helper.log('getting ur');
-    
+
                             ur_calc.get_ur(
                                 {
                                     apikey: settings.api_key,
@@ -619,21 +619,21 @@ function getScore(recent_raw, cb){
                                     mods: recent.mods
                                 }).then(response => {
                                     recent.ur = response.ur;
-    
-                                    if(recent.countmiss == (response.miss || 0) 
+
+                                    if(recent.countmiss == (response.miss || 0)
                                     && recent.count100 == (response['100'] || 0)
                                     && recent.count50 == (response['50'] || 0))
                                         recent.countsb = response.sliderbreak;
-    
+
                                     if(recent.mods.includes("DT") || recent.mods.includes("NC"))
                                         recent.cvur = response.ur / 1.5;
                                     else if(recent.mods.includes("HT"))
                                         recent.cvur = response.ur * 1.5;
-    
+
                                     resolve(recent);
                                 });
                         });
-    
+
                         recent.ur = -1;
                         if(recent.mods.includes("DT") || recent.mods.includes("HT"))
                             recent.cvur = -1;
@@ -641,7 +641,7 @@ function getScore(recent_raw, cb){
                     }else{
                         cb(null, recent, strains_bar);
                     }
-                }).catch(helper.error);                
+                }).catch(helper.error);
             }).catch(error => {
                 cb('No difficulty data for this map! Please try again later');
                 return;
@@ -973,6 +973,56 @@ module.exports = {
         return output;
     },
 
+	calculate_od: function(od_raw, mods){
+		var mods_string = mods.toLowerCase().replace("+", "");
+		var mods_array = mods_string.match(/.{1,2}/g);
+
+		if(!mods_array)
+			var mods_array = [];
+
+		helper.log(mods_string);
+		helper.log(mods_array);
+
+		let od_time_multiplier = 1, od_multiplier = 1, od, od_ms;
+		if(mods_array.indexOf("dt") > -1){
+			od_time_multiplier *= 1.5;
+		}else if(mods_array.indexOf("ht") > -1){
+			od_time_multiplier *= .75;
+		}
+
+		if(mods_array.indexOf("hr") > -1){
+			od_multiplier *= 1.4;
+		}else if(mods_array.indexOf("ez") > -1){
+			od_multiplier *= 0.5;
+		}
+
+		const od_300_base = 160;
+		const od_100_base = 280;
+		const od_50_base  = 400;
+		const od_300_factor = 12;
+		const od_100_factor = 16;
+		const od_50_factor  = 20;
+		od = Math.min(10, od_raw * od_multiplier);
+
+		let od_300_ms, od_100_ms, od_50_ms;
+		od_300_ms = od_300_base - od_300_factor * od;
+		od_100_ms = od_100_base - od_100_factor * od;
+		od_50_ms  = od_50_base  - od_50_factor  * od;
+
+		let display_od = (od_300_base - od_300_ms/od_time_multiplier)/od_300_factor;
+
+		var output = "";
+		if(mods_array.length > 0)
+			output += "OD" + od_raw + "+" + mods_array.join("").toUpperCase() + " -> ";
+
+		output += "OD" + +display_od.toFixed(2) +
+			" (" + [od_300_ms, od_100_ms, od_50_ms].map(
+				odms => (odms/od_time_multiplier).toFixed(2)
+			).join("ms, ") + "ms)";
+
+		return output;
+	},
+
     format_embed: function(recent){
         let embed = {fields: []};
         embed.color = 12277111;
@@ -1257,7 +1307,7 @@ module.exports = {
 	        api.get('/get_user_best', { params: { u: options.user, limit: options.count } }),
 	        api.get('/get_user', { params: { u: options.user } })
         ];
-        
+
         const results = await Promise.all(requests);
 
         let user_best = results[0].data;
@@ -2005,9 +2055,9 @@ module.exports = {
             const outputChart = await graphCanvas.renderToBuffer(configuration);
 
             const output_frame = await getFrame(osu_file_path, max_strain_time_real - map.objects[0].time % 400, mods_array, [427, 320], {ar: ar, cs: cs})
-            
+
             const graphImage = new Jimp(600, 400, '#263238E6');
-            
+
             const _graph = await Jimp.read(outputChart);
             const _frame = await Jimp.read(output_frame);
             _graph.composite(_frame, 90, 55, { opacitySource: 0.6 });
