@@ -54,7 +54,11 @@ class RawCursor {
         this.replayData = replay.replay_data;
     }
 
-    next (time) {
+    next () {
+        return this.replayData[this.i++];
+    }
+
+    at (time) {
         while (this.i + 1 < this.replayData.length 
             && this.replayData[this.i].offset < time) {
             this.i++;
@@ -132,7 +136,7 @@ function getCursorAt(timestamp, replay){
     return {previous, current};
 }
 
-function getCursor(replay){
+function iterateCursor(replay){
     replay.lastCursor++;
 
     return { 
@@ -1066,6 +1070,8 @@ function processBeatmap(osuContents){
         }*/
     }
 
+    const cursor = new RawCursor(beatmap.Replay);
+
     console.time('process hit results');
     for(let i = 0; i < beatmap.hitObjects.length; i++){
         const hitObject = beatmap.hitObjects[i];
@@ -1073,17 +1079,15 @@ function processBeatmap(osuContents){
         if(hitObject.objectName == 'spinner')
             continue; // process spinners later
 
-        let nextFrame, previous, current;
-
+        let previous, current = cursor.next();
         let currentPresses = 0;
 
         do{
-            nextFrame = getCursor(beatmap.Replay);
-
-            ({ previous, current } = nextFrame);
+            previous = current;
+            current = cursor.next();
 
             if(current != null && current.offset > hitObject.latestHit){
-                beatmap.Replay.lastCursor--;
+                cursor.i--;
                 break;
             }
 
@@ -1138,7 +1142,7 @@ function processBeatmap(osuContents){
 
     const allhits = [];
 
-    const cursor = new RawCursor(beatmap.Replay);
+    cursor.i = 0;
 
     console.time('process combo');
     for(const hitObject of beatmap.hitObjects){
@@ -1254,7 +1258,7 @@ function processBeatmap(osuContents){
 
                 if(i > 0){
                     const scoringFrame = newScoringFrame(beatmap.ScoringFrames);
-                    const replayFrame = cursor.next(repeatOffset);
+                    const replayFrame = cursor.at(repeatOffset);
 
                     scoringFrame.offset = repeatOffset;
 
@@ -1292,7 +1296,7 @@ function processBeatmap(osuContents){
                     scoringFrame.offset = offset;
                     scoringFrame.position = tick.position;
 
-                    const replayFrame = cursor.next(offset);
+                    const replayFrame = cursor.at(offset);
 
                     const currentHolding = replayFrame.K1 || replayFrame.K2 || replayFrame.M1 || replayFrame.M2;
 
@@ -1319,7 +1323,7 @@ function processBeatmap(osuContents){
                 }
 
                 if(i + 1 == hitObject.repeatCount){
-                    const replayFrame = cursor.next(hitObject.actualEndTime);
+                    const replayFrame = cursor.at(hitObject.actualEndTime);
 
                     const endPosition = i % 2 == 1 ? hitObject.position : hitObject.actualEndPosition;
 
