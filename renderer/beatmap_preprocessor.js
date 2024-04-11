@@ -46,6 +46,24 @@ const keys_enum = {
     "S": Math.pow(2,4)
 }
 
+class RawCursor {
+    i = 0;
+    replayData;
+
+    constructor (replay) {
+        this.replayData = replay.replay_data;
+    }
+
+    next (time) {
+        while (this.i + 1 < this.replayData.length 
+            && this.replayData[this.i].offset < time) {
+            this.i++;
+        }
+
+        return this.replayData[this.i];
+    }
+}
+
 function parseKeysPressed(num){
     let keys = Number(num);
     let output_keys = {
@@ -1120,6 +1138,8 @@ function processBeatmap(osuContents){
 
     const allhits = [];
 
+    const cursor = new RawCursor(beatmap.Replay);
+
     console.time('process combo');
     for(const hitObject of beatmap.hitObjects){
         if(hitObject.objectName == 'circle'){
@@ -1234,7 +1254,7 @@ function processBeatmap(osuContents){
 
                 if(i > 0){
                     const scoringFrame = newScoringFrame(beatmap.ScoringFrames);
-                    const replayFrame = getCursorAtRaw(beatmap.Replay, repeatOffset);
+                    const replayFrame = cursor.next(repeatOffset);
 
                     scoringFrame.offset = repeatOffset;
 
@@ -1272,7 +1292,7 @@ function processBeatmap(osuContents){
                     scoringFrame.offset = offset;
                     scoringFrame.position = tick.position;
 
-                    const replayFrame = getCursorAtRaw(beatmap.Replay, offset);
+                    const replayFrame = cursor.next(offset);
 
                     const currentHolding = replayFrame.K1 || replayFrame.K2 || replayFrame.M1 || replayFrame.M2;
 
@@ -1299,7 +1319,7 @@ function processBeatmap(osuContents){
                 }
 
                 if(i + 1 == hitObject.repeatCount){
-                    const replayFrame = getCursorAtRaw(beatmap.Replay, hitObject.actualEndTime);
+                    const replayFrame = cursor.next(hitObject.actualEndTime);
 
                     const endPosition = i % 2 == 1 ? hitObject.position : hitObject.actualEndPosition;
 
