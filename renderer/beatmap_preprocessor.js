@@ -46,7 +46,7 @@ const keys_enum = {
     "S": Math.pow(2,4)
 }
 
-class RawCursor {
+class Cursor {
     i = 0;
     replayData;
 
@@ -58,6 +58,10 @@ class RawCursor {
         return this.replayData[this.i++];
     }
 
+    prev () {
+        return this.replayData[--this.i];
+    }
+
     at (time) {
         while (this.i + 1 < this.replayData.length 
             && this.replayData[this.i].offset < time) {
@@ -65,6 +69,10 @@ class RawCursor {
         }
 
         return this.replayData[this.i];
+    }
+
+    reset () {
+        this.i = 0;
     }
 }
 
@@ -104,45 +112,6 @@ function newScoringFrame(scoringFrames){
     scoringFrame.previousCombo = scoringFrame.combo;
 
     return scoringFrame;
-}
-
-function getCursorAt(timestamp, replay){
-    while(replay.lastCursor < replay.replay_data.length && replay.replay_data[replay.lastCursor].offset < timestamp)
-        replay.lastCursor++;
-
-    let current = replay.replay_data[replay.lastCursor];
-    let previous = replay.replay_data[replay.lastCursor - 1];
-
-    if(current === undefined || next === undefined){
-        if(replay.replay_data.length > 0){
-            return {
-                previous: replay.replay_data[replay.replay_data.length],
-                current: replay.replay_data[replay.replay_data.length]
-            }
-        }else{
-            return {
-                previous: {
-                    x: 0,
-                    y: 0
-                },
-                next: {
-                    x: 0,
-                    y: 0
-                }
-            }
-        }
-    }
-
-    return {previous, current};
-}
-
-function iterateCursor(replay){
-    replay.lastCursor++;
-
-    return { 
-        previous: replay.replay_data[replay.lastCursor - 1],
-        current: replay.replay_data[replay.lastCursor]
-    };
 }
 
 async function parseReplay(buf, decompress = true){
@@ -362,12 +331,6 @@ function variance(array){
     _array.forEach(a => _sum += a);
 
 	return Math.sqrt(_sum / _array.length);
-}
-
-function getCursorAtRaw(replay, time){
-    let lastIndex = replay.replay_data.findIndex(a => a.offset >= time) - 1;
-
-    return replay.replay_data[lastIndex] || replay.replay_data[replay.replay_data.length - 1];
 }
 
 function sampleSetToName(sampleSetId){
@@ -1070,7 +1033,7 @@ function processBeatmap(osuContents){
         }*/
     }
 
-    const cursor = new RawCursor(beatmap.Replay);
+    const cursor = new Cursor(beatmap.Replay);
 
     console.time('process hit results');
     for(let i = 0; i < beatmap.hitObjects.length; i++){
@@ -1087,7 +1050,7 @@ function processBeatmap(osuContents){
             current = cursor.next();
 
             if(current != null && current.offset > hitObject.latestHit){
-                cursor.i--;
+                cursor.prev();
                 break;
             }
 
@@ -1142,7 +1105,7 @@ function processBeatmap(osuContents){
 
     const allhits = [];
 
-    cursor.i = 0;
+    cursor.reset()
 
     console.time('process combo');
     for(const hitObject of beatmap.hitObjects){
