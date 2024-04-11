@@ -5,12 +5,13 @@ const os = require('os');
 const osu = require('../osu');
 const osr = require('node-osr');
 const lzma = require('lzma-native');
-const ojsama = require('ojsama');
+const rosu = require('rosu-pp-js');
 const axios = require('axios');
 const _ = require('lodash');
 const helper = require('../helper.js');
+const booba = require('booba');
 
-let options, beatmap_path, enabled_mods, beatmap, speed_override, speed_multiplier = 1;
+let options, beatmap_path, enabled_mods, beatmap, speed_override, speed_multiplier = 1, render_time, render_length;
 
 const PLAYFIELD_WIDTH = 512;
 const PLAYFIELD_HEIGHT = 384;
@@ -347,6 +348,61 @@ function getCursorAtRaw(replay, time){
     return replay.replay_data[lastIndex] || replay.replay_data[replay.replay_data.length - 1];
 }
 
+function sampleSetToName(sampleSetId){
+    switch(sampleSetId){
+        case 2:
+            return "soft";
+        case 3:
+            return "drum";
+        default:
+            return "normal";
+    }
+}
+
+function getHitSounds(timingPoint, name, soundTypes, additions) {
+    let output = [];
+
+    let sampleSetName = sampleSetToName(timingPoint.sampleSetId);
+    let sampleSetNameAddition = sampleSetName;
+
+    if(!soundTypes.includes('normal'))
+        soundTypes.push('normal');
+
+    if('sample' in additions)
+        sampleSetName = additions.sample;
+
+    if('additionalSample' in additions)
+        sampleSetNameAddition = additions.additionalSample;
+
+    let hitSoundBase = `${sampleSetName}-${name}`;
+    let hitSoundBaseAddition = `${sampleSetNameAddition}-${name}`;
+    let customSampleIndex = timingPoint.customSampleIndex > 0 ? timingPoint.customSampleIndex : '';
+
+    if(name == 'hit'){
+        soundTypes.forEach(soundType => {
+            let base = soundType == 'normal' ? hitSoundBase : hitSoundBaseAddition;
+            output.push(
+                `${base}${soundType}${customSampleIndex}`
+            );
+        });
+    }else if(name == 'slider'){
+        output.push(
+            `${hitSoundBase}slide${customSampleIndex}`
+        );
+
+        if(soundTypes.includes('whistle'))
+            output.push(
+                `${hitSoundBase}whistle${customSampleIndex}`
+            );
+    }else if(name == 'slidertick'){
+        output.push(
+            `${hitSoundBase}${customSampleIndex}`
+        )
+    }
+
+    return output;
+};
+
 function processBeatmap(osuContents){
     // AR
     //beatmap.TimeFadein = difficultyRange(beatmap.ApproachRate, 1800, 1200, 450);
@@ -404,6 +460,7 @@ function processBeatmap(osuContents){
         }
     });
 
+    console.time('calculate slider curves');
     // Calculate slider curves
     beatmap.hitObjects.forEach((hitObject, i) => {
         if(hitObject.objectName == "slider"){
@@ -516,6 +573,7 @@ function processBeatmap(osuContents){
                     }
                 });
 
+                
                 slider_parts.forEach((part, index) => {
                     if(part.length == 2){
                         slider_dots.push(part[0], part[1])
@@ -529,7 +587,9 @@ function processBeatmap(osuContents){
             hitObject.SliderDots = slider_dots;
         }
     });
+    console.timeEnd('calculate slider curves');
 
+    console.time('interpolate slider path');
     // Interpolate slider dots
     beatmap.hitObjects.forEach((hitObject, i) => {
         if(hitObject.objectName != 'slider')
@@ -582,6 +642,9 @@ function processBeatmap(osuContents){
 
         hitObject.SliderDots = slider_dots;
     });
+    console.timeEnd('interpolate slider path');
+
+    console.time('calculate slider ticks and hitsounds');
 
     // Generate slider ticks and apply lazy end position
     beatmap.hitObjects.forEach((hitObject, i) => {
@@ -657,61 +720,6 @@ function processBeatmap(osuContents){
             hitObject.SliderTicks = slider_ticks;
         }
 
-        let sampleSetToName = sampleSetId => {
-            switch(sampleSetId){
-                case 2:
-                    return "soft";
-                case 3:
-                    return "drum";
-                default:
-                    return "normal";
-            }
-        };
-
-        let getHitSounds = (timingPoint, name, soundTypes, additions) => {
-            let output = [];
-
-            let sampleSetName = sampleSetToName(timingPoint.sampleSetId);
-            let sampleSetNameAddition = sampleSetName;
-
-            if(!soundTypes.includes('normal'))
-                soundTypes.push('normal');
-
-            if('sample' in additions)
-                sampleSetName = additions.sample;
-
-            if('additionalSample' in additions)
-                sampleSetNameAddition = additions.additionalSample;
-
-            let hitSoundBase = `${sampleSetName}-${name}`;
-            let hitSoundBaseAddition = `${sampleSetNameAddition}-${name}`;
-            let customSampleIndex = timingPoint.customSampleIndex > 0 ? timingPoint.customSampleIndex : '';
-
-            if(name == 'hit'){
-                soundTypes.forEach(soundType => {
-                    let base = soundType == 'normal' ? hitSoundBase : hitSoundBaseAddition;
-                    output.push(
-                        `${base}${soundType}${customSampleIndex}`
-                    );
-                });
-            }else if(name == 'slider'){
-                output.push(
-                    `${hitSoundBase}slide${customSampleIndex}`
-                );
-
-                if(soundTypes.includes('whistle'))
-                    output.push(
-                        `${hitSoundBase}whistle${customSampleIndex}`
-                    );
-            }else if(name == 'slidertick'){
-                output.push(
-                    `${hitSoundBase}${customSampleIndex}`
-                )
-            }
-
-            return output;
-        };
-
         hitObject.HitSounds = getHitSounds(timingPoint, 'hit', hitObject.soundTypes, hitObject.additions);
         hitObject.EdgeHitSounds = [];
         hitObject.SliderHitSounds = [];
@@ -749,8 +757,11 @@ function processBeatmap(osuContents){
         }
     });
 
+    console.timeEnd('calculate slider ticks and hitsounds');
+
     const stackThreshold = beatmap.TimePreempt * beatmap.StackLeniency;
 
+    console.time('calculate stacking offsets');
     if(Number(beatmap.fileFormat.slice(1)) >= 6){
         let startIndex = 0;
         let endIndex = beatmap.hitObjects.length - 1;
@@ -845,6 +856,7 @@ function processBeatmap(osuContents){
             }
         }
     }    
+    console.timeEnd('calculate stacking offsets');
 
     let currentCombo = 1;
     let currentComboNumber = 0;
@@ -1035,7 +1047,8 @@ function processBeatmap(osuContents){
             
         }*/
     }
-    
+
+    console.time('process hit results');
     for(let i = 0; i < beatmap.hitObjects.length; i++){
         const hitObject = beatmap.hitObjects[i];
 
@@ -1101,11 +1114,13 @@ function processBeatmap(osuContents){
             }
         }while(current != null && current.offset < hitObject.latestHit);
     }
+    console.timeEnd('process hit results');
 
     beatmap.ScoringFrames = [];
 
     const allhits = [];
 
+    console.time('process combo');
     for(const hitObject of beatmap.hitObjects){
         if(hitObject.objectName == 'circle'){
             const scoringFrame = newScoringFrame(beatmap.ScoringFrames);
@@ -1358,47 +1373,42 @@ function processBeatmap(osuContents){
             }
         }
     }
+    console.timeEnd('process combo');
 
     beatmap.ScoringFrames = beatmap.ScoringFrames.sort((a, b) => a.offset - b.offset);
 
-    const parser = new ojsama.parser().feed(osuContents);
+    console.time('calc pp frames');
+    const map = new rosu.Beatmap(osuContents);
 
-    const objects = parser.map.objects.slice();
-    const mods = ojsama.modbits.from_string(enabled_mods.filter(a => ["HR", "EZ"].includes(a) == false).join(""));
+    const difficulty = new rosu.Difficulty({
+        mods: new booba.Mods(enabled_mods).value,
+        ar: beatmap.ApproachRateRealtime,
+        arWithMods: true,
+        od: beatmap.OverallDifficultyRealtime,
+        odWithMods: false,
+    });
 
-    parser.map.cs = beatmap.CircleSize;
-    parser.map.od = beatmap.OverallDifficultyRealtime;
-    parser.map.ar = beatmap.ApproachRateRealtime;
-    
-    for(const scoringFrame of beatmap.ScoringFrames.filter(a => ['miss', 50, 100, 300].includes(a.result))){
-        const hitCount = scoringFrame.countMiss + scoringFrame.count50 + scoringFrame.count100 + scoringFrame.count300;
+    const gradualPerf = difficulty.gradualPerformance(map);
 
-        parser.map.objects = objects.slice(0, hitCount);
+    for(const [index, scoringFrame] of beatmap.ScoringFrames.entries()){
+        if (['miss', 50, 100, 300].includes(scoringFrame.result) === false) {
+            scoringFrame.pp = beatmap.ScoringFrames[index - 1]?.pp ?? 0;
+            scoringFrame.stars = beatmap.ScoringFrames[index - 1]?.stars ?? 0;
+            continue;
+        }
 
-        const stars = new ojsama.diff().calc({map: parser.map, mods});
-
-        const pp = ojsama.ppv2({
-            stars,
-            combo: scoringFrame.maxCombo,
+        const state = {
+            maxCombo: scoringFrame.maxCombo,
             nmiss: scoringFrame.countMiss,
             n300: scoringFrame.count300,
             n100: scoringFrame.count100,
             n50: scoringFrame.count50
-        });
+        };
 
-        scoringFrame.pp = pp.total;
-        scoringFrame.stars = stars.total;
-    }
+        const perf = gradualPerf.next(state);
 
-    let pp = 0, stars = 0;
-
-    for(const scoringFrame of beatmap.ScoringFrames){
-        if(scoringFrame.pp != null){
-            ({pp, stars} = scoringFrame)
-        }
-
-        scoringFrame.pp = pp;
-        scoringFrame.stars = stars;
+        scoringFrame.pp = perf.pp;
+        scoringFrame.stars = perf.difficulty.stars ?? 0;
     }
 
     const hitResults = _.countBy(beatmap.ScoringFrames, 'result');
@@ -1414,7 +1424,9 @@ function processBeatmap(osuContents){
 async function prepareBeatmap(){
     const osuContents = await fs.promises.readFile(beatmap_path, 'utf8');
 
+    console.time('parse beatmap');
     beatmap = osuBeatmapParser.parseContent(osuContents);
+    console.timeEnd('parse beatmap');
 
     beatmap.CircleSize = beatmap.CircleSize != null ? beatmap.CircleSize : 5;
     beatmap.OverallDifficulty = beatmap.OverallDifficulty != null ? beatmap.OverallDifficulty : 5;
@@ -1490,9 +1502,12 @@ async function prepareBeatmap(){
 }
 
 process.on('message', obj => {
-    ({beatmap_path, options, speed, enabled_mods} = obj);
+    ({beatmap_path, options, speed, enabled_mods, render_time, render_length} = obj);
 
+    console.time('prepare beatmap');
     prepareBeatmap().then(() => {
+        console.timeEnd('prepare beatmap');
+        helper.log('beatmap sent');
         process.send(beatmap, () => {
             process.exit();
         });
