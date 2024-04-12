@@ -320,17 +320,21 @@ function getTimingPoint(timingPoints, offset){
     return timingPoint;
 }
 
-function variance(array){
-    let sum = 0;
-    array.forEach(a => sum += a);
+function variance(arr) {
+    let m = 0;
+    let s = 0;
+    let oldM;
     
-	const avg = sum / array.length;
-    let _sum = 0;
-    let _array = array.map(function(a){ return Math.pow(a - avg, 2); });
-    
-    _array.forEach(a => _sum += a);
+    for (let k = 1; k <= arr.length; k++) {
+        let x = arr[k - 1];
+        oldM = m;
+        m += (x - m) / k;
+        s += (x - m) * (x - oldM);
+    }
 
-	return Math.sqrt(_sum / _array.length);
+    const v = s / (arr.length - 1);
+
+    return Math.sqrt(s / arr.length);
 }
 
 function sampleSetToName(sampleSetId){
