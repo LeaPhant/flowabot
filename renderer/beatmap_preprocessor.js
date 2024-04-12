@@ -1517,11 +1517,11 @@ process.on('message', data => {
 
     console.time('prepare beatmap');
     prepareBeatmap().then(() => {
-        console.time('trimming beatmap');
-        beatmap.hitObjects = beatmap.hitObjects.filter(a => a.endTime >= start_time || a.startTime - beatmap.TimePreempt <= end_time);
-        beatmap.Replay.replay_data = beatmap.Replay.replay_data.filter(a => a.offset >= start_time && a.offset <= end_time);
-        beatmap.ScoringFrames = beatmap.ScoringFrames.filter(a => a.offset >= start_time && a.offset <= end_time);
-        console.timeEnd('trimming beatmap');
+        // console.time('trimming beatmap');
+        // beatmap.hitObjects = beatmap.hitObjects.filter(a => a.endTime >= start_time || a.startTime - beatmap.TimePreempt <= end_time);
+        // beatmap.Replay.replay_data = beatmap.Replay.replay_data.filter(a => a.offset >= start_time && a.offset <= end_time);
+        // beatmap.ScoringFrames = beatmap.ScoringFrames.filter(a => a.offset >= start_time && a.offset <= end_time);
+        // console.timeEnd('trimming beatmap');
         console.timeEnd('prepare beatmap');
         process.send(beatmap, () => {
             process.exit();
