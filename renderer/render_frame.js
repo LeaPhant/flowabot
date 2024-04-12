@@ -483,6 +483,8 @@ module.exports = {
             beatmap_path,
             options,
             enabled_mods,
+            time,
+            length,
 			speed_override: options.speed
         });
 
