@@ -1505,8 +1505,8 @@ async function prepareBeatmap(){
 process.on('message', data => {
     ({beatmap_path, options, speed, enabled_mods, time: render_time, length: render_length} = data);
 
-    start_time = (render_time - 1 * 1000);
-    end_time = (render_time + render_length + 1) * 1000;
+    start_time = render_time - 1000;
+    end_time = render_time + render_length + 1000;
 
     console.time('prepare beatmap');
     prepareBeatmap().then(() => {
