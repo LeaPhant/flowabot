@@ -445,7 +445,7 @@ function processBeatmap(osuContents){
     });
 
     start_time = Math.max(beatmap.hitObjects[0].endTime - 1000, start_time);
-    end_time = start_time + render_length + beatmap.TimePreempt + 2000;
+    end_time = start_time + render_length / speed_multiplier + beatmap.TimePreempt + 2000;
 
     // HR inversion
     beatmap.hitObjects.forEach((hitObject, i) => {
