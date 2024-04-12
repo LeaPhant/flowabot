@@ -1440,7 +1440,7 @@ async function prepareBeatmap(){
     beatmap.ApproachRate = beatmap.ApproachRate != null ? beatmap.ApproachRate : beatmap.OverallDifficulty;
 
     let replay;
-
+	console.time('parse replay');
     if(options.score_id && !options.osr){
 		const replay_path = path.resolve(config.replay_path, `${options.score_id}.osr`);
 		const parsedOsr = await osr.read(replay_path)
@@ -1462,6 +1462,7 @@ async function prepareBeatmap(){
             throw "Couldn't download replay";
         }
     }
+	console.timeEnd('parse replay');
 
     speed_multiplier = 1;
 
