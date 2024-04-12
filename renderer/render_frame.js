@@ -520,7 +520,9 @@ module.exports = {
             beatmap_path,
             options,
             enabled_mods,
-			speed_override: options.speed
+			speed_override: options.speed,
+			time,
+			length,
         });
 
 		worker.on('close', code => {
