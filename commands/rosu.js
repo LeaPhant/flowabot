@@ -2,7 +2,7 @@ const fs = require('fs').promises;
 const path = require('path');
 const os = require('os');
 const URL = require('url');
-const { Beatmap, Calculator } = require('rosu-pp');
+const { Beatmap, Performance, BeatmapAttributesBuilder } = require('rosu-pp-js');
 
 const helper = require('../helper.js');
 const osu = require('../osu.js');
@@ -171,25 +171,20 @@ module.exports = {
                         });
                     }
 
-                    let beatmap_params = {
-                        path: beatmap_path,
-                    }
-
                     let params = {
-                        mode: 0,
                     }
 
                     if (od)
-                        beatmap_params.od = od;
+                        params.od = od;
 
                     if (ar)
-                        beatmap_params.ar = ar;
+                        params.ar = ar;
 
                     if (hp)
-                        beatmap_params.hp = hp;
+                        params.hp = hp;
 
                     if (cs)
-                        beatmap_params.cs = cs;
+                        params.cs = cs;
 
                     if(mods.length > 0){
                         params.mods = getModsEnum(mods);
@@ -208,7 +203,7 @@ module.exports = {
                         params.nMisses = nmiss;
 
                     if(acc_percent)
-                        params.acc = acc_percent;
+                        params.accuracy = acc_percent;
 
                     if(clock_rate)
                         params.clockRate = clock_rate;
@@ -217,32 +212,30 @@ module.exports = {
                         helper.updateLastBeatmap({
                             beatmap_id,
                             mods,
-                            fail_percent: last_beatmap[msg.channel.id].fail_percent || 1,
-                            acc: last_beatmap[msg.channel.id].acc || 100
+                            fail_percent: last_beatmap[msg.channel.id]?.fail_percent || 1,
+                            acc: last_beatmap[msg.channel.id]?.acc || 100
                         }, msg.channel.id, last_beatmap);
                     }
-
-                    const map = new Beatmap(beatmap_params)
-                    const calc = new Calculator(params)
-
-                    const mapAttr = calc.mapAttributes(map)
-                    const perf = calc.performance(map)
+					const osuContents = await fs.readFile(beatmap_path, 'utf8');
+                    const map = new Beatmap(osuContents);
+                    const perf = new Performance(params).calculate(map);
 
                     let pp = round(perf.pp)
                     let aim_pp = round(perf.ppAim)
                     let speed_pp = round(perf.ppSpeed)
-                    let acc_pp = round(perf.ppAcc)
+                    let acc_pp = round(perf.ppAccuracy)
                     let fl_pp = ''
                     let fl_stars = ''
                     let aim_stars = round(perf.difficulty.aim)
                     let speed_stars = round(perf.difficulty.speed)
-                    let bpm = round(mapAttr.bpm)
+                    let bpm = round(map.bpm * (clock_rate || 1))
                     let stars = round(perf.difficulty.stars)
                     if(mods.includes('fl')) {
                         fl_pp = `, ${round(perf.ppFlashlight)} flashlight pp`
                         fl_stars = `, ${round(perf.difficulty.flashlight)} flashlight stars`
                     }
                     
+					let mapAttr = new BeatmapAttributesBuilder({map: map, clockRate: clock_rate}).build();
                     ar = round(mapAttr.ar)
                     od = round(mapAttr.od)
                     cs = round(mapAttr.cs)
