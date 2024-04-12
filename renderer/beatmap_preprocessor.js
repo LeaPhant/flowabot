@@ -439,6 +439,14 @@ function processBeatmap(osuContents){
     if(isNaN(beatmap.StackLeniency))
         beatmap.StackLeniency = 0.7;
 
+    beatmap.hitObjects.forEach(hitObject => {
+        if(hitObject.objectName == "circle")
+            hitObject.endTime = hitObject.startTime;
+    });
+
+    start_time = Math.max(beatmap.hitObjects[0].endTime - 1000, start_time);
+    end_time = start_time + render_length + beatmap.TimePreempt + 2000;
+
     // HR inversion
     beatmap.hitObjects.forEach((hitObject, i) => {
         if(enabled_mods.includes("HR")){
@@ -640,9 +648,6 @@ function processBeatmap(osuContents){
     // Generate slider ticks and apply lazy end position
     beatmap.hitObjects.forEach((hitObject, i) => {
         hitObject.StackHeight = 0;
-
-        if(hitObject.objectName == "circle")
-            hitObject.endTime = hitObject.startTime;
 
         if(hitObject.objectName == "spinner"){
             hitObject.duration = hitObject.endTime - hitObject.startTime;
@@ -1506,7 +1511,6 @@ process.on('message', data => {
     ({beatmap_path, options, speed, enabled_mods, time: render_time, length: render_length} = data);
 
     start_time = render_time - 1000;
-    end_time = render_time + render_length + 1000;
 
     console.time('prepare beatmap');
     prepareBeatmap().then(() => {
