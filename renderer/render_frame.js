@@ -852,7 +852,7 @@ module.exports = {
                                             '-H', 'content-type: multipart/form-data',
                                             '-H', 'authorization: ' + config.credentials.pekli_token,
 											'-H', 'Override-Domain: pek.li',
-                                            '-F', `file=@${file_path}/video.${options.type}`
+                                            '-F', `"file=@${file_path}/video.${options.type};type=video/mp4"`
                                         ]);
 
                                     const json = JSON.parse(response.stdout);
