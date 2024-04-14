@@ -851,6 +851,7 @@ module.exports = {
                                             '-s', '-X', 'POST', config.pekli_host + '/api/upload',
                                             '-H', 'content-type: multipart/form-data',
                                             '-H', 'authorization: ' + config.credentials.pekli_token,
+											'-H', 'Override-Domain: pek.li',
                                             '-F', `file=@${file_path}/video.${options.type}`
                                         ]);
 
