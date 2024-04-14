@@ -848,7 +848,7 @@ module.exports = {
 
                                     const response = await execFilePromise('curl',
                                         [
-                                            '-s', '-X', 'POST', 'https://pek.li/api/upload',
+                                            '-s', '-X', 'POST', config.pekli_host + '/api/upload',
                                             '-H', 'content-type: multipart/form-data',
                                             '-H', 'authorization: ' + config.credentials.pekli_token,
                                             '-F', `file=@${file_path}/video.${options.type}`
