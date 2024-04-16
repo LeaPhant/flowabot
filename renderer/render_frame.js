@@ -479,8 +479,7 @@ module.exports = {
     },
 
     get_frames: async function(beatmap_path, time, length, enabled_mods, size, options, cb){
-        if(config.debug)
-            console.time('process beatmap');
+        console.time('process beatmap');
 
 		const { msg } = options;
 
@@ -538,8 +537,7 @@ module.exports = {
         worker.on('message', async _beatmap => {
             beatmap = _beatmap;
 
-            if(config.debug)
-                console.timeEnd('process beatmap');
+            console.timeEnd('process beatmap');
 
             if(time == 0 && options.percent){
                 time = beatmap.hitObjects[Math.floor(options.percent * (beatmap.hitObjects.length - 1))].startTime - 2000;
