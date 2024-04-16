@@ -5,16 +5,14 @@ const os = require('os');
 const osu = require('../osu');
 const osr = require('node-osr');
 const lzma = require('lzma-native');
-const rosu = require('rosu-pp-js');
+const ojsama = require('ojsama');
+const { Beatmap, Calculator } = require('rosu-pp')
 const axios = require('axios');
 const _ = require('lodash');
 const helper = require('../helper.js');
 const config = require('../config.json');
-const booba = require('booba');
 
-let options, beatmap_path, enabled_mods, 
-    beatmap, speed_override, speed_multiplier = 1, 
-    render_time, render_length, start_time, end_time;
+let options, beatmap_path, enabled_mods, beatmap, speed_override, speed_multiplier = 1;
 
 const PLAYFIELD_WIDTH = 512;
 const PLAYFIELD_HEIGHT = 384;
@@ -47,36 +45,6 @@ const keys_enum = {
     "K1": Math.pow(2,2),
     "K2": Math.pow(2,3),
     "S": Math.pow(2,4)
-}
-
-class Cursor {
-    i = 0;
-    replayData;
-
-    constructor (replay) {
-        this.replayData = replay.replay_data;
-    }
-
-    next () {
-        return this.replayData[this.i++];
-    }
-
-    prev () {
-        return this.replayData[--this.i];
-    }
-
-    at (time) {
-        while (this.i + 1 < this.replayData.length 
-            && this.replayData[this.i].offset < time) {
-            this.i++;
-        }
-
-        return this.replayData[this.i];
-    }
-
-    reset () {
-        this.i = 0;
-    }
 }
 
 function parseKeysPressed(num){
@@ -117,11 +85,51 @@ function newScoringFrame(scoringFrames){
     return scoringFrame;
 }
 
+function getCursorAt(timestamp, replay){
+    while(replay.lastCursor < replay.replay_data.length && replay.replay_data[replay.lastCursor].offset < timestamp)
+        replay.lastCursor++;
+
+    let current = replay.replay_data[replay.lastCursor];
+    let previous = replay.replay_data[replay.lastCursor - 1];
+
+    if(current === undefined || next === undefined){
+        if(replay.replay_data.length > 0){
+            return {
+                previous: replay.replay_data[replay.replay_data.length],
+                current: replay.replay_data[replay.replay_data.length]
+            }
+        }else{
+            return {
+                previous: {
+                    x: 0,
+                    y: 0
+                },
+                next: {
+                    x: 0,
+                    y: 0
+                }
+            }
+        }
+    }
+
+    return {previous, current};
+}
+
+function getCursor(replay){
+    replay.lastCursor++;
+
+    return { 
+        previous: replay.replay_data[replay.lastCursor - 1],
+        current: replay.replay_data[replay.lastCursor]
+    };
+}
+
 async function parseReplay(buf, decompress = true){
     let replay_data = buf;
 
     if(decompress)
-        replay_data = (await lzma.decompress(replay_data)).toString();
+        replay_data = (await osr.read(buf)).replay_data;
+        //replay_data = (await lzma.decompress(replay_data)).toString();
         
     let replay_frames = replay_data.split(",");
 
@@ -323,77 +331,24 @@ function getTimingPoint(timingPoints, offset){
     return timingPoint;
 }
 
-function variance(arr) {
-    let m = 0;
-    let s = 0;
-    let oldM;
+function variance(array){
+    let sum = 0;
+    array.forEach(a => sum += a);
     
-    for (let k = 1; k <= arr.length; k++) {
-        let x = arr[k - 1];
-        oldM = m;
-        m += (x - m) / k;
-        s += (x - m) * (x - oldM);
-    }
+	const avg = sum / array.length;
+    let _sum = 0;
+    let _array = array.map(function(a){ return Math.pow(a - avg, 2); });
+    
+    _array.forEach(a => _sum += a);
 
-    const v = s / (arr.length - 1);
-
-    return Math.sqrt(s / arr.length);
+	return Math.sqrt(_sum / _array.length);
 }
 
-function sampleSetToName(sampleSetId){
-    switch(sampleSetId){
-        case 2:
-            return "soft";
-        case 3:
-            return "drum";
-        default:
-            return "normal";
-    }
+function getCursorAtRaw(replay, time){
+    let lastIndex = replay.replay_data.findIndex(a => a.offset >= time) - 1;
+
+    return replay.replay_data[lastIndex] || replay.replay_data[replay.replay_data.length - 1];
 }
-
-function getHitSounds(timingPoint, name, soundTypes, additions) {
-    let output = [];
-
-    let sampleSetName = sampleSetToName(timingPoint.sampleSetId);
-    let sampleSetNameAddition = sampleSetName;
-
-    if(!soundTypes.includes('normal'))
-        soundTypes.push('normal');
-
-    if('sample' in additions)
-        sampleSetName = additions.sample;
-
-    if('additionalSample' in additions)
-        sampleSetNameAddition = additions.additionalSample;
-
-    let hitSoundBase = `${sampleSetName}-${name}`;
-    let hitSoundBaseAddition = `${sampleSetNameAddition}-${name}`;
-    let customSampleIndex = timingPoint.customSampleIndex > 0 ? timingPoint.customSampleIndex : '';
-
-    if(name == 'hit'){
-        soundTypes.forEach(soundType => {
-            let base = soundType == 'normal' ? hitSoundBase : hitSoundBaseAddition;
-            output.push(
-                `${base}${soundType}${customSampleIndex}`
-            );
-        });
-    }else if(name == 'slider'){
-        output.push(
-            `${hitSoundBase}slide${customSampleIndex}`
-        );
-
-        if(soundTypes.includes('whistle'))
-            output.push(
-                `${hitSoundBase}whistle${customSampleIndex}`
-            );
-    }else if(name == 'slidertick'){
-        output.push(
-            `${hitSoundBase}${customSampleIndex}`
-        )
-    }
-
-    return output;
-};
 
 function processBeatmap(osuContents){
     // AR
@@ -440,14 +395,6 @@ function processBeatmap(osuContents){
     if(isNaN(beatmap.StackLeniency))
         beatmap.StackLeniency = 0.7;
 
-    beatmap.hitObjects.forEach(hitObject => {
-        if(hitObject.objectName == "circle")
-            hitObject.endTime = hitObject.startTime;
-    });
-
-    start_time = Math.max(beatmap.hitObjects[0].endTime - 1000, start_time);
-    end_time = start_time + render_length / speed_multiplier + beatmap.TimePreempt + 2000;
-
     // HR inversion
     beatmap.hitObjects.forEach((hitObject, i) => {
         if(enabled_mods.includes("HR")){
@@ -460,7 +407,6 @@ function processBeatmap(osuContents){
         }
     });
 
-    console.time('calculate slider curves');
     // Calculate slider curves
     beatmap.hitObjects.forEach((hitObject, i) => {
         if(hitObject.objectName == "slider"){
@@ -573,7 +519,6 @@ function processBeatmap(osuContents){
                     }
                 });
 
-                
                 slider_parts.forEach((part, index) => {
                     if(part.length == 2){
                         slider_dots.push(part[0], part[1])
@@ -587,9 +532,7 @@ function processBeatmap(osuContents){
             hitObject.SliderDots = slider_dots;
         }
     });
-    console.timeEnd('calculate slider curves');
 
-    console.time('interpolate slider path');
     // Interpolate slider dots
     beatmap.hitObjects.forEach((hitObject, i) => {
         if(hitObject.objectName != 'slider')
@@ -642,13 +585,13 @@ function processBeatmap(osuContents){
 
         hitObject.SliderDots = slider_dots;
     });
-    console.timeEnd('interpolate slider path');
-
-    console.time('calculate slider ticks and hitsounds');
 
     // Generate slider ticks and apply lazy end position
     beatmap.hitObjects.forEach((hitObject, i) => {
         hitObject.StackHeight = 0;
+
+        if(hitObject.objectName == "circle")
+            hitObject.endTime = hitObject.startTime;
 
         if(hitObject.objectName == "spinner"){
             hitObject.duration = hitObject.endTime - hitObject.startTime;
@@ -717,6 +660,61 @@ function processBeatmap(osuContents){
             hitObject.SliderTicks = slider_ticks;
         }
 
+        let sampleSetToName = sampleSetId => {
+            switch(sampleSetId){
+                case 2:
+                    return "soft";
+                case 3:
+                    return "drum";
+                default:
+                    return "normal";
+            }
+        };
+
+        let getHitSounds = (timingPoint, name, soundTypes, additions) => {
+            let output = [];
+
+            let sampleSetName = sampleSetToName(timingPoint.sampleSetId);
+            let sampleSetNameAddition = sampleSetName;
+
+            if(!soundTypes.includes('normal'))
+                soundTypes.push('normal');
+
+            if('sample' in additions)
+                sampleSetName = additions.sample;
+
+            if('additionalSample' in additions)
+                sampleSetNameAddition = additions.additionalSample;
+
+            let hitSoundBase = `${sampleSetName}-${name}`;
+            let hitSoundBaseAddition = `${sampleSetNameAddition}-${name}`;
+            let customSampleIndex = timingPoint.customSampleIndex > 0 ? timingPoint.customSampleIndex : '';
+
+            if(name == 'hit'){
+                soundTypes.forEach(soundType => {
+                    let base = soundType == 'normal' ? hitSoundBase : hitSoundBaseAddition;
+                    output.push(
+                        `${base}${soundType}${customSampleIndex}`
+                    );
+                });
+            }else if(name == 'slider'){
+                output.push(
+                    `${hitSoundBase}slide${customSampleIndex}`
+                );
+
+                if(soundTypes.includes('whistle'))
+                    output.push(
+                        `${hitSoundBase}whistle${customSampleIndex}`
+                    );
+            }else if(name == 'slidertick'){
+                output.push(
+                    `${hitSoundBase}${customSampleIndex}`
+                )
+            }
+
+            return output;
+        };
+
         hitObject.HitSounds = getHitSounds(timingPoint, 'hit', hitObject.soundTypes, hitObject.additions);
         hitObject.EdgeHitSounds = [];
         hitObject.SliderHitSounds = [];
@@ -754,11 +752,8 @@ function processBeatmap(osuContents){
         }
     });
 
-    console.timeEnd('calculate slider ticks and hitsounds');
-
     const stackThreshold = beatmap.TimePreempt * beatmap.StackLeniency;
 
-    console.time('calculate stacking offsets');
     if(Number(beatmap.fileFormat.slice(1)) >= 6){
         let startIndex = 0;
         let endIndex = beatmap.hitObjects.length - 1;
@@ -853,7 +848,6 @@ function processBeatmap(osuContents){
             }
         }
     }    
-    console.timeEnd('calculate stacking offsets');
 
     let currentCombo = 1;
     let currentComboNumber = 0;
@@ -1044,25 +1038,24 @@ function processBeatmap(osuContents){
             
         }*/
     }
-
-    const cursor = new Cursor(beatmap.Replay);
-
-    console.time('process hit results');
+    
     for(let i = 0; i < beatmap.hitObjects.length; i++){
         const hitObject = beatmap.hitObjects[i];
 
         if(hitObject.objectName == 'spinner')
             continue; // process spinners later
 
-        let previous, current = cursor.next();
+        let nextFrame, previous, current;
+
         let currentPresses = 0;
 
         do{
-            previous = current;
-            current = cursor.next();
+            nextFrame = getCursor(beatmap.Replay);
+
+            ({ previous, current } = nextFrame);
 
             if(current != null && current.offset > hitObject.latestHit){
-                cursor.prev();
+                beatmap.Replay.lastCursor--;
                 break;
             }
 
@@ -1111,15 +1104,11 @@ function processBeatmap(osuContents){
             }
         }while(current != null && current.offset < hitObject.latestHit);
     }
-    console.timeEnd('process hit results');
 
     beatmap.ScoringFrames = [];
 
     const allhits = [];
 
-    cursor.reset()
-
-    console.time('process combo & calc ur');
     for(const hitObject of beatmap.hitObjects){
         if(hitObject.objectName == 'circle'){
             const scoringFrame = newScoringFrame(beatmap.ScoringFrames);
@@ -1233,7 +1222,7 @@ function processBeatmap(osuContents){
 
                 if(i > 0){
                     const scoringFrame = newScoringFrame(beatmap.ScoringFrames);
-                    const replayFrame = cursor.at(repeatOffset);
+                    const replayFrame = getCursorAtRaw(beatmap.Replay, repeatOffset);
 
                     scoringFrame.offset = repeatOffset;
 
@@ -1271,7 +1260,7 @@ function processBeatmap(osuContents){
                     scoringFrame.offset = offset;
                     scoringFrame.position = tick.position;
 
-                    const replayFrame = cursor.at(offset);
+                    const replayFrame = getCursorAtRaw(beatmap.Replay, offset);
 
                     const currentHolding = replayFrame.K1 || replayFrame.K2 || replayFrame.M1 || replayFrame.M2;
 
@@ -1298,7 +1287,7 @@ function processBeatmap(osuContents){
                 }
 
                 if(i + 1 == hitObject.repeatCount){
-                    const replayFrame = cursor.at(hitObject.actualEndTime);
+                    const replayFrame = getCursorAtRaw(beatmap.Replay, hitObject.actualEndTime);
 
                     const endPosition = i % 2 == 1 ? hitObject.position : hitObject.actualEndPosition;
 
@@ -1372,59 +1361,68 @@ function processBeatmap(osuContents){
             }
         }
     }
-    console.timeEnd('process combo & calc ur');
 
     beatmap.ScoringFrames = beatmap.ScoringFrames.sort((a, b) => a.offset - b.offset);
 
-    console.time('calc pp frames');
-    const map = new rosu.Beatmap(osuContents);
+    const mods = ojsama.modbits.from_string(enabled_mods.filter(a => ["HR", "EZ"].includes(a) == false).join(""));
 
-    const difficulty = new rosu.Difficulty({
-        mods: new booba.Mods(enabled_mods).value,
-        ar: beatmap.ApproachRateRealtime,
-        arWithMods: true,
-        od: beatmap.OverallDifficultyRealtime,
-        odWithMods: false,
-    });
+	const beatmap_params = {
+		content: osuContents,
+		ar: beatmap.ApproachRateRealtime,
+		cs: beatmap.CircleSize,
+		od: beatmap.OverallDifficultyRealtime
+	}
 
-    const gradualPerf = difficulty.gradualPerformance(map);
-	let firstFrame = true;
+	const rosu_map = new Beatmap(beatmap_params)
 
-    for(const [index, scoringFrame] of beatmap.ScoringFrames.entries()){
-        if (['miss', 50, 100, 300].includes(scoringFrame.result) === false || gradualPerf.nRemaining === 0) {
-            scoringFrame.pp = beatmap.ScoringFrames[index - 1]?.pp ?? 0;
-            scoringFrame.stars = beatmap.ScoringFrames[index - 1]?.stars ?? 0;
-            continue;
-        }
+    for(const scoringFrame of beatmap.ScoringFrames.filter(a => ['miss', 50, 100, 300].includes(a.result))){
+        const hitCount = scoringFrame.countMiss + scoringFrame.count50 + scoringFrame.count100 + scoringFrame.count300;
 
-        if (options.combo && scoringFrame.maxCombo < options.combo - 5
-			|| !options.combo && (scoringFrame.offset < start_time|| scoringFrame.offset > end_time)) continue;
-
-        const state = {
-            maxCombo: scoringFrame.maxCombo,
-            misses: scoringFrame.countMiss,
+        const params = {
+            mods: mods,
             n300: scoringFrame.count300,
             n100: scoringFrame.count100,
-            n50: scoringFrame.count50
-        };
+            n50: scoringFrame.count50,
+            nMisses: scoringFrame.countMiss,
+            combo: scoringFrame.maxCombo,
+            passedObjects: hitCount,
+        }
 
-		if (firstFrame) {
-			const hitCount = Math.min(Math.max(scoringFrame.count300 + scoringFrame.count100 
-			+ scoringFrame.count50 + scoringFrame.countMiss, 1), beatmap.nbCircles + beatmap.nbSliders + beatmap.nbSpinners) - 1;
-			const perf = gradualPerf.nth(state, hitCount);
-			scoringFrame.pp = perf?.pp ?? 0;
-			scoringFrame.stars = perf?.difficulty?.stars ?? 0;
-			firstFrame = false;
-			continue;
-		}
+        const rosu_calc = new Calculator(params)
 
-        const perf = gradualPerf.next(state);
+        const rosu_perf = rosu_calc.performance(rosu_map)
 
-        scoringFrame.pp = perf?.pp ?? 0;
-        scoringFrame.stars = perf?.difficulty?.stars ?? 0;
+        const pp = rosu_perf.pp
+        const stars = rosu_perf.difficulty.stars
+
+        //const stars = new ojsama.diff().calc({map: parser.map, mods});
+        //const index = Math.floor((scoringFrame.offset - start_offset) / 400)
+        //const rosu_stars = star_strains[index < star_strains.length ? index : star_strains.length - 1]
+        //console.log(rosu_stars)
+
+        // const pp = ojsama.ppv2({
+        //     stars,
+        //     combo: scoringFrame.maxCombo,
+        //     nmiss: scoringFrame.countMiss,
+        //     n300: scoringFrame.count300,
+        //     n100: scoringFrame.count100,
+        //     n50: scoringFrame.count50
+        // });
+
+        scoringFrame.pp = pp;
+        scoringFrame.stars = stars;
     }
 
-    console.timeEnd('calc pp frames');
+    let pp = 0, stars = 0;
+
+    for(const scoringFrame of beatmap.ScoringFrames){
+        if(scoringFrame.pp != null){
+            ({pp, stars} = scoringFrame)
+        }
+
+        scoringFrame.pp = pp;
+        scoringFrame.stars = stars;
+    }
 
     const hitResults = _.countBy(beatmap.ScoringFrames, 'result');
 
@@ -1439,22 +1437,19 @@ function processBeatmap(osuContents){
 async function prepareBeatmap(){
     const osuContents = await fs.promises.readFile(beatmap_path, 'utf8');
 
-    console.time('parse beatmap');
     beatmap = osuBeatmapParser.parseContent(osuContents);
-    console.timeEnd('parse beatmap');
 
     beatmap.CircleSize = beatmap.CircleSize != null ? beatmap.CircleSize : 5;
     beatmap.OverallDifficulty = beatmap.OverallDifficulty != null ? beatmap.OverallDifficulty : 5;
     beatmap.ApproachRate = beatmap.ApproachRate != null ? beatmap.ApproachRate : beatmap.OverallDifficulty;
 
     let replay;
-	console.time('parse replay');
-    if(options.score_id && !options.osr){
-		const replay_path = path.resolve(config.replay_path, `${options.score_id}.osr`);
-		const parsedOsr = await osr.read(replay_path)
+
+    if(options.score_id){
+        let replay_path = path.resolve(config.replay_path, `${options.score_id}.osr`);
 
         if(fs.existsSync(replay_path))
-            replay = {lastCursor: 0, replay_data: await parseReplay(parsedOsr.replay_data, false)};
+            replay = {lastCursor: 0, replay_data: await parseReplay(fs.readFileSync(replay_path))};
     }
 
     if(options.osr){
@@ -1470,7 +1465,6 @@ async function prepareBeatmap(){
             throw "Couldn't download replay";
         }
     }
-	console.timeEnd('parse replay');
 
     speed_multiplier = 1;
 
@@ -1518,21 +1512,12 @@ async function prepareBeatmap(){
     processBeatmap(osuContents);
 }
 
-process.on('message', data => {
-    ({beatmap_path, options, speed, enabled_mods, time: render_time, length: render_length} = data);
+process.on('message', obj => {
+    ({beatmap_path, options, speed, enabled_mods} = obj);
 
-    start_time = render_time - 1000;
-
-    console.time('prepare beatmap');
     prepareBeatmap().then(() => {
-        // console.time('trimming beatmap');
-        // beatmap.hitObjects = beatmap.hitObjects.filter(a => a.endTime >= start_time || a.startTime - beatmap.TimePreempt <= end_time);
-        // beatmap.Replay.replay_data = beatmap.Replay.replay_data.filter(a => a.offset >= start_time && a.offset <= end_time);
-        // beatmap.ScoringFrames = beatmap.ScoringFrames.filter(a => a.offset >= start_time && a.offset <= end_time);
-        // console.timeEnd('trimming beatmap');
-        console.timeEnd('prepare beatmap');
         process.send(beatmap, () => {
             process.exit();
         });
-    });
+    })
 });
