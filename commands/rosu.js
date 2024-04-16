@@ -228,18 +228,19 @@ module.exports = {
                     let fl_stars = ''
                     let aim_stars = round(perf.difficulty.aim)
                     let speed_stars = round(perf.difficulty.speed)
-                    let bpm = round(map.bpm * (clock_rate || 1))
                     let stars = round(perf.difficulty.stars)
                     if(mods.includes('fl')) {
                         fl_pp = `, ${round(perf.ppFlashlight)} flashlight pp`
                         fl_stars = `, ${round(perf.difficulty.flashlight)} flashlight stars`
                     }
                     
-					let mapAttr = new BeatmapAttributesBuilder({map: map, clockRate: clock_rate}).build();
+					let mapAttr = new BeatmapAttributesBuilder({map: map, ...params}).build();
                     ar = round(mapAttr.ar)
                     od = round(mapAttr.od)
                     cs = round(mapAttr.cs)
                     hp = round(mapAttr.hp)
+
+					let bpm = round(map.bpm * mapAttr.clockRate)
 
                     output += `\`\`\`\n${pp}pp (${aim_pp} aim pp, ${speed_pp} speed pp, ${acc_pp} acc pp${fl_pp})\n`
                     output += `${stars}★ (${aim_stars} aim stars, ${speed_stars} speed stars${fl_stars})\n`
