@@ -1388,32 +1388,40 @@ function processBeatmap(osuContents){
     });
 
     const gradualPerf = difficulty.gradualPerformance(map);
+	let firstFrame = true;
 
     for(const [index, scoringFrame] of beatmap.ScoringFrames.entries()){
-        if (['miss', 50, 100, 300].includes(scoringFrame.result) === false) {
+        if (['miss', 50, 100, 300].includes(scoringFrame.result) === false || gradualPerf.nRemaining === 0) {
             scoringFrame.pp = beatmap.ScoringFrames[index - 1]?.pp ?? 0;
             scoringFrame.stars = beatmap.ScoringFrames[index - 1]?.stars ?? 0;
             continue;
         }
 
-        if (scoringFrame.offset < start_time 
-            || scoringFrame.offset > end_time) continue;
-
-        const hitCount = scoringFrame.n300 + scoringFrame.n100 
-        + scoringFrame.n50 + scoringFrame.nmiss;
+        if (options.combo && scoringFrame.maxCombo < options.combo - 5
+			|| !options.combo && (scoringFrame.offset < start_time|| scoringFrame.offset > end_time)) continue;
 
         const state = {
             maxCombo: scoringFrame.maxCombo,
-            nmiss: scoringFrame.countMiss,
+            misses: scoringFrame.countMiss,
             n300: scoringFrame.count300,
             n100: scoringFrame.count100,
             n50: scoringFrame.count50
         };
 
-        const perf = gradualPerf.nth(state, hitCount);
+		if (firstFrame) {
+			const hitCount = Math.min(Math.max(scoringFrame.count300 + scoringFrame.count100 
+			+ scoringFrame.count50 + scoringFrame.countMiss, 1), beatmap.nbCircles + beatmap.nbSliders + beatmap.nbSpinners) - 1;
+			const perf = gradualPerf.nth(state, hitCount);
+			scoringFrame.pp = perf?.pp ?? 0;
+			scoringFrame.stars = perf?.difficulty?.stars ?? 0;
+			firstFrame = false;
+			continue;
+		}
 
-        scoringFrame.pp = perf.pp;
-        scoringFrame.stars = perf.difficulty.stars ?? 0;
+        const perf = gradualPerf.next(state);
+
+        scoringFrame.pp = perf?.pp ?? 0;
+        scoringFrame.stars = perf?.difficulty?.stars ?? 0;
     }
 
     console.timeEnd('calc pp frames');
