@@ -2219,8 +2219,10 @@ module.exports = {
             let data = response;
 
             let sr;
+			// custom user agent might be useful for getting some stats (i know this isnt the best way to track that)
+			const headers = { "User-Agent": "flowabot" };
 
-            await axios.get(`https://score.respektive.pw/u/${data.id}`).then(function (response) {
+            await axios.get(`https://score.respektive.pw/u/${data.id}`, { headers }).then(function (response) {
                 sr = response.data[0].rank;
             }).catch(err => {
                 sr = 0;
