@@ -842,7 +842,7 @@ module.exports = {
                                 });
                             }else{
                                 try{
-                                    console.log('uploading to pek.li');
+                                    console.log('uploading to pek.li:', config.pekli_host + '/api/upload');
 
                                     const response = await execFilePromise('curl',
                                         [
