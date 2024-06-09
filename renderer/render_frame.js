@@ -861,8 +861,8 @@ module.exports = {
                                     .finally(() => {
                                         fs.promises.rmdir(file_path, { recursive: true }).catch(helper.error);
                                     });
-                                }catch(e){
-                                    console.log(err);
+                                }catch(err){
+                                    console.rerror(err);
                                     fs.promises.rmdir(file_path, { recursive: true }).catch(helper.error);
                                 }
                             }
