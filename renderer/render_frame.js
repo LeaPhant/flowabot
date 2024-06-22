@@ -369,14 +369,13 @@ async function downloadMedia(options, beatmap, beatmap_path, size, download_path
 	let mapStream;
 
 	try{
-		const chimuCheckMapExists = await axios.get(`https://api.chimu.moe/v1/set/${beatmapset_id}`, { timeout: 2000 });
-
-		if(chimuCheckMapExists.status != 200)
-			throw "Map not found";
-
-		const chimuMap = await axios.get(`https://api.chimu.moe/v1/download/${beatmapset_id}?n=0`, { timeout: 10000, responseType: 'stream' });
-
-		mapStream = chimuMap.data;
+		try {
+			const osuDirectMap = await axios.get(`https://osu.direct/api/d/${beatmapset_id}`, { timeout: 10000, responseType: 'stream' });
+			mapStream = osuDirectMap.data;
+		} catch (e) {
+			const nerinyanMap = await axios.get(`https://api.nerinyan.moe/d/${beatmapset_id}`, { responseType: 'stream' });
+			mapStream = nerinyanMap.data;
+		}
 	}catch(e){
 		const beatconnectMap = await axios.get(`https://beatconnect.io/b/${beatmapset_id}`, { responseType: 'stream' });
 		mapStream = beatconnectMap.data;
