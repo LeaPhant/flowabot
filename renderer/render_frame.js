@@ -846,11 +846,11 @@ module.exports = {
                                     const response = await execFilePromise('curl',
                                         [
                                             '-s', '-X', 'POST', config.pekli_host + '/api/upload',
-                                            '-H', 'content-type: multipart/form-data',
-                                            '-H', 'authorization: ' + config.credentials.pekli_token,
-											'-H', 'Override-Domain: pek.li',
+                                            '-H',`"Content-Type: multipart/form-data"`,
+                                            '-H', `"authorization: ${config.credentials.pekli_token}"`,
+											'-H', `"Override-Domain: pek.li"`,
                                             '-F', `"file=@${file_path}/video.${options.type};type=video/mp4"`
-                                        ]);
+                                        ], {shell: true});
 
                                     const json = JSON.parse(response.stdout);
 
