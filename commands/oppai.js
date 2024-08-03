@@ -57,7 +57,7 @@ module.exports = {
 
                     let beatmap_path = download_path ? download_path : path.resolve(config.osu_cache_path, `${beatmap_id}.osu`);
 
-                    oppaiCmd = '/home/osu/oppai-ng/oppai ' + beatmap_path + ' ' + argv.slice(2).join(" ")
+                    oppaiCmd = config.oppai_path + ' ' + beatmap_path + ' ' + argv.slice(2).join(" ")
 
                     exec(oppaiCmd, (err, stdout, stderr) => {
                         if(err || stderr){
