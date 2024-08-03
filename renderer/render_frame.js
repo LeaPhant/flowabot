@@ -370,14 +370,14 @@ async function downloadMedia(options, beatmap, beatmap_path, size, download_path
 
 	try{
 		try {
-			const osuDirectMap = await axios.get(`https://osu.direct/api/d/${beatmapset_id}`, { timeout: 10000, responseType: 'stream' });
+			const osuDirectMap = await axios.get(`https://catboy.best/d/${beatmapset_id}n`, { timeout: 10000, responseType: 'stream' });
 			mapStream = osuDirectMap.data;
 		} catch (e) {
-			const nerinyanMap = await axios.get(`https://api.nerinyan.moe/d/${beatmapset_id}`, { responseType: 'stream' });
+			const nerinyanMap = await axios.get(`https://osu.direct/api/d/${beatmapset_id}`, { responseType: 'stream' });
 			mapStream = nerinyanMap.data;
 		}
 	}catch(e){
-		const beatconnectMap = await axios.get(`https://beatconnect.io/b/${beatmapset_id}`, { responseType: 'stream' });
+		const beatconnectMap = await axios.get(`https://api.nerinyan.moe/d/${beatmapset_id}`, { responseType: 'stream' });
 		mapStream = beatconnectMap.data;
 	}
 
