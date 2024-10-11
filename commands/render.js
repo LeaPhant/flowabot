@@ -9,6 +9,10 @@ const helper = require('../helper.js');
 const frame = require('../renderer/render_frame.js')
 const config = require('../config.json');
 
+function isFloat(value) {
+    return (!isNaN(value) && value.toString().indexOf('.') != -1)
+} 
+
 module.exports = {
     command: ['render', 'frame', 'fail'],
     description: "Render picture or gif of a beatmap at a specific time. Videos 10 seconds or longer are automatically rendered as mp4 video with audio and beatmap background.",
@@ -111,6 +115,8 @@ module.exports = {
                 }else if(arg.endsWith('%')){
                     speed = parseInt(arg) / 100;
                     speed = Math.max(0.01, speed);
+                } else if (arg.endsWith('*')){
+                    speed = parseFloat(arg);
                 }else if(arg.endsWith('fps')){
                     let _fps = parseInt(arg);
                     if(!isNaN(_fps)){
@@ -128,7 +134,11 @@ module.exports = {
                 }else if(arg.endsWith('s')){
                     length = parseFloat(arg);
                 }else if(arg.endsWith('x')){
-                    combo = parseInt(arg);
+                    if (isFloat(arg.slice(0, -1))){
+                        speed = parseFloat(arg);
+                    } else {
+                        combo = parseInt(arg);
+                    }
                 }else if(/^([0-9]+)$/g.test(arg)){
                     time += parseInt(arg) * 1000;
                 }else if(/^ar[0-9]+/g.test(arg.toLowerCase())){
