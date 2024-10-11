@@ -429,13 +429,14 @@ async function downloadMedia(options, beatmap, beatmap_path, size, download_path
 let beatmap, speed_multiplier;
 
 module.exports = {
-    get_frame: function(beatmap_path, time, enabled_mods, size, options, cb){
+    get_frame: function(beatmap_path, time, mods_raw, size, options, cb){
+		enabled_mods = mods_raw.map(mod => mod.acronym);
         let worker = fork(path.resolve(__dirname, 'beatmap_preprocessor.js'), ['--max-old-space-size=512']);
 
         worker.send({
             beatmap_path,
             options,
-            enabled_mods
+            mods_raw
         });
 
 		worker.on('close', code => {
@@ -477,9 +478,9 @@ module.exports = {
         });
     },
 
-    get_frames: async function(beatmap_path, time, length, enabled_mods, size, options, cb){
+    get_frames: async function(beatmap_path, time, length, mods_raw, size, options, cb){
         console.time('process beatmap');
-
+		enabled_mods = mods_raw.map(mod => mod.acronym);
 		const { msg } = options;
 
 		options.msg = null;
@@ -517,7 +518,7 @@ module.exports = {
         worker.send({
             beatmap_path,
             options,
-            enabled_mods,
+            mods_raw,
 			speed_override: options.speed,
 			time,
 			length,
@@ -611,10 +612,10 @@ module.exports = {
             let time_scale = 1;
 
             if(enabled_mods.includes('DT') || enabled_mods.includes('NC'))
-                time_scale *= 1.5;
+                time_scale *= mods_raw.filter(mod => mod.acronym == "DT" || mod.acronym == "NC")[0].settings?.speed_change ?? 1.5;
 
             if(enabled_mods.includes('HT') || enabled_mods.includes('DC'))
-                time_scale *= 0.75;
+                time_scale *= mods_raw.filter(mod => mod.acronym == "HT" || mod.acronym == "DC")[0].settings?.speed_change ?? 0.75;
 
 			if(options.speed != 1)
 				time_scale = options.speed;

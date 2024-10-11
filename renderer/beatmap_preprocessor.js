@@ -12,7 +12,7 @@ const _ = require('lodash');
 const helper = require('../helper.js');
 const config = require('../config.json');
 
-let options, beatmap_path, enabled_mods, beatmap, speed_override, speed_multiplier = 1;
+let options, beatmap_path, enabled_mods, mods_raw, beatmap, speed_override, speed_multiplier = 1;
 
 const PLAYFIELD_WIDTH = 512;
 const PLAYFIELD_HEIGHT = 384;
@@ -1386,6 +1386,7 @@ function processBeatmap(osuContents){
             nMisses: scoringFrame.countMiss,
             combo: scoringFrame.maxCombo,
             passedObjects: hitCount,
+			clockRate: speed_multiplier,
         }
 
         const rosu_calc = new Calculator(params)
@@ -1468,10 +1469,12 @@ async function prepareBeatmap(){
 
     speed_multiplier = 1;
 
-    if(enabled_mods.includes("DT")){
-        speed_multiplier = 1.5;
-    }else if(enabled_mods.includes("HT")){
-        speed_multiplier = 0.75;
+	enabled_mods = mods_raw.map(mod => mod.acronym);
+
+    if(enabled_mods.includes("DT") || enabled_mods.includes("NC")){
+		speed_multiplier = mods_raw.filter(mod => mod.acronym == "DT" || mod.acronym == "NC")[0].settings?.speed_change ?? 1.5;
+    }else if(enabled_mods.includes("HT") || enabled_mods.includes("DC")){
+		speed_multiplier = mods_raw.filter(mod => mod.acronym == "HT" || mod.acronym == "DC")[0].settings?.speed_change ?? 0.75;
     }
 
     if(speed_override)
@@ -1513,7 +1516,7 @@ async function prepareBeatmap(){
 }
 
 process.on('message', obj => {
-    ({beatmap_path, options, speed, enabled_mods} = obj);
+    ({beatmap_path, options, speed, mods_raw} = obj);
 
     prepareBeatmap().then(() => {
         process.send(beatmap, () => {

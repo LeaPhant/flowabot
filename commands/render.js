@@ -186,7 +186,7 @@ module.exports = {
                         ({ score_id } = last_beatmap[msg.channel.id]);
 
                     if(mods.length == 0)
-                        mods = last_beatmap[msg.channel.id].mods.map(mod => mod.acronym);
+                        mods = last_beatmap[msg.channel.id].mods;
                 }
 
                 let download_path = path.resolve(config.osu_cache_path, `${beatmap_id}.osu`);
