@@ -77,7 +77,7 @@ module.exports = {
 
             argv.slice(1).forEach(arg => {
                 if(arg.startsWith('+'))
-                    mods = arg.substr(1).toUpperCase().match(/.{1,2}/g);
+                    mods = arg.substr(1).toUpperCase().match(/.{1,2}/g).map(mod => ({ "acronym": mod }));
                 else if(/^([0-9]+)\:([0-9]+)\:([0-9]+)$/g.test(arg)){
                     let parts = arg.split(':');
                     if(parts.length > 2){
