@@ -723,7 +723,7 @@ async function getScore(recent_raw, cb){
             let strains_bar;
 
             if(await helper.fileExists(beatmap_path)){
-                strains_bar = await module.exports.get_strains_bar(beatmap_path, recent.mods.map(mod => mod.acronym).join(''), recent.fail_percent);
+                strains_bar = await module.exports.get_strains_bar(beatmap_path, recent.mods.map(mod => mod.acronym).join(''), recent.fail_percent, (recent.beatmapset_id == 481703 ? '#31858d' : undefined));
 
                 if(strains_bar)
                     recent.strains_bar = true;
@@ -1221,6 +1221,7 @@ module.exports = {
     format_embed: function(recent){
         let embed = {fields: []};
         embed.color = 12277111;
+		if (recent.beatmapset_id == 481703) embed.color = 0x31858d;
         embed.author = {
             url: `https://osu.ppy.sh/u/${recent.user_id}`,
             name: `${recent.username} – ${recent.user_pp}pp (#${recent.user_rank.toLocaleString()})`,
@@ -2365,7 +2366,7 @@ module.exports = {
 
     calculate_strains: calculateStrains,
 
-	get_strains_bar: async function(osu_file_path, mods_string, progress){
+	get_strains_bar: async function(osu_file_path, mods_string, progress, color = '#F06292'){
 		let map_strains = await module.exports.get_strains(osu_file_path, mods_string);
 
 		if(!map_strains)
@@ -2396,7 +2397,7 @@ module.exports = {
 			points.push({x, y});
 		});
 
-		ctx.fillStyle = '#F06292';
+		ctx.fillStyle = color;
 		ctx.moveTo(0, 40);
 		ctx.lineTo(0, 30);
 
@@ -2416,7 +2417,8 @@ module.exports = {
 		ctx.fillStyle = 'transparent';
 		ctx.fillRect(progress * 399, 0, 399 - progress * 399, 40);
 
-		ctx.fillStyle = 'rgba(244, 143, 177, 0.5)';
+		ctx.fillStyle = color;
+		ctx.globalAlpha = 0.5;
 		ctx.moveTo(0, 40);
 		ctx.lineTo(0, 30);
 
