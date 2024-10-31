@@ -395,15 +395,33 @@ function processBeatmap(osuContents){
     if(isNaN(beatmap.StackLeniency))
         beatmap.StackLeniency = 0.7;
 
-    // HR inversion
+    // HR/MR inversion
+	// MR default setting is horizontal (settings is missing), reflection=1 means vertical, reflection=2 means both vertical and horizontal
     beatmap.hitObjects.forEach((hitObject, i) => {
-        if(enabled_mods.includes("HR")){
+		// vertical
+        if(enabled_mods.includes("HR") || 
+		(enabled_mods.includes("MR") && mods_raw.filter(mod => mod.acronym == "MR")[0].settings?.reflection >= 1)){
             hitObject.position[1] = PLAYFIELD_HEIGHT - hitObject.position[1];
 
             if(hitObject.objectName == "slider"){
                 for(let x = 0; x < hitObject.points.length; x++)
                     hitObject.points[x][1] = PLAYFIELD_HEIGHT - hitObject.points[x][1];
             }
+        }
+		// horizontal
+		if(enabled_mods.includes("MR")){
+			console.log(mods_raw)
+			let settings = mods_raw.filter(mod => mod.acronym == "MR")[0].settings;
+			console.log(settings)
+			// either no settings or reflection not set to vertical
+			if (!settings || (settings && settings.reflection != 1)) {
+				hitObject.position[0] = PLAYFIELD_WIDTH - hitObject.position[0];
+
+				if(hitObject.objectName == "slider"){
+					for(let x = 0; x < hitObject.points.length; x++)
+						hitObject.points[x][0] = PLAYFIELD_WIDTH - hitObject.points[x][0];
+				}
+			}
         }
     });
 
