@@ -410,9 +410,7 @@ function processBeatmap(osuContents){
         }
 		// horizontal
 		if(enabled_mods.includes("MR")){
-			console.log(mods_raw)
 			let settings = mods_raw.filter(mod => mod.acronym == "MR")[0].settings;
-			console.log(settings)
 			// either no settings or reflection not set to vertical
 			if (!settings || (settings && settings.reflection != 1)) {
 				hitObject.position[0] = PLAYFIELD_WIDTH - hitObject.position[0];
