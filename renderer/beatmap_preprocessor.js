@@ -1477,6 +1477,15 @@ async function prepareBeatmap(){
 		speed_multiplier = mods_raw.filter(mod => mod.acronym == "HT" || mod.acronym == "DC")[0].settings?.speed_change ?? 0.75;
     }
 
+	if(enabled_mods.includes("DA")) {
+		let settings = mods_raw.filter(mod => mod.acronym == "DA")[0].settings;
+		if(settings) {
+			beatmap.CircleSize = settings.circle_size ?? beatmap.CircleSize;
+			beatmap.ApproachRate = settings.approach_rate ?? beatmap.ApproachRate;
+			beatmap.OverallDifficulty = settings.overall_difficulty ?? beatmap.OverallDifficulty;
+		}
+	}
+
     if(speed_override)
         speed_multiplier = speed_override;
 
