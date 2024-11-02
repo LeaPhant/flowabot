@@ -1343,25 +1343,25 @@ module.exports = {
         lines[2] = 'Beatmap Information';
 
         let b_info = {
-            cs: recent.cs.toFixed(1),
-            ar: recent.ar.toFixed(1),
-            od: recent.od.toFixed(1),
-            hp: recent.hp.toFixed(1)
+            cs: recent.cs.toFixed(2),
+            ar: recent.ar.toFixed(2),
+            od: recent.od.toFixed(2),
+            hp: recent.hp.toFixed(2)
         };
 
         if (recent.mods.map(m => m.acronym).includes("DA")) {
             recent.mods.forEach(mod => {
                 if (mod.acronym === "DA" && "settings" in mod) {
-                    b_info.cs = `${"circle_size" in mod.settings ? "__" + recent.cs.toFixed(1) +"__" : recent.cs.toFixed(1)}`;
-                    b_info.ar = `${"approach_rate" in mod.settings ? "__" + recent.ar.toFixed(1) +"__" : recent.ar.toFixed(1)}`;
-                    b_info.od = `${"overall_difficulty" in mod.settings ? "__" + recent.od.toFixed(1) +"__" : recent.od.toFixed(1)}`;
-                    b_info.hp = `${"drain_rate" in mod.settings ? "__" + recent.hp.toFixed(1) +"__" : recent.hp.toFixed(1)}`;
+                    b_info.cs = `${"circle_size" in mod.settings ? "__" + recent.cs.toFixed(2) +"__" : recent.cs.toFixed(2)}`;
+                    b_info.ar = `${"approach_rate" in mod.settings ? "__" + recent.ar.toFixed(2) +"__" : recent.ar.toFixed(2)}`;
+                    b_info.od = `${"overall_difficulty" in mod.settings ? "__" + recent.od.toFixed(2) +"__" : recent.od.toFixed(2)}`;
+                    b_info.hp = `${"drain_rate" in mod.settings ? "__" + recent.hp.toFixed(2) +"__" : recent.hp.toFixed(2)}`;
                 }
             })
         }
 
         lines[3] += `${Duration.fromMillis(recent.duration * 1000).toFormat('mm:ss')} ~ `;
-        lines[3] += `CS**${b_info.cs}** AR**${b_info.ar}** OD**${b_info.od}** HP**${b_info.hp}** ~ `;
+        lines[3] += `CS**${+b_info.cs}** AR**${+b_info.ar}** OD**${+b_info.od}** HP**${+b_info.hp}** ~ `;
 
         lines[3] += `**${+recent.bpm.toFixed(1)}**`
         // if(recent.bpm_min != recent.bpm_max)
@@ -2029,10 +2029,10 @@ module.exports = {
                     lines[1] += '**';
             });
 
-            lines[3] = `CS**${+diff_settings.cs.toFixed(1)}** AR**${+diff.ar.toFixed(1)}** OD**${+diff.od.toFixed(1)}** HP**${+diff_settings.hp.toFixed(1)}** - `;
+            lines[3] = `CS**${+diff_settings.cs.toFixed(2)}** AR**${+diff.ar.toFixed(2)}** OD**${+diff.od.toFixed(2)}** HP**${+diff_settings.hp.toFixed(2)}** - `;
 
             if(bpm_min != bpm_max)
-                lines[3] += `${+bpm_min.toFixed(1)}-${+bpm_max.toFixed(1)} (**`;
+                lines[3] += `${+bpm_min.toFixed(2)}-${+bpm_max.toFixed(2)} (**`;
             else
                 lines[3] += '**';
 
