@@ -13,6 +13,8 @@ const helper = require('../helper.js');
 const config = require('../config.json');
 
 let options, beatmap_path, enabled_mods, mods_raw, beatmap, speed_override, speed_multiplier = 1;
+let isUsingClassicNotelock = false;
+let isUsingSliderHeadAccuracy = true;
 
 const PLAYFIELD_WIDTH = 512;
 const PLAYFIELD_HEIGHT = 384;
@@ -1057,6 +1059,7 @@ function processBeatmap(osuContents){
     
     for(let i = 0; i < beatmap.hitObjects.length; i++){
         const hitObject = beatmap.hitObjects[i];
+		const nextEarliestHit = (beatmap.hitObjects[i+1]?.startTime ?? hitObject.startTime) - 400; // osu miss window is 400ms, i think...
 
         if(hitObject.objectName == 'spinner')
             continue; // process spinners later
@@ -1064,14 +1067,18 @@ function processBeatmap(osuContents){
         let nextFrame, previous, current;
 
         let currentPresses = 0;
+		let earliestCursor = beatmap?.replay?.lastCursor ?? 0;
 
         do{
             nextFrame = getCursor(beatmap.Replay);
 
             ({ previous, current } = nextFrame);
 
+			if(current != null && current.offset < nextEarliestHit)
+				earliestCursor++;
+
             if(current != null && current.offset > hitObject.latestHit){
-                beatmap.Replay.lastCursor--;
+                beatmap.Replay.lastCursor = isUsingClassicNotelock ? beatmap.Replay.lastCursor - 1 : earliestCursor;
                 break;
             }
 
@@ -1499,6 +1506,18 @@ async function prepareBeatmap(){
 			beatmap.CircleSize = settings.circle_size ?? beatmap.CircleSize;
 			beatmap.ApproachRate = settings.approach_rate ?? beatmap.ApproachRate;
 			beatmap.OverallDifficulty = settings.overall_difficulty ?? beatmap.OverallDifficulty;
+		}
+	}
+
+	if(enabled_mods.includes("CL")) {
+		let settings = mods_raw.filter(mod => mod.acronym == "CL")[0].settings;
+
+		if(!settings) {
+			isUsingClassicNotelock = true;
+			isUsingSliderHeadAccuracy = false;
+		} else {
+			isUsingClassicNotelock = (settings.classic_note_lock == true) ? true : false;
+			isUsingSliderHeadAccuracy = (settings.no_slider_head_accuracy == false) ? true : false;
 		}
 	}
 
