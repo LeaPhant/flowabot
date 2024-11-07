@@ -1906,6 +1906,17 @@ module.exports = {
             if(!mods)
                 mods = [];
 
+			if(options.mods.map(x => x.acronym).includes('DA')) {
+				options.mods.forEach( mod => {
+					if(mod.acronym == "DA" && Object.entries(mod.settings ?? {}).length > 0){ 
+						beatmap.ar = mod.settings.approach_rate ?? beatmap.ar
+						beatmap.cs = mod.settings.circle_size ?? beatmap.cs
+						beatmap.accuracy = mod.settings.overall_difficulty ?? beatmap.accuracy
+						beatmap.drain = mod.settings.drain_rate ?? beatmap.drain
+					}
+				})
+			}
+
             let diff_settings = calculateCsArOdHp(beatmap.cs, beatmap.ar, beatmap.od, beatmap.hp, options.mods);
 
             let speed = 1;
