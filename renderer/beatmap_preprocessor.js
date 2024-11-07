@@ -6,7 +6,7 @@ const osu = require('../osu');
 const osr = require('node-osr');
 const lzma = require('lzma-native');
 const ojsama = require('ojsama');
-const { Beatmap, Calculator } = require('rosu-pp')
+const rosu = require('rosu-pp-js');
 const axios = require('axios');
 const _ = require('lodash');
 const helper = require('../helper.js');
@@ -1396,13 +1396,13 @@ function processBeatmap(osuContents){
 		od: beatmap.OverallDifficultyRealtime
 	}
 
-	const rosu_map = new Beatmap(beatmap_params)
+	const rosu_map = new rosu.Beatmap(osuContents);
 
     for(const scoringFrame of beatmap.ScoringFrames.filter(a => ['miss', 50, 100, 300].includes(a.result))){
         const hitCount = scoringFrame.countMiss + scoringFrame.count50 + scoringFrame.count100 + scoringFrame.count300;
 
         const params = {
-            mods: mods,
+            mods: mods_raw,
             n300: scoringFrame.count300,
             n100: scoringFrame.count100,
             n50: scoringFrame.count50,
@@ -1412,9 +1412,7 @@ function processBeatmap(osuContents){
 			clockRate: speed_multiplier,
         }
 
-        const rosu_calc = new Calculator(params)
-
-        const rosu_perf = rosu_calc.performance(rosu_map)
+        const rosu_perf = new rosu.Performance(params).calculate(rosu_map);
 
         const pp = rosu_perf.pp
         const stars = rosu_perf.difficulty.stars

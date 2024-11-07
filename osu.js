@@ -1,7 +1,6 @@
 const axios = require('axios');
 const ojsama = require('ojsama');
-const { std_ppv2 } = require('booba');
-const { Beatmap, Calculator } = require('rosu-pp')
+const rosu = require("rosu-pp-js");
 
 const osuBeatmapParser = require('osu-parser');
 const path = require('path');
@@ -637,7 +636,7 @@ async function getScore(recent_raw, cb){
                 }
             })
         }
-                    
+
         let diff_settings = calculateCsArOdHp(beatmap.cs, beatmap.ar, beatmap.accuracy, beatmap.drain, recent.mods);
 
         let speed = 1;
@@ -655,17 +654,10 @@ async function getScore(recent_raw, cb){
 
         helper.downloadBeatmap(recent_raw.beatmap.id).finally(async () => {
             let beatmap_path = path.resolve(config.osu_cache_path, `${recent_raw.beatmap.id}.osu`);
-
-            const beatmap_params = {
-                path: beatmap_path,
-                ar: beatmap.ar,
-                cs: beatmap.cs,
-                hp: beatmap.drain,
-                od: beatmap.accuracy,
-            }
+			const beatmap_content = await fs.readFile(beatmap_path, 'utf8');
 
             const play_params = {
-                mods: getModsEnum(recent_raw.mods.map(x => x.acronym)),
+                mods: recent_raw.mods,
                 n300: recent_raw.statistics.great ?? 0,
                 n100: recent_raw.statistics.ok ?? 0,
                 n50: recent_raw.statistics.meh ?? 0,
@@ -674,16 +666,17 @@ async function getScore(recent_raw, cb){
                 clockRate: speed,
             }
             const fc_play_params = {
-                mods: getModsEnum(recent_raw.mods.map(x => x.acronym)),
+                mods: recent_raw.mods,
                 clockRate: speed,
                 n300: (recent_raw.statistics.great ?? 0) + (recent_raw.statistics.miss ?? 0),
                 n100: recent_raw.statistics.ok ?? 0,
                 n50: recent_raw.statistics.meh ?? 0,
             }
 
-            const rosu_map = new Beatmap(beatmap_params)
-            const play = new Calculator(play_params).performance(rosu_map)
-            const fc_play = new Calculator(fc_play_params).performance(rosu_map)
+
+            const rosu_map = new rosu.Beatmap(beatmap_content)
+			const play = new rosu.Performance(play_params).calculate(rosu_map);
+			const fc_play = new rosu.Performance(fc_play_params).calculate(rosu_map);
 
             recent = Object.assign({
                 approved: beatmapset.status,
@@ -1695,25 +1688,18 @@ module.exports = {
 
             await helper.downloadBeatmap(beatmap.beatmap_id)
             const beatmap_path = path.resolve(config.osu_cache_path, `${beatmap.beatmap_id}.osu`);
-
-            const beatmap_params = {
-                path: beatmap_path,
-                ar: beatmap.ar,
-                cs: beatmap.cs,
-                hp: beatmap.hp,
-                od: beatmap.od,
-            }
+			const beatmap_content = await fs.readFile(beatmap_path, 'utf8');
 
             const play_params = {
-                mods: getModsEnum(top.mods.map(x => x.acronym)),
+                mods: top.mods,
                 n300: Number(top.statistics.great ?? 0 + top.statistics.miss ?? 0),
                 n100: Number(top.statistics.ok ?? 0),
                 n50: Number(top.statistics.meh ?? 0),
                 clockRate: speed,
             }
 
-            const rosu_map = new Beatmap(beatmap_params)
-            const pp_fc = new Calculator(play_params).performance(rosu_map)
+            const rosu_map = new rosu.Beatmap(beatmap_content);
+			const pp_fc = new rosu.Performance(play_params).calculate(rosu_map);
 
             top.stars = pp_fc.difficulty.stars;
             top.pp_fc = pp_fc.pp;
@@ -1767,25 +1753,18 @@ module.exports = {
 
             await helper.downloadBeatmap(beatmap.beatmap_id)
             const beatmap_path = path.resolve(config.osu_cache_path, `${beatmap.beatmap_id}.osu`);
-
-            const beatmap_params = {
-                path: beatmap_path,
-                ar: beatmap.ar,
-                cs: beatmap.cs,
-                hp: beatmap.hp,
-                od: beatmap.od,
-            }
+			const beatmap_content = await fs.readFile(beatmap_path, 'utf8');
 
             const play_params = {
-                mods: getModsEnum(pin.mods.map(x => x.acronym)),
+                mods: pin.mods,
                 n300: Number(pin.statistics.great ?? 0 + pin.statistics.miss ?? 0),
                 n100: Number(pin.statistics.ok ?? 0),
                 n50: Number(pin.statistics.meh ?? 0),
                 clockRate: speed,
             }
 
-            const rosu_map = new Beatmap(beatmap_params)
-            const pp_fc = new Calculator(play_params).performance(rosu_map)
+            const rosu_map = new rosu.Beatmap(beatmap_content);
+			const pp_fc = new rosu.Performance(play_params).calculate(rosu_map);
 
             pin.stars = pp_fc.difficulty.stars;
             pin.pp_fc = pp_fc.pp;
@@ -1839,25 +1818,18 @@ module.exports = {
 
             await helper.downloadBeatmap(beatmap.beatmap_id)
             const beatmap_path = path.resolve(config.osu_cache_path, `${beatmap.beatmap_id}.osu`);
-
-            const beatmap_params = {
-                path: beatmap_path,
-                ar: beatmap.ar,
-                cs: beatmap.cs,
-                hp: beatmap.hp,
-                od: beatmap.od,
-            }
+			const beatmap_content = await fs.readFile(beatmap_path, 'utf8');
 
             const play_params = {
-                mods: getModsEnum(first.mods.map(x => x.acronym)),
+                mods: first.mods,
                 n300: Number(first.statistics.great ?? 0 + first.statistics.miss ?? 0),
                 n100: Number(first.statistics.ok ?? 0),
                 n50: Number(first.statistics.meh ?? 0),
                 clockRate: speed,
             }
 
-            const rosu_map = new Beatmap(beatmap_params)
-            const pp_fc = new Calculator(play_params).performance(rosu_map)
+            const rosu_map = new rosu.Beatmap(beatmap_content);
+			const pp_fc = new rosu.Performance(play_params).calculate(rosu_map);
 
             first.stars = pp_fc.difficulty.stars;
             first.pp_fc = pp_fc.pp;
@@ -1956,18 +1928,13 @@ module.exports = {
 
             await helper.downloadBeatmap(beatmap.beatmap_id)
             const beatmap_path = path.resolve(config.osu_cache_path, `${beatmap.beatmap_id}.osu`);
+			const beatmap_content = await fs.readFile(beatmap_path, 'utf8');
 
-            const beatmap_params = {
-                path: beatmap_path,
-                ar: beatmap.ar,
-                cs: beatmap.cs,
-                hp: beatmap.hp,
-                od: beatmap.od,
-            }
-
-            const rosu_map = new Beatmap(beatmap_params)
-
-            let diff = new Calculator({ mods: getModsEnum(mods), clockRate: speed }).difficulty(rosu_map)
+            const rosu_map = new rosu.Beatmap(beatmap_content);
+			let diff = new rosu.Difficulty({
+				mods: options.mods,
+				clockRate: speed,
+			}).calculate(rosu_map);
 
             let accuracies = [90, 95, 97, 98, 99, 99.5, 100];
 
@@ -1988,12 +1955,12 @@ module.exports = {
 
 
                 const play_params = {
-                    mods: getModsEnum(mods),
+                    mods: options.mods,
                     clockRate: speed,
-                    acc: acc,
+                    accuracy: acc,
                 }
 
-                const pp_result = new Calculator(play_params).performance(rosu_map)
+				const pp_result = new rosu.Performance(play_params).calculate(rosu_map);
 
                 pps.push(Math.round(pp_result.pp))
             }
@@ -2455,6 +2422,7 @@ module.exports = {
 	},
 
     get_strains: async function(osu_file_path, mods_string, type){
+		let beatmap_content = await fs.readFile(osu_file_path, 'utf8');
         let parser = new ojsama.parser().feed(await fs.readFile(osu_file_path, 'utf8'));
         let map = parser.map;
 
@@ -2478,11 +2446,11 @@ module.exports = {
         if(mods_array.includes("HT"))
             speed_multiplier *= 0.75;
 
-        const rosu_map = new Beatmap({ path: osu_file_path })
-        const rosu_calc = new Calculator({ mods: mods })
+		const rosu_map = new rosu.Beatmap(beatmap_content);
+		const rosu_diff = new rosu.Difficulty({ mods: mods })
 
-        const rosu_stars = rosu_calc.difficulty(rosu_map)
-        const rosu_strains = rosu_calc.strains(rosu_map)
+        const rosu_stars = rosu_diff.calculate(rosu_map);
+        const rosu_strains = rosu_diff.strains(rosu_map);
 
         let total = rosu_stars.stars;
 
