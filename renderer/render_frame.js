@@ -356,7 +356,7 @@ async function downloadMedia(options, beatmap, beatmap_path, size, download_path
         output.beatmap_path = extraction_path;
 
 		if(options.lagtrain){
-			output.audio_path = '/home/osu/mikazuki/renderer/res/lagtrain.mp3';
+			output.audio_path = path.resolve(resources, "lagtrain.mp3");
 		}else if(beatmap.AudioFilename && fs.existsSync(path.resolve(extraction_path, beatmap.AudioFilename))){
             output.audio_path = path.resolve(extraction_path, beatmap.AudioFilename);
 		}
@@ -393,7 +393,7 @@ async function downloadMedia(options, beatmap, beatmap_path, size, download_path
 	output.beatmap_path = extraction_path;
 
 	if(options.lagtrain){
-		output.audio_path = '/home/osu/mikazuki/renderer/res/lagtrain.mp3';
+		output.audio_path = path.resolve(resources, "lagtrain.mp3");
 	}else if(beatmap.AudioFilename && await helper.fileExists(path.resolve(extraction_path, beatmap.AudioFilename))){
 		output.audio_path = path.resolve(extraction_path, beatmap.AudioFilename);
 	}
