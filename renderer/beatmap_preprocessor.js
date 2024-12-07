@@ -1406,7 +1406,7 @@ function processBeatmap(osuContents){
             n300: scoringFrame.count300,
             n100: scoringFrame.count100,
             n50: scoringFrame.count50,
-            nMisses: scoringFrame.countMiss,
+            misses: scoringFrame.countMiss,
             combo: scoringFrame.maxCombo,
             passedObjects: hitCount,
 			clockRate: speed_multiplier,

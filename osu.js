@@ -661,7 +661,7 @@ async function getScore(recent_raw, cb){
                 n300: recent_raw.statistics.great ?? 0,
                 n100: recent_raw.statistics.ok ?? 0,
                 n50: recent_raw.statistics.meh ?? 0,
-                nMisses: recent_raw.statistics.miss ?? 0,
+                misses: recent_raw.statistics.miss ?? 0,
                 combo: recent_raw.max_combo,
                 clockRate: speed,
             }

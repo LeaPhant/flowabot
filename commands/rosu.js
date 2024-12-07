@@ -129,7 +129,7 @@ module.exports = {
                         params.n50 = n50;
 
                     if(nmiss)
-                        params.nMisses = nmiss;
+                        params.misses = nmiss;
 
                     if(acc_percent)
                         params.accuracy = acc_percent;
