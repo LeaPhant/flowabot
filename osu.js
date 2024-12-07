@@ -665,6 +665,13 @@ async function getScore(recent_raw, cb){
                 combo: recent_raw.max_combo,
                 clockRate: speed,
             }
+
+			if (recent_raw.statistics.large_tick_hit)
+				play_params.largeTickHits = recent_raw.statistics.large_tick_hit;
+
+			if (recent_raw.statistics.slider_tail_hit)
+				play_params.sliderEndHits = recent_raw.statistics.slider_tail_hit;
+
             const fc_play_params = {
                 mods: recent_raw.mods,
                 clockRate: speed,
@@ -677,6 +684,8 @@ async function getScore(recent_raw, cb){
             const rosu_map = new rosu.Beatmap(beatmap_content)
 			const play = new rosu.Performance(play_params).calculate(rosu_map);
 			const fc_play = new rosu.Performance(fc_play_params).calculate(rosu_map);
+
+			rosu_map.free();
 
             recent = Object.assign({
                 approved: beatmapset.status,
@@ -1701,6 +1710,8 @@ module.exports = {
             const rosu_map = new rosu.Beatmap(beatmap_content);
 			const pp_fc = new rosu.Performance(play_params).calculate(rosu_map);
 
+			rosu_map.free();
+
             top.stars = pp_fc.difficulty.stars;
             top.pp_fc = pp_fc.pp;
             top.acc_fc = calculateAccuracy({great: play_params.n300, ok: play_params.n100, meh: play_params.n50}).toFixed(2);
@@ -1766,6 +1777,8 @@ module.exports = {
             const rosu_map = new rosu.Beatmap(beatmap_content);
 			const pp_fc = new rosu.Performance(play_params).calculate(rosu_map);
 
+			rosu_map.free();
+
             pin.stars = pp_fc.difficulty.stars;
             pin.pp_fc = pp_fc.pp;
             pin.acc_fc = calculateAccuracy({great: play_params.n300, ok: play_params.n100, meh: play_params.n50}).toFixed(2);
@@ -1830,6 +1843,8 @@ module.exports = {
 
             const rosu_map = new rosu.Beatmap(beatmap_content);
 			const pp_fc = new rosu.Performance(play_params).calculate(rosu_map);
+
+			rosu_map.free();
 
             first.stars = pp_fc.difficulty.stars;
             first.pp_fc = pp_fc.pp;
@@ -1975,6 +1990,8 @@ module.exports = {
 
                 pps.push(Math.round(pp_result.pp))
             }
+
+			rosu_map.free();
 
             let embed = {};
 
@@ -2462,6 +2479,8 @@ module.exports = {
 
         const rosu_stars = rosu_diff.calculate(rosu_map);
         const rosu_strains = rosu_diff.strains(rosu_map);
+
+		rosu_map.free();
 
         let total = rosu_stars.stars;
 

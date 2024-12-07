@@ -8,61 +8,6 @@ const helper = require('../helper.js');
 const osu = require('../osu.js');
 const config = require('../config.json');
 
-const mods_enum = {
-    ''    : 0,
-    'NF'  : 1,
-    'EZ'  : 2,
-    'TD'  : 4,
-    'HD'  : 8,
-    'HR'  : 16,
-    'SD'  : 32,
-    'DT'  : 64,
-    'RX'  : 128,
-    'HT'  : 256,
-    'NC'  : 512,
-    'FL'  : 1024,
-    'AT'  : 2048,
-    'SO'  : 4096,
-    'AP'  : 8192,
-    'PF'  : 16384,
-    '4K'  : 32768,
-    '5K'  : 65536,
-    '6K'  : 131072,
-    '7K'  : 262144,
-    '8K'  : 524288,
-    'FI'  : 1048576,
-    'RD'  : 2097152,
-    'LM'  : 4194304,
-    '9K'  : 16777216,
-    '10K' : 33554432,
-    '1K'  : 67108864,
-    '3K'  : 134217728,
-    '2K'  : 268435456,
-    'V2'  : 536870912,
-};
-
-const ar_ms_step1 = 120;
-const ar_ms_step2 = 150;
-
-const ar0_ms = 1800;
-const ar5_ms = 1200;
-const ar10_ms = 450;
-
-const od_ms_step = 6;
-const od0_ms = 79.5;
-const od10_ms = 19.5;
-
-function getModsEnum(mods){
-    let return_value = 0;
-
-    if (mods.includes("nc")) mods.push("dt");
-
-    mods.forEach(mod => {
-        return_value |= mods_enum[mod.toUpperCase()];
-    });
-    return return_value;
-}
-
 function round(num) {
     var m = Number((Math.abs(num) * 100).toPrecision(15));
     return Math.round(m) / 100 * Math.sign(num);
@@ -98,7 +43,7 @@ module.exports = {
             let mods = [];
             let download_path, download_promise;
 
-            let acc_percent, combo, n100, n50, nmiss, od, ar, cs, hp, clock_rate;
+            let acc_percent, combo, n100, n50, nmiss, od, ar, cs, hp, clock_rate, large_tick_hit, slider_tail_hit;
 
             if(beatmap_url.startsWith('<') && beatmap_url.endsWith('>'))
                 beatmap_url = beatmap_url.substring(1, beatmap_url.length - 1);
@@ -130,6 +75,10 @@ module.exports = {
                     cs = parseFloat(argv[i].substr(2));
                 else if(argv[i].toLowerCase().startsWith("hp"))
                     hp = parseFloat(argv[i].substr(2));
+				else if(argv[i].endsWith("L"))
+					large_tick_hit = parseInt(argv[i]);
+				else if(argv[i].endsWith("S"))
+					slider_tail_hit = parseInt(argv[i]);
             }
 
             osu.parse_beatmap_url(beatmap_url, true).then(response => {
@@ -151,26 +100,6 @@ module.exports = {
 
                     let beatmap_path = download_path ? download_path : path.resolve(config.osu_cache_path, `${beatmap_id}.osu`);
 
-                    let base_ar = ar
-                    let base_od = od
-                    let base_cs = cs
-                    let base_hp = hp
-
-                    if(isNaN(cs) || isNaN(ar) || isNaN(od) || isNaN(hp)){
-                        let beatmap = await fs.readFile(beatmap_path, 'utf8');
-                        let lines = beatmap.split("\n");
-                        lines.forEach(function(line){
-                        if(isNaN(ar) && line.startsWith("ApproachRate:"))
-                            base_ar = line.split(":").pop().trim()
-                        if(isNaN(od) && line.startsWith("OverallDifficulty:"))
-                            base_od = line.split(":").pop().trim()
-                        if(isNaN(cs) && line.startsWith("CircleSize:"))
-                            base_cs = line.split(":").pop().trim()
-                        if(isNaN(hp) && line.startsWith("HPDrainRate:"))
-                            base_hp = line.split(":").pop().trim()
-                        });
-                    }
-
                     let params = {
                     }
 
@@ -187,7 +116,7 @@ module.exports = {
                         params.cs = cs;
 
                     if(mods.length > 0){
-                        params.mods = getModsEnum(mods);
+						params.mods = mods.join('').toUpperCase();
                     }
 
                     if(combo)
@@ -207,6 +136,12 @@ module.exports = {
 
                     if(clock_rate)
                         params.clockRate = clock_rate;
+
+					if(large_tick_hit)
+						params.largeTickHits = large_tick_hit;
+
+					if(slider_tail_hit)
+						params.sliderEndHits = slider_tail_hit;
 
                     if(beatmap_id){
                         helper.updateLastBeatmap({
@@ -235,6 +170,7 @@ module.exports = {
                     }
                     
 					let mapAttr = new BeatmapAttributesBuilder({map: map, ...params}).build();
+
                     ar = round(mapAttr.ar)
                     od = round(mapAttr.od)
                     cs = round(mapAttr.cs)
@@ -247,6 +183,7 @@ module.exports = {
                     output += `CS${cs} AR${ar} OD${od} HP${hp} ${bpm} BPM`
                     output += `\`\`\``
 
+					map.free();
                     resolve(output);
 
                 });
