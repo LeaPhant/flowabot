@@ -826,23 +826,6 @@ function calculateFlashlightDifficultyValue(strains) {
     return sum * 1.06;
 }
 
-async function updateAccessToken(){
-    let data = await fs.readFile('../osu-oauth-token-refresh/access_token.json', 'utf8')
-    let json = JSON.parse(data)
-    access_token = json.access_token
-
-    api = axios.create({
-        baseURL: 'https://osu.ppy.sh/api/v2',
-        headers: {
-            Authorization: `Bearer ${access_token}`,
-            "x-api-version": 20240124
-        }
-    });
-
-    setTimeout(updateAccessToken, 60 * 1000)
-    return
-}
-
 async function updateTrackedUsers(){
     for(user_id in tracked_users){
         let user = user_id;
@@ -911,37 +894,45 @@ async function updateTrackedUsers(){
 	setTimeout(updateTrackedUsers, 300 * 1000);
 }
 
-// async function getAccessToken(){
+async function getAccessToken(){
 
-//     const token_url = "https://osu.ppy.sh/oauth/token";
+    const token_url = "https://osu.ppy.sh/oauth/token";
 
-//     let headers = {
-//         "Accept": "application/json",
-//         "Content-Type": "application/json",
-//     };
+    let headers = {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+    };
 
-//     let body = {
-//         "client_id": config.credentials.client_id,
-//         "client_secret": config.credentials.client_secret,
-//         "grant_type": "client_credentials",
-//         "scope": "public"  
-//     }
+    let body = {
+        "client_id": config.credentials.client_id,
+        "client_secret": config.credentials.client_secret,
+        "grant_type": "client_credentials",
+        "scope": "public"  
+    }
 
-//     const token_response = await axios(token_url, {
-//         method: "POST",
-//         headers,
-//         data: body,
-//     })
+    const token_response = await axios(token_url, {
+        method: "POST",
+        headers,
+        data: body,
+    })
 
-//     const token_res = await token_response.data;
-//     const token = token_res.access_token;
-//     const expires = token_res.expires_in - 1;
+    const token_res = await token_response.data;
+    const token = token_res.access_token;
+    const expires = token_res.expires_in - 1;
 
-//     access_token = token;
+    access_token = token;
 
-//     setTimeout(getAccessToken, expires * 1000);
+	api = axios.create({
+        baseURL: 'https://osu.ppy.sh/api/v2',
+        headers: {
+            Authorization: `Bearer ${access_token}`,
+            "x-api-version": 20240124
+        }
+    });
 
-// }
+    setTimeout(getAccessToken, expires * 1000);
+
+}
 
 async function getUserId(u){
     let res;
@@ -981,7 +972,7 @@ module.exports = {
 		last_beatmap = _last_beatmap;
 
 		if(client_id && client_secret){
-            await updateAccessToken();
+            await getAccessToken();
             updateTrackedUsers();
 		}
 
