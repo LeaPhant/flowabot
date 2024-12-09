@@ -333,7 +333,7 @@ function getTimingPoint(timingPoints, offset){
     return timingPoint;
 }
 
-function variance(array){
+/*function variance(array){
     let sum = 0;
     array.forEach(a => sum += a);
     
@@ -344,6 +344,23 @@ function variance(array){
     _array.forEach(a => _sum += a);
 
 	return Math.sqrt(_sum / _array.length);
+}*/
+
+function variance(array){
+    let m = 0;
+    let s = 0;
+    let oldM;
+    
+    for (let k = 1; k <= array.length; k++) {
+        let x = array[k - 1];
+        oldM = m;
+        m += (x - m) / k;
+        s += (x - m) * (x - oldM);
+    }
+
+    const v = s / (array.length - 1);
+
+    return Math.sqrt(s / array.length);
 }
 
 function getCursorAtRaw(replay, time){
