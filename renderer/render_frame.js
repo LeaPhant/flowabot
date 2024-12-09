@@ -733,7 +733,7 @@ module.exports = {
 						if(code > 0){
 							resolveRender("Error encoding video")
 							.then(() => {
-								fs.promises.rmdir(file_path, { recursive: true }).catch(helper.error);
+								fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
 							}).catch(console.error);
 
 							return false;
@@ -748,11 +748,11 @@ module.exports = {
                             attachment: `${file_path}/video.${options.type}`,
                             name: `video.${options.type}`
                         }]}).then(() => {
-                            fs.promises.rmdir(file_path, { recursive: true }).catch(helper.error);
+                            fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
                         })
                         .catch(console.error)
                         .finally(() => {
-                            fs.promises.rmdir(file_path, { recursive: true }).catch(helper.error);
+                            fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
                         });
 					});
 
@@ -760,7 +760,7 @@ module.exports = {
 						if(err){
 							resolveRender("Error encoding video")
 							.then(() => {
-								fs.promises.rmdir(file_path, { recursive: true }).catch(helper.error);
+								fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
 							}).catch(console.error);
 
 							return false;
@@ -802,7 +802,7 @@ module.exports = {
 							if(code > 0){
 								resolveRender("Error encoding video")
 								.then(() => {
-									fs.promises.rmdir(file_path, { recursive: true }).catch(helper.error);
+									fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
 								}).catch(console.error);
 
 								return false;
@@ -823,22 +823,22 @@ module.exports = {
                                     attachment: `${file_path}/video.${options.type}`,
                                     name: `video.${options.type}`
                                 }]}).then(() => {
-                                    fs.promises.rmdir(file_path, { recursive: true }).catch(helper.error);
+                                    fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
                                 })
                                 .catch(console.error)
                                 .finally(() => {
-                                    fs.promises.rmdir(file_path, { recursive: true }).catch(helper.error);
+                                    fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
                                 });
                             }else if(stat.size < MAX_SIZE_DM ){
                                 resolveRender({files: [{
                                     attachment: `${file_path}/video.${options.type}`,
                                     name: `video.${options.type}`
                                 }]}).then(() => {
-                                    fs.promises.rmdir(file_path, { recursive: true }).catch(helper.error);
+                                    fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
                                 })
                                 .catch(console.error)
                                 .finally(() => {
-                                    fs.promises.rmdir(file_path, { recursive: true }).catch(helper.error);
+                                    fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
                                 });
                             }else{
                                 try{
@@ -856,14 +856,14 @@ module.exports = {
                                     const json = JSON.parse(response.stdout);
 
                                     resolveRender(json.files[0]).then(() => {
-                                        fs.promises.rmdir(file_path, { recursive: true }).catch(helper.error);
+                                        fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
                                     }).catch(console.error)
                                     .finally(() => {
-                                        fs.promises.rmdir(file_path, { recursive: true }).catch(helper.error);
+                                        fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
                                     });
                                 }catch(err){
                                     console.error(err);
-                                    fs.promises.rmdir(file_path, { recursive: true }).catch(helper.error);
+                                    fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
                                 }
                             }
 						});
@@ -883,7 +883,7 @@ module.exports = {
 							if(err){
 								resolveRender("Error encoding video")
 								.then(() => {
-									fs.promises.rmdir(file_path, { recursive: true }).catch(helper.error);
+									fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
 								}).catch(console.error);
 
 								return false;
