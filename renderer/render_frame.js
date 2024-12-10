@@ -600,7 +600,7 @@ module.exports = {
 			
 			let lastObject = beatmap.hitObjects[beatmap.hitObjects.length - 1];
 
-			let lastObjectTime = lastObject.endTime + 1500;
+			let lastObjectTime = lastObject.endTime;
 
             length = Math.min(800 * 1000, length);
 
