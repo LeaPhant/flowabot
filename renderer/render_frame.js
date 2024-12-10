@@ -700,8 +700,8 @@ module.exports = {
                     '-i', 'pipe:0'
                 ];
 
-                let mediaPromise = downloadMedia(options, beatmap, beatmap_path, size, file_path);
-				let audioProcessingPromise = renderHitsounds(mediaPromise, beatmap, start_time, actual_length, modded_length, time_scale, file_path, options.argon);
+                let mediaPromise = downloadMedia(options, beatmap, beatmap_path, size, file_path).catch(() => {});
+				let audioProcessingPromise = renderHitsounds(mediaPromise, beatmap, start_time, actual_length, modded_length, time_scale, file_path, options.argon).catch(() => {});
 
                 if(options.type == 'mp4')
                     bitrate = Math.max(850, Math.min(bitrate, (0.95 * MAX_SIZE) * 8 / (actual_length / 1000) / 1024));
