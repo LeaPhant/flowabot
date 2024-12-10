@@ -1414,25 +1414,29 @@ function processBeatmap(osuContents){
 	}
 
 	const rosu_map = new rosu.Beatmap(osuContents);
+    const rosu_diff = new rosu.Difficulty({
+        mods: mods_raw,
+        clockRate: speed_multiplier
+    });
+    const rosu_perf = rosu_diff.gradualPerformance(rosu_map);
 
-    for(const scoringFrame of beatmap.ScoringFrames.filter(a => ['miss', 50, 100, 300].includes(a.result))){
+    const scoringFrames = beatmap.ScoringFrames.filter(a => ['miss', 50, 100, 300].includes(a.result));
+
+    for(const scoringFrame of scoringFrames){
         const hitCount = scoringFrame.countMiss + scoringFrame.count50 + scoringFrame.count100 + scoringFrame.count300;
 
         const params = {
-            mods: mods_raw,
             n300: scoringFrame.count300,
             n100: scoringFrame.count100,
             n50: scoringFrame.count50,
             misses: scoringFrame.countMiss,
-            combo: scoringFrame.maxCombo,
-            passedObjects: hitCount,
-			clockRate: speed_multiplier,
+            maxCombo: scoringFrame.maxCombo
         }
 
-        const rosu_perf = new rosu.Performance(params).calculate(rosu_map);
+        const perfResult = rosu_perf.next(params);
 
-        const pp = rosu_perf.pp
-        const stars = rosu_perf.difficulty.stars
+        const pp = perfResult?.pp ?? 0;
+        const stars = perfResult?.difficulty.stars ?? 0;
 
         //const stars = new ojsama.diff().calc({map: parser.map, mods});
         //const index = Math.floor((scoringFrame.offset - start_offset) / 400)
