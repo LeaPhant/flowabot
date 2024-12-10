@@ -602,6 +602,8 @@ module.exports = {
 
 			let lastObjectTime = lastObject.endTime;
 
+			if (lastObject.lastObject) lastObjectTime += 1500;
+
             length = Math.min(800 * 1000, length);
 
 			if(length >= 10 * 1000)

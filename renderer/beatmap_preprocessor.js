@@ -1647,6 +1647,7 @@ async function prepareBeatmap(){
     beatmap.renderLength = renderLength;
 
     // trim beatmap
+    beatmap.hitObjects[beatmap.hitObjects.length - 1].lastObject = true;
     beatmap.hitObjects = beatmap.hitObjects.slice(firstHitobjectIndex, lastHitobjectIndex + 1);
 }
 
