@@ -436,7 +436,9 @@ module.exports = {
         worker.send({
             beatmap_path,
             options,
-            mods_raw
+            mods_raw,
+			time,
+			length: 0
         });
 
 		worker.on('close', code => {
@@ -449,12 +451,7 @@ module.exports = {
         worker.on('message', _beatmap => {
             beatmap = _beatmap;
 
-            if(time == 0 && options.percent){
-                time = beatmap.hitObjects[Math.floor(options.percent * beatmap.hitObjects.length)].startTime - 2000;
-            }else{
-                let firstNonSpinner = beatmap.hitObjects.filter(x => x.objectName != 'spinner');
-                time = Math.max(time, firstNonSpinner[0].startTime);
-            }
+			time = beatmap.renderTime;
 
             let worker = fork(path.resolve(__dirname, 'render_worker.js'));
 
@@ -479,7 +476,6 @@ module.exports = {
     },
 
     get_frames: async function(beatmap_path, time, length, mods_raw, size, options, cb){
-        console.time('process beatmap');
 		enabled_mods = mods_raw.map(mod => mod.acronym);
 		const { msg } = options;
 
@@ -487,9 +483,14 @@ module.exports = {
 
 		const renderStatus = ['– processing beatmap', '– rendering frames', '– encoding video'];
 
-		const renderMessage = await msg.channel.send({embed: {description: renderStatus.join("\n")}});
+		let renderMessage;
+
+		msg.channel.send({embed: {description: renderStatus.join("\n")}}).then(msg => {
+			renderMessage = msg;
+		}).catch(helper.error);
 
 		const updateRenderStatus = async () => {
+			if (!renderMessage) return;
 			await renderMessage.edit({
 				embed: {
 					description: renderStatus.join("\n")
@@ -506,10 +507,12 @@ module.exports = {
 			clearInterval(updateInterval);
 
 			await msg.channel.send(opts);
-			await renderMessage.delete();
+			if (renderMessage) await renderMessage.delete();
 		};
 
 		const beatmapProcessStart = Date.now();
+
+		console.time('process beatmap');
 
         let worker = fork(path.resolve(__dirname, 'beatmap_preprocessor.js'));
 
@@ -539,7 +542,8 @@ module.exports = {
 
             console.timeEnd('process beatmap');
 
-            if(time == 0 && options.percent){
+			/* this is in beatmap_preprocessor.js now
+			if(time == 0 && options.percent){
                 time = beatmap.hitObjects[Math.floor(options.percent * (beatmap.hitObjects.length - 1))].startTime - 2000;
             }else if(options.objects){
                 let objectIndex = 0;
@@ -589,13 +593,19 @@ module.exports = {
 							break;
 					}
 				}
-			}
+			}*/
 
+			time = beatmap.renderTime;
+			length = beatmap.renderLength;
+			
 			let lastObject = beatmap.hitObjects[beatmap.hitObjects.length - 1];
 
 			let lastObjectTime = lastObject.endTime + 1500;
 
             length = Math.min(800 * 1000, length);
+
+			if(length >= 10 * 1000)
+				options.type = 'mp4';
 
             let start_time = time;
 

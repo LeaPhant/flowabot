@@ -12,7 +12,7 @@ const _ = require('lodash');
 const helper = require('../helper.js');
 const config = require('../config.json');
 
-let options, beatmap_path, enabled_mods, mods_raw, beatmap, speed_override, speed_multiplier = 1;
+let options, beatmap_path, enabled_mods, mods_raw, beatmap, speed_override, speed_multiplier = 1, renderTime, renderLength, firstHitobjectIndex, lastHitobjectIndex;
 let isUsingClassicNotelock = false;
 let isUsingSliderHeadAccuracy = true;
 
@@ -787,6 +787,71 @@ function processBeatmap(osuContents){
         }
     });
 
+    if(renderTime == 0 && options.percent){
+        renderTime = beatmap.hitObjects[Math.floor(options.percent * (beatmap.hitObjects.length - 1))].startTime - 2000;
+    }else if(options.objects){
+        let objectIndex = 0;
+
+        for(let i = 0; i < beatmap.hitObjects.length; i++){
+            if(beatmap.hitObjects[i].startTime >= renderTime){
+                objectIndex = i;
+                break;
+            }
+        }
+
+        renderTime -= 200;
+
+        if(beatmap.hitObjects.length > objectIndex + options.objects)
+            renderLength = beatmap.hitObjects[objectIndex + options.objects].startTime - renderTime + 400;
+    }else{
+        let firstNonSpinner = beatmap.hitObjects.filter(x => x.objectName != 'spinner');
+
+        if (firstNonSpinner.length == 0)
+            firstNonSpinner = beatmap.hitObjects[0];
+
+        renderTime = Math.max(renderTime, Math.max(0, firstNonSpinner[0].startTime - 1000));
+    }
+
+    if(options.combo){
+        let current_combo = 0;
+
+        for(let hitObject of beatmap.hitObjects){
+            if(hitObject.objectName == 'slider'){
+                current_combo += 1;
+
+                for(let i = 0; i < hitObject.repeatCount; i++){
+                    current_combo += 1 + hitObject.SliderTicks.length;
+                    renderTime = hitObject.startTime + i * (hitObject.duration / hitObject.repeatCount);
+
+                    if(current_combo >= options.combo)
+                        break;
+                }
+
+                if(current_combo >= options.combo)
+                    break;
+            }else{
+                current_combo += 1;
+                renderTime = hitObject.endTime;
+
+                if(current_combo >= options.combo)
+                    break;
+            }
+        }
+    }
+
+    firstHitobjectIndex = beatmap.hitObjects.findIndex(x => x.endTime > renderTime - 1000) ?? 0;
+    lastHitobjectIndex = beatmap.hitObjects.findIndex(x => x.startTime > (renderTime + renderLength + 1000)) - 1;
+
+    if (lastHitobjectIndex < 0) 
+        lastHitobjectIndex = beatmap.hitObjects.length - 1;
+
+    if (lastHitobjectIndex == firstHitobjectIndex) {
+        if (lastHitobjectIndex + 2 > beatmap.hitObjects.length)
+            firstHitobjectIndex--;
+        else
+            lastHitobjectIndex++;
+    }
+
     const stackThreshold = beatmap.TimePreempt * beatmap.StackLeniency;
 
     if(Number(beatmap.fileFormat.slice(1)) >= 6){
@@ -1404,36 +1469,37 @@ function processBeatmap(osuContents){
 
     beatmap.ScoringFrames = beatmap.ScoringFrames.sort((a, b) => a.offset - b.offset);
 
-    const mods = ojsama.modbits.from_string(enabled_mods.filter(a => ["HR", "EZ"].includes(a) == false).join(""));
-
-	const beatmap_params = {
-		content: osuContents,
-		ar: beatmap.ApproachRateRealtime,
-		cs: beatmap.CircleSize,
-		od: beatmap.OverallDifficultyRealtime
-	}
-
 	const rosu_map = new rosu.Beatmap(osuContents);
-    const rosu_diff = new rosu.Difficulty({
+    /*const rosu_diff = new rosu.Difficulty({
         mods: mods_raw,
         clockRate: speed_multiplier
     });
-    const rosu_perf = rosu_diff.gradualPerformance(rosu_map);
+    const rosu_perf = rosu_diff.gradualPerformance(rosu_map);*/
 
     const scoringFrames = beatmap.ScoringFrames.filter(a => ['miss', 50, 100, 300].includes(a.result));
 
     for(const scoringFrame of scoringFrames){
         const hitCount = scoringFrame.countMiss + scoringFrame.count50 + scoringFrame.count100 + scoringFrame.count300;
 
-        const params = {
+        if (hitCount < firstHitobjectIndex) continue;
+        if (hitCount >= lastHitobjectIndex && hitCount != beatmap.hitObjects.length) continue;
+
+        let perfResult = new rosu.Performance({
+            mods: mods_raw,
+            clockRate: speed_multiplier,
+            passedObjects: hitCount,
             n300: scoringFrame.count300,
             n100: scoringFrame.count100,
             n50: scoringFrame.count50,
             misses: scoringFrame.countMiss,
             maxCombo: scoringFrame.maxCombo
-        }
+        }).calculate(rosu_map);
 
-        const perfResult = rosu_perf.next(params);
+        /*
+        if (hitCount == firstHitobjectIndex || hitCount == beatmap.hitObjects.length) 
+            perfResult = rosu_perf.nth(params, hitCount);
+        else 
+            perfResult = rosu_perf.next(params);*/
 
         const pp = perfResult?.pp ?? 0;
         const stars = perfResult?.difficulty.stars ?? 0;
@@ -1576,10 +1642,16 @@ async function prepareBeatmap(){
     }
 
     processBeatmap(osuContents);
+
+    beatmap.renderTime = renderTime;
+    beatmap.renderLength = renderLength;
+
+    // trim beatmap
+    beatmap.hitObjects = beatmap.hitObjects.slice(firstHitobjectIndex, firstHitobjectIndex + lastHitobjectIndex);
 }
 
 process.on('message', obj => {
-    ({beatmap_path, options, speed, mods_raw} = obj);
+    ({beatmap_path, options, speed, mods_raw, time: renderTime, length: renderLength} = obj);
 
     prepareBeatmap().then(() => {
         process.send(beatmap, () => {
