@@ -15,6 +15,8 @@ const config = require('../config.json');
 let options, beatmap_path, enabled_mods, mods_raw, beatmap, speed_override, speed_multiplier = 1, renderTime, renderLength, firstHitobjectIndex, lastHitobjectIndex;
 let isUsingClassicNotelock = false;
 let isUsingSliderHeadAccuracy = true;
+let isUsingClassicMod = false;
+let isSetOnLazer = false;
 
 const PLAYFIELD_WIDTH = 512;
 const PLAYFIELD_HEIGHT = 384;
@@ -129,9 +131,13 @@ function getCursor(replay){
 async function parseReplay(buf, decompress = true){
     let replay_data = buf;
 
-    if(decompress)
-        replay_data = (await osr.read(buf)).replay_data;
-        //replay_data = (await lzma.decompress(replay_data)).toString();
+    if(decompress) {
+		let data = await osr.read(buf);
+		// this should be changed to use some better identifier than gameVersion when using a better osr parser, but i think this works for now.
+		isSetOnLazer = data.gameVersion >= 30000000;
+        replay_data = data.replay_data;
+	}
+
         
     let replay_frames = replay_data.split(",");
 
@@ -1470,13 +1476,19 @@ function processBeatmap(osuContents){
     beatmap.ScoringFrames = beatmap.ScoringFrames.sort((a, b) => a.offset - b.offset);
 
 	const rosu_map = new rosu.Beatmap(osuContents);
-    /*const rosu_diff = new rosu.Difficulty({
+    const rosu_diff = new rosu.Difficulty({
         mods: mods_raw,
-        clockRate: speed_multiplier
+        clockRate: speed_multiplier,
+		lazer: isSetOnLazer,
     });
-    const rosu_perf = rosu_diff.gradualPerformance(rosu_map);*/
+    const rosu_perf = rosu_diff.gradualPerformance(rosu_map);
 
     const scoringFrames = beatmap.ScoringFrames.filter(a => ['miss', 50, 100, 300].includes(a.result));
+
+	const sliderTickCount = beatmap.hitObjects.filter(a => a.objectName == 'slider')
+	.reduce((a, b) => {
+		return a + (b.repeatCount - 1) + b.SliderTicks.length;
+	}, 0);
 
     for(const scoringFrame of scoringFrames){
         const hitCount = scoringFrame.countMiss + scoringFrame.count50 + scoringFrame.count100 + scoringFrame.count300;
@@ -1484,22 +1496,47 @@ function processBeatmap(osuContents){
         if (hitCount < firstHitobjectIndex) continue;
         if (hitCount >= lastHitobjectIndex && hitCount != beatmap.hitObjects.length) continue;
 
-        let perfResult = new rosu.Performance({
-            mods: mods_raw,
-            clockRate: speed_multiplier,
-            passedObjects: hitCount,
-            n300: scoringFrame.count300,
-            n100: scoringFrame.count100,
-            n50: scoringFrame.count50,
-            misses: scoringFrame.countMiss,
-            maxCombo: scoringFrame.maxCombo
-        }).calculate(rosu_map);
+		let params = {
+			maxCombo: scoringFrame.maxCombo,
+			n300: scoringFrame.count300,
+			n100: scoringFrame.count100,
+			n50: scoringFrame.count50,
+			misses: scoringFrame.countMiss
+		};
 
-        /*
-        if (hitCount == firstHitobjectIndex || hitCount == beatmap.hitObjects.length) 
-            perfResult = rosu_perf.nth(params, hitCount);
-        else 
-            perfResult = rosu_perf.next(params);*/
+		// for now we just assume all sliders are always hit
+		if (isSetOnLazer) {
+			params = {
+				/**
+				* "Large tick" hits for osu!standard.
+				*
+				* The meaning depends on the kind of score:
+				* - if set on osu!stable, this field is irrelevant and can be `0`
+				* - if set on osu!lazer *without* `CL`, this field is the amount of hit
+				*   slider ticks and repeats
+				* - if set on osu!lazer *with* `CL`, this field is the amount of hit
+				*   slider heads, ticks, and repeats
+				*/
+				osuLargeTickHits: isUsingClassicMod ? beatmap.nbSliders + sliderTickCount : sliderTickCount,
+				/**
+				* "Small tick" hits for osu!standard.
+				*
+				* These are essentially the slider end hits for lazer scores without
+				* slider accuracy.
+				*
+				* Only relevant for osu!lazer.
+				*/
+				osuSmallTickHits: isUsingSliderHeadAccuracy ? 0 : beatmap.nbSliders,
+				sliderEndHits: beatmap.nbSliders,
+				...params,
+			}
+		}
+
+		let perfResult;
+		if (hitCount == firstHitobjectIndex || hitCount == beatmap.hitObjects.length) 
+			perfResult = rosu_perf.nth(params, hitCount);
+		else 
+			perfResult = rosu_perf.next(params);
 
         const pp = perfResult?.pp ?? 0;
         const stars = perfResult?.difficulty.stars ?? 0;
@@ -1595,6 +1632,7 @@ async function prepareBeatmap(){
 	}
 
 	if(enabled_mods.includes("CL")) {
+		isUsingClassicMod = true;
 		let settings = mods_raw.filter(mod => mod.acronym == "CL")[0].settings;
 
 		if(!settings) {
