@@ -12,7 +12,7 @@ const _ = require('lodash');
 const helper = require('../helper.js');
 const config = require('../config.json');
 
-let options, beatmap_path, enabled_mods, mods_raw, beatmap, speed_override, speed_multiplier = 1, renderTime, renderLength, firstHitobjectIndex, lastHitobjectIndex;
+let options, beatmap_path, enabled_mods, mods_raw, beatmap, score_info, speed_override, speed_multiplier = 1, renderTime, renderLength, firstHitobjectIndex, lastHitobjectIndex;
 let isUsingClassicNotelock = false;
 let isUsingSliderHeadAccuracy = true;
 let isUsingClassicMod = false;
@@ -133,8 +133,10 @@ async function parseReplay(buf, decompress = true){
 
     if(decompress) {
 		let data = await osr.read(buf);
-		// this should be changed to use some better identifier than gameVersion when using a better osr parser, but i think this works for now.
-		isSetOnLazer = data.gameVersion >= 30000000;
+		if (data.hasOwnProperty("score_info")) {
+			isSetOnLazer = true;
+			score_info = data.score_info;
+		}
         replay_data = data.replay_data;
 	}
 
@@ -1504,7 +1506,6 @@ function processBeatmap(osuContents){
 			misses: scoringFrame.countMiss
 		};
 
-		// for now we just assume all sliders are always hit
 		if (isSetOnLazer) {
 			params = {
 				/**
@@ -1517,7 +1518,7 @@ function processBeatmap(osuContents){
 				* - if set on osu!lazer *with* `CL`, this field is the amount of hit
 				*   slider heads, ticks, and repeats
 				*/
-				osuLargeTickHits: isUsingClassicMod ? beatmap.nbSliders + sliderTickCount : sliderTickCount,
+				osuLargeTickHits: score_info.statistics.large_tick_hit || score_info.maximum_statistics.large_tick_hit || 0,
 				/**
 				* "Small tick" hits for osu!standard.
 				*
@@ -1526,8 +1527,8 @@ function processBeatmap(osuContents){
 				*
 				* Only relevant for osu!lazer.
 				*/
-				osuSmallTickHits: isUsingSliderHeadAccuracy ? 0 : beatmap.nbSliders,
-				sliderEndHits: beatmap.nbSliders,
+				osuSmallTickHits: score_info.statistics.slider_tail_hit || score_info.maximum_statistics.slider_tail_hit || 0,
+				sliderEndHits: score_info.statistics.slider_tail_hit || score_info.maximum_statistics.slider_tail_hit || 0,
 				...params,
 			}
 		}
@@ -1604,9 +1605,10 @@ async function prepareBeatmap(){
         try{
             const response = await axios.get(options.osr, { timeout: 5000, responseType: 'arraybuffer' });
 
-            const parsedOsr = await osr.read(response.data);
-
-            replay = {lastCursor: 0, replay_data: await parseReplay(parsedOsr.replay_data, false)};
+            replay = {lastCursor: 0, replay_data: await parseReplay(response.data)};
+			if (score_info) {
+				mods_raw = score_info.mods;
+			}
         }catch(e){
             console.error(e);
 
