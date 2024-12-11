@@ -656,7 +656,10 @@ async function getScore(recent_raw, cb){
             let beatmap_path = path.resolve(config.osu_cache_path, `${recent_raw.beatmap.id}.osu`);
 			const beatmap_content = await fs.readFile(beatmap_path, 'utf8');
 
+            const set_on_lazer = recent_raw.build_id ? true : false;
+
             const play_params = {
+                lazer: set_on_lazer,
                 mods: recent_raw.mods,
                 n300: recent_raw.statistics.great ?? 0,
                 n100: recent_raw.statistics.ok ?? 0,
@@ -673,6 +676,7 @@ async function getScore(recent_raw, cb){
 				play_params.sliderEndHits = recent_raw.statistics.slider_tail_hit;
 
             const fc_play_params = {
+                lazer: set_on_lazer,
                 mods: recent_raw.mods,
                 clockRate: speed,
                 n300: (recent_raw.statistics.great ?? 0) + (recent_raw.statistics.miss ?? 0),
