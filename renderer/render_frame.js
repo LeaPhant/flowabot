@@ -6,7 +6,6 @@ const util = require('util');
 const axios = require('axios');
 const Jimp = require('jimp');
 const crypto = require('crypto');
-const ffmpeg = require('ffmpeg-static');
 
 const unzip = require('unzipper');
 const disk = require('diskusage');
@@ -17,6 +16,8 @@ const execFilePromise = util.promisify(execFile);
 
 const config = require('../config.json');
 const helper = require('../helper.js');
+
+const ffmpeg = config.ffmpeg_path || require('ffmpeg-static');
 
 const MAX_SIZE = 25 * 1024 * 1024;
 const MAX_SIZE_DM = 8 * 1024 * 1024;
