@@ -1591,6 +1591,8 @@ async function prepareBeatmap(){
 
     let replay;
 
+	console.time("download/parse replay");
+
     if(options.score_id){
         let replay_path = path.resolve(config.replay_path, `${options.score_id}.osr`);
 
@@ -1611,6 +1613,8 @@ async function prepareBeatmap(){
             throw "Couldn't download replay";
         }
     }
+
+	console.timeEnd("download/parse replay");
 
     speed_multiplier = 1;
 
