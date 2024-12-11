@@ -67,6 +67,7 @@ module.exports = {
             let combo = 0;
             let speed = 1;
             let hidden = false;
+            let traceable = false;
             let flashlight = false;
             let analyze = false;
 			let nointerpolate = false;
@@ -103,6 +104,8 @@ module.exports = {
                     audio = true;
                 }else if(arg == 'hd' || arg == 'hidden'){
                     hidden = true;
+                } else if(arg == 'tc' || arg == 'traceable'){
+                    traceable = true;
                 }else if(arg == 'fl' || arg == 'flashlight'){
                     flashlight = true;
                 }else if(arg == 'mp4'){
@@ -229,7 +232,7 @@ module.exports = {
 
                             frame.get_frames(download_path, time, length * 1000, mods, size, {
                                 combo,
-                                type: video_type, cs, ar, od, analyze, lagtrain, argon, hidden, flashlight, black: false, osr, score_id, audio, fps, speed,
+                                type: video_type, cs, ar, od, analyze, lagtrain, argon, hidden, traceable, flashlight, black: false, osr, score_id, audio, fps, speed,
                                 fill: video_type == 'mp4', noshadow: true, percent, border: false, objects, msg, nointerpolate
                             });
 						}else{

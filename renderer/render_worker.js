@@ -514,36 +514,38 @@ process.on('message', async obj => {
                     ctx.strokeStyle = "rgba(255,255,255,0.85)";
 
                     if(time < hitObject.startTime){
-                        if(!options.noshadow)
-                            ctx.shadowColor = "rgba(0,0,0,0.7)";
+                        if (!options.traceable) {
+                            if(!options.noshadow)
+                                ctx.shadowColor = "rgba(0,0,0,0.7)";
 
-                        let position = playfieldPosition(...hitObject.position);
+                            let position = playfieldPosition(...hitObject.position);
 
-                        // Fill circle with combo color instead of leaving see-through circles
-                        if(options.fill){
+                            // Fill circle with combo color instead of leaving see-through circles
+                            if(options.fill){
+                                ctx.beginPath();
+                                ctx.fillStyle = hitObject.Color;
+                                ctx.arc(...position, scale_multiplier * beatmap.Radius, 0, 2 * Math.PI, false);
+                                ctx.fill();
+                            }
+
+                            // Draw circle border
                             ctx.beginPath();
-                            ctx.fillStyle = hitObject.Color;
-                            ctx.arc(...position, scale_multiplier * beatmap.Radius, 0, 2 * Math.PI, false);
-                            ctx.fill();
+                            ctx.arc(...position, scale_multiplier * beatmap.Radius - ctx.lineWidth / 2, 0, 2 * Math.PI, false);
+                            ctx.stroke();
+
+                            ctx.fillStyle = 'white';
+                            ctx.textBaseline = "middle";
+                            ctx.textAlign = "center";
+
+                            let fontSize = 16;
+                            fontSize += 16 * (1 - (beatmap.CircleSize / 10));
+
+                            fontSize *= scale_multiplier;
+
+                            // Draw combo number on circle
+                            ctx.font = `${fontSize}px sans-serif`;
+                            ctx.fillText(hitObject.ComboNumber, position[0], position[1]);
                         }
-
-                        // Draw circle border
-                        ctx.beginPath();
-                        ctx.arc(...position, scale_multiplier * beatmap.Radius - ctx.lineWidth / 2, 0, 2 * Math.PI, false);
-                        ctx.stroke();
-
-                        ctx.fillStyle = 'white';
-                        ctx.textBaseline = "middle";
-                        ctx.textAlign = "center";
-
-                        let fontSize = 16;
-                        fontSize += 16 * (1 - (beatmap.CircleSize / 10));
-
-                        fontSize *= scale_multiplier;
-
-                        // Draw combo number on circle
-                        ctx.font = `${fontSize}px sans-serif`;
-                        ctx.fillText(hitObject.ComboNumber, position[0], position[1]);
 
                         // Draw approach circle
                         if(approachCircle > 0 && !options.hidden){
@@ -643,7 +645,7 @@ process.on('message', async obj => {
 
             if(!options.hidden && time >= hitObject.startTime && hitObject.startTime - time > -200){
                 // Draw fading out circles
-                if(hitObject.objectName != "spinner"){
+                if(hitObject.objectName != "spinner" && !options.traceable){
                     // Increase circle size the further it's faded out
                     let hitOffset = 0;
 
