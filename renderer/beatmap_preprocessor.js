@@ -135,7 +135,7 @@ async function parseReplay(buf, decompress = true){
 		let data = await osr.read(buf);
 		// this should be changed to use some better identifier than gameVersion when using a better osr parser, but i think this works for now.
 		isSetOnLazer = data.gameVersion >= 30000000;
-        replay_data = data.replay_data.toString();
+        replay_data = data.replay_data;
 	}
 
         
