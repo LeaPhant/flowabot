@@ -329,8 +329,8 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 }
 
 async function downloadMedia(options, beatmap, beatmap_path, size, download_path){
-	if(options.type != 'mp4' || !options.audio || !config.credentials.osu_api_key)
-		return false;
+	if(options.type != 'mp4' || options.custom_url || !options.audio || !config.credentials.osu_api_key)
+		throw 'No mapset available';
 
 	let output = {};
 

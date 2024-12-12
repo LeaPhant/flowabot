@@ -203,11 +203,10 @@ module.exports = {
                 if(config.debug)
                     helper.log('specified ar', ar);
 
-                if(!beatmap_id || custom_url){
-                    let download_url = URL.parse(beatmap_url);
+                if(custom_url){
                     download_path = path.resolve(os.tmpdir(), `${Math.floor(Math.random() * 1000000) + 1}.osu`);
 
-                    download_promise = helper.downloadFile(download_path, download_url);
+                    download_promise = helper.downloadFile(download_path, beatmap_url);
                     download_promise.catch(reject);
                 }
 
@@ -232,7 +231,7 @@ module.exports = {
 
                             frame.get_frames(download_path, time, length * 1000, mods, size, {
                                 combo,
-                                type: video_type, cs, ar, od, analyze, lagtrain, argon, hidden, traceable, flashlight, black: false, osr, score_id, audio, fps, speed,
+                                type: video_type, cs, ar, od, analyze, lagtrain, argon, hidden, custom_url, traceable, flashlight, black: false, osr, score_id, audio, fps, speed,
                                 fill: video_type == 'mp4', noshadow: true, percent, border: false, objects, msg, nointerpolate
                             });
 						}else{
