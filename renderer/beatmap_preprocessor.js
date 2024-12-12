@@ -292,11 +292,17 @@ function vectorDistanceSquared(hitObject1, hitObject2){
 }
 
 function difficultyRange(difficulty, min, mid, max){
+    let result;
+
     if(difficulty > 5)
-        return mid + (max - mid) * (difficulty - 5) / 5;
-    if(difficulty < 5)
-        return mid - (mid - min) * (5 - difficulty) / 5;
-    return mid;
+        result = mid + (max - mid) * (difficulty - 5) / 5;
+    else if(difficulty < 5)
+        result = mid + (mid - min) * (difficulty - 5) / 5;
+    else
+        result = mid
+
+    // floating point precision blehhhh
+    return parseFloat(result.toPrecision(2));
 }
 
 function calculate_csarod(cs_raw, ar_raw, od_raw, mods_enabled){
@@ -436,10 +442,13 @@ function processBeatmap(osuContents){
     if(enabled_mods.includes("HD") && options.hidden)
         beatmap.TimeFadein = beatmap.TimePreempt * 0.4;
 
+    const legacyHitWindowCorrection = isUsingClassicMod ? 0.5 : 0;
+
     // OD
-    beatmap.HitWindow300 = (50 + 30 * (5  - beatmap.OverallDifficultyRealtime) / 5) - 0.5;
-    beatmap.HitWindow100 = (100 + 40 * (5  - beatmap.OverallDifficultyRealtime) / 5) - 0.5;
-    beatmap.HitWindow50 = (150 + 50 * (5  - beatmap.OverallDifficultyRealtime) / 5) - 0.5;
+    beatmap.HitWindow300 = difficultyRange(beatmap.OverallDifficultyRealtime, 80, 50, 20) - legacyHitWindowCorrection;
+    beatmap.HitWindow100 = difficultyRange(beatmap.OverallDifficultyRealtime, 140, 100, 60) - legacyHitWindowCorrection;
+    beatmap.HitWindow50 = difficultyRange(beatmap.OverallDifficultyRealtime, 200, 150, 100) - legacyHitWindowCorrection;
+    beatmap.HitWindowMiss = 400;
 
     // CS
     beatmap.Scale = (1.0 - 0.7 * (beatmap.CircleSize - 5) / 5) / 2;
@@ -1178,10 +1187,12 @@ function processBeatmap(osuContents){
     }
 
     const cursor = new Cursor(beatmap.Replay);
+
+    let latehit = 0;
     
     for(let i = 0; i < beatmap.hitObjects.length; i++){
         const hitObject = beatmap.hitObjects[i];
-		const nextEarliestHit = (beatmap.hitObjects[i+1]?.startTime ?? hitObject.startTime) - 400; // osu miss window is 400ms, i think...
+		const nextEarliestHit = (beatmap.hitObjects[i+1]?.startTime ?? hitObject.startTime) - beatmap.HitWindowMiss;
 
         if(hitObject.objectName == 'spinner')
             continue; // process spinners later
@@ -1237,6 +1248,11 @@ function processBeatmap(osuContents){
                             hitResult = 50;
                         else
                             hitResult = 0;
+
+                        if (Math.abs(beatmap.HitWindow300 - offset) < 2.5 && hitResult == 300) {
+                            latehit++;
+                            console.log('#', latehit, 'hit', offset, 'ms late', '(', beatmap.HitWindow300, 'ms hit window 300)');
+                        }
 
                         hitObject.hitOffset = offsetRaw;
                         hitObject.hitResult = hitResult;
