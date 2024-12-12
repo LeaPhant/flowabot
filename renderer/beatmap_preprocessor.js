@@ -878,7 +878,7 @@ function processBeatmap(osuContents){
     }
 
     firstHitobjectIndex = beatmap.hitObjects.findIndex(x => x.endTime > renderTime - 1000) ?? 0;
-    lastHitobjectIndex = beatmap.hitObjects.findIndex(x => x.startTime > (renderTime + renderLength + 1000)) - 1;
+    lastHitobjectIndex = beatmap.hitObjects.findIndex(x => x.startTime > (renderTime + (renderLength + 1000) * speed_multiplier)) - 1;
 
     if (lastHitobjectIndex < 0) 
         lastHitobjectIndex = beatmap.hitObjects.length - 1;

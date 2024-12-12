@@ -633,8 +633,6 @@ module.exports = {
 			if(options.speed != 1)
 				time_scale = options.speed;
 
-			actual_length = Math.min(length + 1000, Math.max(actual_length, actual_length / time_scale));
-
             if(!('type' in options))
                 options.type = 'gif';
 
@@ -651,7 +649,7 @@ module.exports = {
 
 			let threads = require('os').cpus().length;
 
-			let modded_length = time_scale > 1 ? Math.min(actual_length * time_scale, lastObjectTime) : actual_length;
+			let modded_length = time_scale > 0 ? Math.min(actual_length * time_scale, lastObjectTime) : actual_length;
 
 			let amount_frames = Math.floor(modded_length / time_frame);
 
