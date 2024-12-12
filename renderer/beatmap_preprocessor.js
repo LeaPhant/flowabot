@@ -1188,13 +1188,22 @@ function processBeatmap(osuContents){
 
         let previous, current = cursor.next();
         let currentPresses = 0;
+        let earliestCursor = cursor.i ?? 0;
 
         do{
             previous = current;
             current = cursor.next();
 
+            if(current != null && current.offset < nextEarliestHit)
+				earliestCursor++;
+
             if(current != null && current.offset > hitObject.latestHit){
-                cursor.prev();
+                if (isUsingClassicNotelock) {
+                    cursor.prev();
+                } else {
+                    cursor.i = earliestCursor;
+                }
+
                 break;
             }
 
@@ -1349,6 +1358,7 @@ function processBeatmap(osuContents){
                 console.log('scoring frame offset', scoringFrame.offset);*/
 
                 scoringFrame.result = 'sliderbreak';
+                
                 scoringFrame.combo = 0;
             }
 
@@ -1514,11 +1524,6 @@ function processBeatmap(osuContents){
     const rosu_perf = rosu_diff.gradualPerformance(rosu_map);
 
     const scoringFrames = beatmap.ScoringFrames.filter(a => ['miss', 50, 100, 300].includes(a.result));
-
-	const sliderTickCount = beatmap.hitObjects.filter(a => a.objectName == 'slider')
-	.reduce((a, b) => {
-		return a + (b.repeatCount - 1) + b.SliderTicks.length;
-	}, 0);
 
     for(const scoringFrame of scoringFrames){
         const hitCount = scoringFrame.countMiss + scoringFrame.count50 + scoringFrame.count100 + scoringFrame.count300;
