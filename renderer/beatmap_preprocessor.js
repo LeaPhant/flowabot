@@ -1260,7 +1260,7 @@ function processBeatmap(osuContents){
     cursor.reset();
 
     for(const hitObject of beatmap.hitObjects){
-        if(hitObject.objectName == 'circle'){
+        if(hitObject.objectName == 'circle' || isUsingSliderHeadAccuracy && hitObject.objectName == 'slider'){
             const scoringFrame = newScoringFrame(beatmap.ScoringFrames);
 
             if(hitObject.hitResult == null)
@@ -1304,7 +1304,8 @@ function processBeatmap(osuContents){
 
             beatmap.ScoringFrames.push(scoringFrame);
             
-            continue;
+            if (hitObject.objectName != 'slider')
+                continue;
         }
 
         if(hitObject.objectName == 'spinner'){
@@ -1332,37 +1333,36 @@ function processBeatmap(osuContents){
             hitObject.MissedSliderTick = 0;
             hitObject.MissedSliderEnd = 0;
 
-            const scoringFrame = newScoringFrame(beatmap.ScoringFrames);
-            
-            scoringFrame.offset = hitObject.startTime + Math.min(
-                hitObject.hitOffset != null ? hitObject.hitOffset : beatmap.HitWindow50,
-                hitObject.endTime
-                );
-            
-            if(hitObject.hitResult > 0){
-                scoringFrame.result = 30;
-                scoringFrame.combo++;
-
-                scoringFrame.hitOffset = hitObject.hitOffset;
-    
-                allhits.push(hitObject.hitOffset);
-                scoringFrame.ur = variance(allhits) * 10;
-
-                if(scoringFrame.combo > scoringFrame.maxCombo)
-                    scoringFrame.maxCombo = scoringFrame.combo;
-
-            }else{
-                hitObject.MissedSliderStart = 1;
-
-                /*console.log('missed slider start at', hitObject.startTime);
-                console.log('scoring frame offset', scoringFrame.offset);*/
-
-                scoringFrame.result = 'sliderbreak';
+            if (!isUsingSliderHeadAccuracy) {
+                const scoringFrame = newScoringFrame(beatmap.ScoringFrames);
                 
-                scoringFrame.combo = 0;
-            }
+                scoringFrame.offset = hitObject.startTime + Math.min(
+                    hitObject.hitOffset != null ? hitObject.hitOffset : beatmap.HitWindow50,
+                    hitObject.endTime
+                    );
 
-            beatmap.ScoringFrames.push(scoringFrame);
+                if(hitObject.hitResult > 0){
+                    scoringFrame.result = 30;
+                    
+                    scoringFrame.combo++;
+
+                    scoringFrame.hitOffset = hitObject.hitOffset;
+        
+                    allhits.push(hitObject.hitOffset);
+                    scoringFrame.ur = variance(allhits) * 10;
+
+                    if(scoringFrame.combo > scoringFrame.maxCombo)
+                        scoringFrame.maxCombo = scoringFrame.combo;
+
+                }else{
+                    hitObject.MissedSliderStart = 1;
+                    scoringFrame.result = 'sliderbreak';
+                    
+                    scoringFrame.combo = 0;
+                }
+
+                beatmap.ScoringFrames.push(scoringFrame);
+            }
 
             for(let i = 0; i < hitObject.repeatCount; i++){
                 const repeatOffset = hitObject.startTime + i * (hitObject.duration / hitObject.repeatCount);
@@ -1383,7 +1383,9 @@ function processBeatmap(osuContents){
 
                     const currentHolding = replayFrame.K1 || replayFrame.K2 || replayFrame.M1 || replayFrame.M2;
 
-                    if(currentHolding && withinCircle(replayFrame.x, replayFrame.y, ...repeatPosition, beatmap.ActualFollowpointRadius)){
+                    const isLateStart = isUsingSliderHeadAccuracy && hitObject.hitOffset <= beatmap.HitWindow50 && hitObject.hitOffset > repeatOffset;
+
+                    if(isLateStart || currentHolding && withinCircle(replayFrame.x, replayFrame.y, ...repeatPosition, beatmap.ActualFollowpointRadius)){
                         scoringFrame.result = 30;
                         scoringFrame.combo++;
 
@@ -1392,9 +1394,12 @@ function processBeatmap(osuContents){
 
                         beatmap.ScoringFrames.push(scoringFrame);
                     }else{
-                        //console.log('missed repeat at', scoringFrame.offset);
-
-                        scoringFrame.result = 'sliderbreak';
+                        // missed a slider repeat
+                        if (isUsingSliderHeadAccuracy) {
+                            scoringFrame.result = 'sliderbreak';
+                        } else {
+                            scoringFrame.result = 'large_tick_miss';
+                        }
                         scoringFrame.combo = 0;
                         hitObject.MissedSliderTick = true;
 
@@ -1415,7 +1420,9 @@ function processBeatmap(osuContents){
 
                     const currentHolding = replayFrame.K1 || replayFrame.K2 || replayFrame.M1 || replayFrame.M2;
 
-                    if(currentHolding && withinCircle(replayFrame.x, replayFrame.y, ...tick.position, beatmap.ActualFollowpointRadius)){
+                    const isLateStart = isUsingSliderHeadAccuracy && hitObject.hitOffset <= beatmap.HitWindow50 && hitObject.hitOffset > repeatOffset;
+
+                    if(isLateStart || currentHolding && withinCircle(replayFrame.x, replayFrame.y, ...tick.position, beatmap.ActualFollowpointRadius)){
                         scoringFrame.result = 10;
                         scoringFrame.combo++;
 
@@ -1427,11 +1434,13 @@ function processBeatmap(osuContents){
                         continue;
                     }
 
+                    // missed a slider tick
                     hitObject.MissedSliderTick = 1;
-
-                    //console.log('missed slider tick at', scoringFrame.offset);
-
-                    scoringFrame.result = 'sliderbreak';
+                    if (isUsingSliderHeadAccuracy) {
+                        scoringFrame.result = 'sliderbreak';
+                    } else {
+                        scoringFrame.result = 'large_tick_miss';
+                    }
                     scoringFrame.combo = 0;
 
                     beatmap.ScoringFrames.push(scoringFrame);
@@ -1481,13 +1490,22 @@ function processBeatmap(osuContents){
 
                     scoringFrameEnd.position = hitObject.repeatCount % 2 == 0 ? hitObject.position : hitObject.endPosition;
 
+                    if (isUsingSliderHeadAccuracy) {
+                        if (hitObject.MissedSliderEnd) {
+                            scoringFrameEnd.result = 'slider_end_miss';
+                        } else {
+                            scoringFrameEnd.result = 30;
+                        }
+                        beatmap.ScoringFrames.push(scoringFrameEnd);
+                        continue;
+                    }
+
                     /*if(totalPartsMissed > 0){
                         console.log('---');
                         console.log('slider start missed', hitObject.MissedSliderStart);
                         console.log('slider tick missed', hitObject.MissedSliderTick);
                         console.log('slider end missed', hitObject.MissedSliderEnd);
                     }*/
-
 
                     switch(totalPartsMissed){
                         case 0:
