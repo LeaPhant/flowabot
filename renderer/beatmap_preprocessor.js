@@ -1239,10 +1239,6 @@ function processBeatmap(osuContents){
                             hitResult = 0;
 
                         hitObject.hitOffset = offsetRaw;
-
-                        if(hitObject.objectName == 'slider')
-                            hitResult = hitResult > 0 ? 50 : 0;
-
                         hitObject.hitResult = hitResult;
                     }
                 }
