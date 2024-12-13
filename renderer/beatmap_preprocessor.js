@@ -1652,9 +1652,6 @@ function processBeatmap(osuContents){
         scoringFrame.stars = stars;
     }
 
-    console.log(beatmap.ScoringFrames[beatmap.ScoringFrames.length - 1]);
-    console.log(score_info);
-
     const hitResults = _.countBy(beatmap.ScoringFrames, 'result');
 
     hitResults.ur = beatmap.ScoringFrames[beatmap.ScoringFrames.length - 1].ur;
