@@ -1641,15 +1641,16 @@ function processBeatmap(osuContents){
         sf.stars = stars;
     }
 
-    let pp = 0, stars = 0;
+    let pp = 0, stars = 0, accuracy = 100;
 
     for(const scoringFrame of beatmap.ScoringFrames){
         if(scoringFrame.pp != null){
-            ({pp, stars} = scoringFrame)
+            ({pp, stars, accuracy} = scoringFrame)
         }
 
         scoringFrame.pp = pp;
         scoringFrame.stars = stars;
+        scoringFrame.accuracy = accuracy;
     }
 
     const hitResults = _.countBy(beatmap.ScoringFrames, 'result');
