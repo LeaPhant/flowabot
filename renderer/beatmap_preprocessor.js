@@ -77,7 +77,13 @@ function parseKeysPressed(num){
 }
 
 function newScoringFrame(scoringFrames){
-    const defaultFrame = {ur: 0, offset: 0, count300: 0, count100: 0, count50: 0, countMiss: 0, combo: 0, previousCombo: 0, maxCombo: 0};
+    const defaultFrame = {
+        ur: 0, offset: 0, 
+        count300: 0, count100: 0, count50: 0, countMiss: 0, 
+        largeTickHits: 0, smallTickHits: 0, sliderEndHits: 0,
+        largeTickMisses: 0, smallTickMisses: 0, sliderEndMisses: 0,
+        combo: 0, previousCombo: 0, maxCombo: 0, accuracy: 100
+    };
 
     let scoringFrame = {...defaultFrame};
 
@@ -1249,11 +1255,6 @@ function processBeatmap(osuContents){
                         else
                             hitResult = 0;
 
-                        if (Math.abs(beatmap.HitWindow300 - offset) < 2.5 && hitResult == 300) {
-                            latehit++;
-                            console.log('#', latehit, 'hit', offset, 'ms late', '(', beatmap.HitWindow300, 'ms hit window 300)');
-                        }
-
                         hitObject.hitOffset = offsetRaw;
                         hitObject.hitResult = hitResult;
                     }
@@ -1400,6 +1401,7 @@ function processBeatmap(osuContents){
                     if(isLateStart || currentHolding && withinCircle(replayFrame.x, replayFrame.y, ...repeatPosition, beatmap.ActualFollowpointRadius)){
                         scoringFrame.result = 30;
                         scoringFrame.combo++;
+                        scoringFrame.largeTickHits++;
 
                         if(scoringFrame.combo > scoringFrame.maxCombo)
                             scoringFrame.maxCombo = scoringFrame.combo;
@@ -1411,6 +1413,7 @@ function processBeatmap(osuContents){
                             scoringFrame.result = 'sliderbreak';
                         } else {
                             scoringFrame.result = 'large_tick_miss';
+                            scoringFrame.largeTickMisses++;
                         }
                         scoringFrame.combo = 0;
                         hitObject.MissedSliderTick = true;
@@ -1437,6 +1440,7 @@ function processBeatmap(osuContents){
                     if(isLateStart || currentHolding && withinCircle(replayFrame.x, replayFrame.y, ...tick.position, beatmap.ActualFollowpointRadius)){
                         scoringFrame.result = 10;
                         scoringFrame.combo++;
+                        scoringFrame.largeTickHits++;
 
                         if(scoringFrame.combo > scoringFrame.maxCombo)
                             scoringFrame.maxCombo = scoringFrame.combo;
@@ -1452,6 +1456,7 @@ function processBeatmap(osuContents){
                         scoringFrame.result = 'sliderbreak';
                     } else {
                         scoringFrame.result = 'large_tick_miss';
+                        scoringFrame.largeTickMisses++;
                     }
                     scoringFrame.combo = 0;
 
@@ -1465,7 +1470,11 @@ function processBeatmap(osuContents){
 
                     const currentHolding = replayFrame.K1 || replayFrame.K2 || replayFrame.M1 || replayFrame.M2;
 
-                    if(currentHolding && withinCircle(replayFrame.x, replayFrame.y, ...endPosition, beatmap.ActualFollowpointRadius)){
+                    const isLateStart = isUsingSliderHeadAccuracy 
+                    && hitObject.hitOffset <= beatmap.HitWindow50 
+                    && hitObject.hitOffset > (hitObject.actualEndTime - hitObject.startTime);
+
+                    if(isLateStart || currentHolding && withinCircle(replayFrame.x, replayFrame.y, ...endPosition, beatmap.ActualFollowpointRadius)){
                         const scoringFrame = newScoringFrame(beatmap.ScoringFrames);
                         scoringFrame.offset = hitObject.endTime;
                         scoringFrame.position = endPosition;
@@ -1505,8 +1514,12 @@ function processBeatmap(osuContents){
                     if (isUsingSliderHeadAccuracy) {
                         if (hitObject.MissedSliderEnd) {
                             scoringFrameEnd.result = 'slider_end_miss';
+                            scoringFrameEnd.smallTickMisses++;
+                            scoringFrameEnd.sliderEndMisses++;
                         } else {
                             scoringFrameEnd.result = 30;
+                            scoringFrameEnd.smallTickHits++;
+                            scoringFrameEnd.sliderEndHits++;
                         }
                         beatmap.ScoringFrames.push(scoringFrameEnd);
                         continue;
@@ -1555,46 +1568,51 @@ function processBeatmap(osuContents){
 
     const scoringFrames = beatmap.ScoringFrames.filter(a => ['miss', 50, 100, 300].includes(a.result));
 
-    for(const scoringFrame of scoringFrames){
-        const hitCount = scoringFrame.countMiss + scoringFrame.count50 + scoringFrame.count100 + scoringFrame.count300;
+    for(const sf of scoringFrames){
+        const hitCount = sf.countMiss + sf.count50 + sf.count100 + sf.count300;
 
         if (hitCount < firstHitobjectIndex) continue;
         if (hitCount >= lastHitobjectIndex && hitCount != beatmap.hitObjects.length) continue;
 
 		let params = {
-			maxCombo: scoringFrame.maxCombo,
-			n300: scoringFrame.count300,
-			n100: scoringFrame.count100,
-			n50: scoringFrame.count50,
-			misses: scoringFrame.countMiss
+			maxCombo: sf.maxCombo,
+			n300: sf.count300,
+			n100: sf.count100,
+			n50: sf.count50,
+			misses: sf.countMiss
 		};
+
+        let numerator = 300 * sf.count300 + 100 * sf.count100 + 50 * sf.count50;
+        let denominator = 300 * hitCount;
 
 		if (isSetOnLazer) {
 			params = {
-				/**
-				* "Large tick" hits for osu!standard.
-				*
-				* The meaning depends on the kind of score:
-				* - if set on osu!stable, this field is irrelevant and can be `0`
-				* - if set on osu!lazer *without* `CL`, this field is the amount of hit
-				*   slider ticks and repeats
-				* - if set on osu!lazer *with* `CL`, this field is the amount of hit
-				*   slider heads, ticks, and repeats
-				*/
-				osuLargeTickHits: score_info.statistics.large_tick_hit || score_info.maximum_statistics.large_tick_hit || 0,
-				/**
-				* "Small tick" hits for osu!standard.
-				*
-				* These are essentially the slider end hits for lazer scores without
-				* slider accuracy.
-				*
-				* Only relevant for osu!lazer.
-				*/
-				osuSmallTickHits: score_info.statistics.slider_tail_hit || score_info.maximum_statistics.slider_tail_hit || 0,
-				sliderEndHits: score_info.statistics.slider_tail_hit || score_info.maximum_statistics.slider_tail_hit || 0,
+				osuLargeTickHits: sf.largeTickHits,
+				osuSmallTickHits: sf.smallTickHits,
+				sliderEndHits: sf.sliderEndHits,
 				...params,
 			}
+
+            const maxSliderEndHits = sf.sliderEndHits + sf.sliderEndMisses;
+            const maxLargeTickHits = sf.largeTickMisses + sf.largeTickHits;
+            const maxSmallTickHits = sf.smallTickMisses + sf.smallTickHits;
+
+            if (isUsingSliderHeadAccuracy) {
+                const sliderEndHits = Math.min(sf.sliderEndHits, maxSliderEndHits);
+                const largeTickHits = Math.min(sf.largeTickHits, maxLargeTickHits);
+
+                numerator += 150 * sliderEndHits + 30 * largeTickHits;
+                denominator += 150 * maxSliderEndHits + 30 * maxLargeTickHits;
+            } else {
+                const largeTickHits = Math.min(sf.largeTickHits, maxLargeTickHits);
+                const smallTickHits = maxSmallTickHits;
+
+                numerator += 30 * largeTickHits + 10 * smallTickHits;
+                denominator += 30 * largeTickHits + 10 * maxSmallTickHits;
+            }
 		}
+
+        sf.accuracy = numerator / denominator * 100;
 
 		let perfResult;
 		if (hitCount == firstHitobjectIndex || hitCount == beatmap.hitObjects.length) 
@@ -1606,21 +1624,21 @@ function processBeatmap(osuContents){
         const stars = perfResult?.difficulty.stars ?? 0;
 
         //const stars = new ojsama.diff().calc({map: parser.map, mods});
-        //const index = Math.floor((scoringFrame.offset - start_offset) / 400)
+        //const index = Math.floor((sf.offset - start_offset) / 400)
         //const rosu_stars = star_strains[index < star_strains.length ? index : star_strains.length - 1]
         //console.log(rosu_stars)
 
         // const pp = ojsama.ppv2({
         //     stars,
-        //     combo: scoringFrame.maxCombo,
-        //     nmiss: scoringFrame.countMiss,
-        //     n300: scoringFrame.count300,
-        //     n100: scoringFrame.count100,
-        //     n50: scoringFrame.count50
+        //     combo: sf.maxCombo,
+        //     nmiss: sf.countMiss,
+        //     n300: sf.count300,
+        //     n100: sf.count100,
+        //     n50: sf.count50
         // });
 
-        scoringFrame.pp = pp;
-        scoringFrame.stars = stars;
+        sf.pp = pp;
+        sf.stars = stars;
     }
 
     let pp = 0, stars = 0;
@@ -1633,6 +1651,9 @@ function processBeatmap(osuContents){
         scoringFrame.pp = pp;
         scoringFrame.stars = stars;
     }
+
+    console.log(beatmap.ScoringFrames[beatmap.ScoringFrames.length - 1]);
+    console.log(score_info);
 
     const hitResults = _.countBy(beatmap.ScoringFrames, 'result');
 

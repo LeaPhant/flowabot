@@ -828,18 +828,10 @@ process.on('message', async obj => {
                 ctx.font = `${21 * scale_multiplier}px monospace`;
                 ctx.fillText(`★${parseFloat(stars).toFixed(2)}`, 15, 47 + 26 * scale_multiplier);
 
-                let accuracy = 100;
-
-                const totalHits = currentFrame.count50 * 300 + currentFrame.count100 * 300 + currentFrame.count300 * 300 + currentFrame.countMiss * 300;
-
-                if(totalHits > 0)
-                    accuracy = (currentFrame.count50 * 50 + currentFrame.count100 * 100 + currentFrame.count300 * 300)
-                    / totalHits * 100;
-
                 ctx.textAlign = "right";
                 ctx.textBaseline = "top";
                 ctx.font = `${26 * scale_multiplier}px monospace`;
-                ctx.fillText(`${accuracy.toFixed(2)}%`, ...accuracyPosition);
+                ctx.fillText(`${currentFrame.accuracy.toFixed(2)}%`, ...accuracyPosition);
 
                 const hitCountPosition = [canvas.width - 15, 45 + 26 * scale_multiplier];
 
