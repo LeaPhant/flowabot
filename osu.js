@@ -531,6 +531,158 @@ function convertStandardisedToClassic(score, object_count) {
     return Math.round((Math.pow(object_count, 2) * 32.57 + 100000) * score / 1000000);
 }
 
+function getModSettingsString(mods) {
+	let string = "";
+	for (const mod of mods) {
+		switch (mod.acronym) {
+			case "RD":
+				if (mod.settings?.angle_sharpness)
+					string += `**RD** ~ Seed: \`${mod.settings.seed}\`\n**RD** ~ Angle Sharpness: \`${mod.settings.angle_sharpness}\`\n`;
+				else
+					string += `**RD** ~ Seed: \`${mod.settings.seed}\`\n`;
+				break;
+			case "MR":
+				if (mod.settings?.reflection)
+					string += `**MR** ~ Axis: \`${mod.settings.reflection == 1 ? "vertical" : "both"}\`\n`;
+				else
+					string += `**MR** ~ Axis: \`horizontal\`\n`;
+				break;
+			case "WG":
+				string += `**WG** ~ Strength: \`${mod.settings.strength}\`\n`;
+				break;
+			case "DF":
+				string += `**DF** ~ Start Scale: \`${mod.settings.start_scale}\`\n`;
+				break;
+			case "GR":
+				string += `**GR** ~ Start Scale: \`${mod.settings.start_scale}\`\n`;
+				break;
+			case "MU":
+				if (!mod.settings)
+					break;
+				if (mod.settings.inverse_muting)
+					string += `**MU** ~ Start muted: \`${mod.settings.inverse_muting}\`\n`;
+				if (mod.settings.enable_metronome)
+					string += `**MU** ~ Metronome: \`${mod.settings.enable_metronome}\`\n`;
+				if (mod.settings.mute_combo_count)
+					string += `**MU** ~ Final volume at combo: \`${mod.settings.mute_combo_count}\`\n`;
+				if (mod.settings.affects_hit_sounds)
+					string += `**MU** ~ Mute hit sounds: \`${mod.settings.affects_hit_sounds}\`\n`;
+				break;
+			case "EZ":
+				if (!mod.settings)
+					break;
+				string += `**EZ** ~ Extra Lives: \`${mod.settings.retries}\`\n`;
+				break;
+			case "HD":
+				if (!mod.settings)
+					break;
+				if (mod.settings.only_fade_approach_circles)
+					string += `**HD** ~ Only fade approach circles: \`${mod.settings.only_fade_approach_circles}\`\n`;
+				break;
+			case "FL":
+				if (!mod.settings)
+					break;
+				if (mod.settings.follow_delay)
+					string += `**FL** ~ Follow delay: \`${mod.settings.follow_delay}\`\n`;
+				if (mod.settings.size_multiplier)
+					string += `**FL** ~ Flashlight size: \`${mod.settings.size_multiplier}\`\n`;
+				if (mod.settings.combo_based_size)
+					string += `**FL** ~ Change size based on combo: \`${mod.settings.combo_based_size}\`\n`;
+				break;
+			case "AC":
+				if (!mod.settings)
+					break;
+				if (mod.settings.minimum_accuracy)
+					string += `**AC** ~ Minimum accuracy: \`${mod.settings.minimum_accuracy}\`\n`;
+				break;
+			case "CL":
+				if (!mod.settings)
+					break;
+				if (mod.settings.no_slider_head_accuracy)
+					string += `**CL** ~ No slider head accuracy: \`${mod.settings.no_slider_head_accuracy}\`\n`;
+				if (mod.settings.classic_note_lock)
+					string += `**CL** ~ Apply Classic note lock: \`${mod.settings.classic_note_lock}\`\n`;
+				if (mod.settings.classic_health)
+					string += `**CL** ~ Classic health: \`${mod.settings.classic_health}\`\n`;
+				break;
+			case "WU":
+				if (!mod.settings)
+					break;
+				if (mod.settings.initial_rate)
+					string += `**WU** ~ Initial rate: \`${mod.settings.initial_rate}\`\n`;
+				if (mod.settings.final_rate)
+					string += `**WU** ~ Final rate: \`${mod.settings.final_rate}\`\n`;
+				break;
+			case "WD":
+				if (!mod.settings)
+					break;
+				if (mod.settings.initial_rate)
+					string += `**WD** ~ Initial rate: \`${mod.settings.initial_rate}\`\n`;
+				if (mod.settings.final_rate)
+					string += `**WD** ~ Final rate: \`${mod.settings.final_rate}\`\n`;
+				break;
+			case "BR":
+				if (!mod.settings)
+					break;
+				if (mod.settings.spin_speed)
+					string += `**BR** ~ Roll speed: \`${mod.settings.spin_speed}\`\n`;
+				if (mod.settings.direction)
+					string += `**BR** ~ Direction: \`${mod.settings.direction}\`\n`;
+				break;
+			case "AD":
+				if (!mod.settings)
+					break;
+				if (mod.settings.scale)
+					string += `**AD** ~ Initial size: \`${mod.settings.scale}\`\n`;
+				if (mod.settings.style)
+					string += `**AD** ~ Style: \`${mod.settings.style}\`\n`;
+				break;
+			case "NS":
+				if (!mod.settings)
+					break;
+				if (mod.settings.hidden_combo_count)
+					string += `**NS** ~ Hidden at combo: \`${mod.settings.hidden_combo_count}\`\n`;
+				break;
+			case "MG":
+				if (!mod.settings)
+					break;
+				if (mod.settings.attraction_strength)
+					string += `**MG** ~ Attraction strength: \`${mod.settings.attraction_strength}\`\n`;
+				break;
+			case "RP":
+				if (!mod.settings)
+					break;
+				if (mod.settings.repulsion_strength)
+					string += `**RP** ~ Repulsion strength: \`${mod.settings.repulsion_strength}\`\n`;
+				break;
+			case "AS":
+				if (!mod.settings)
+					break;
+				if (mod.settings.initial_rate)
+					string += `**AS** ~ Initial rate: \`${mod.settings.initial_rate}\`\n`;
+				break;
+			case "DP":
+				if (!mod.settings)
+					break;
+				if (mod.settings.max_depth)
+					string += `**DP** ~ Maximum depth: \`${mod.settings.max_depth}\`\n`;
+				if (mod.settings.show_approach_circles)
+					string += `**DP** ~ Show Approach Circles: \`${mod.settings.show_approach_circles}\`\n`;
+				break;
+			case "BM":
+				if (!mod.settings)
+					break;
+				if (mod.settings.max_size_combo_count)
+					string += `**BM** ~ Maximum size at combo: \`${mod.settings.max_size_combo_count}\`\n`;
+				if (mod.settings.max_cursor_size)
+					string += `**BM** ~ Final size multiplier: \`${mod.settings.max_cursor_size}\`\n`;
+				break;
+		}
+	}
+
+	return string;
+}
+
 async function getScore(recent_raw, cb){
     let recent = {};
     let best_score;
@@ -1377,6 +1529,8 @@ module.exports = {
         lines[3] += ' BPM ~ ';
         lines[3] += `**${+recent.stars.toFixed(2)}**★`;
 
+		let mod_settings_value = getModSettingsString(recent.mods);
+
         embed.fields.push(
             {
                 name: lines[0],
@@ -1387,6 +1541,13 @@ module.exports = {
                 value: lines[3]
             }
         );
+
+		if (mod_settings_value.length > 0) {
+			embed.fields.push({
+				name: "Mod Settings",
+				value: mod_settings_value
+			});
+		}
 
         return embed;
 
