@@ -20,6 +20,12 @@ let isSetOnLazer = false;
 
 const PLAYFIELD_WIDTH = 512;
 const PLAYFIELD_HEIGHT = 384;
+const PLAYFIELD_DIAGONAL = vectorLength([PLAYFIELD_WIDTH, PLAYFIELD_HEIGHT]);
+const PLAYFIELD_CENTER = [PLAYFIELD_WIDTH / 2, PLAYFIELD_HEIGHT / 2];
+
+const PLAYFIELD_EDGE_RATIO = 0.375;
+const BORDER_DISTANCE_X = PLAYFIELD_WIDTH * PLAYFIELD_EDGE_RATIO;
+const BORDER_DISTANCE_Y = PLAYFIELD_HEIGHT * PLAYFIELD_EDGE_RATIO;
 
 const MAX_RADIAN = 360 * (Math.PI / 180);
 
@@ -50,6 +56,11 @@ const keys_enum = {
     "K2": Math.pow(2,3),
     "S": Math.pow(2,4)
 }
+
+const FLOAT_EPSILON = 1e-3;
+
+const AlmostEquals = (value1, value2, acceptableDifference = FLOAT_EPSILON) => Math.abs(value1 - value2) <= acceptableDifference;
+const clamp = (number, min, max) => Math.max(Math.min(number, max), min);
 
 function parseKeysPressed(num){
     let keys = Number(num);
@@ -125,6 +136,103 @@ class Cursor {
     }
 }
 
+const INT32_MIN_VALUE = -2147483648;
+const INT32_MAX_VALUE = 2147483647;
+
+class Random {
+    _seedArray;
+    _inext;
+    _inextp;
+
+    constructor(seed) {
+        this.seed = seed;
+
+        let seedArray = new Array(56);
+ 
+        let subtraction = (seed == INT32_MIN_VALUE) ? INT32_MAX_VALUE : Math.abs(seed);
+        let mj = 161803398 - subtraction; // magic number based on Phi (golden ratio)
+        seedArray[55] = mj;
+        let mk = 1;
+
+        let ii = 0;
+        for (let i = 1; i < 55; i++)
+        {
+            // The range [1..55] is special (Knuth) and so we're wasting the 0'th position.
+            if ((ii += 21) >= 55)
+            {
+                ii -= 55;
+            }
+
+            seedArray[ii] = mk;
+            mk = mj - mk;
+            if (mk < 0)
+            {
+                mk += INT32_MAX_VALUE;
+            }
+
+            mj = seedArray[ii];
+        }
+
+        for (let k = 1; k < 5; k++)
+        {
+            for (let i = 1; i < 56; i++)
+            {
+                let n = i + 30;
+                if (n >= 55)
+                {
+                    n -= 55;
+                }
+
+                seedArray[i] -= seedArray[1 + n];
+                if (seedArray[i] < 0)
+                {
+                    seedArray[i] += INT32_MAX_VALUE;
+                }
+            }
+        }
+
+        this._seedArray = seedArray;
+        this._inext = 0;
+        this._inextp = 21;
+    }
+
+    sample () {
+        return this.InternalSample() * (1.0 / INT32_MAX_VALUE);
+    }
+
+    InternalSample () {
+        let locINext = this._inext;
+        if (++locINext >= 56)
+        {
+            locINext = 1;
+        }
+
+        let locINextp = this._inextp;
+        if (++locINextp >= 56)
+        {
+            locINextp = 1;
+        }
+
+        let seedArray = this._seedArray;
+        let retVal = seedArray[locINext] - seedArray[locINextp];
+
+        if (retVal == INT32_MAX_VALUE)
+        {
+            retVal--;
+        }
+        if (retVal < 0)
+        {
+            retVal += INT32_MAX_VALUE;
+        }
+
+        seedArray[locINext] = retVal;
+        this._inext = locINext;
+        this._inextp = locINextp;
+
+        return retVal;
+    }
+}
+
 function getCursorAt(timestamp, replay){
     while(replay.lastCursor < replay.replay_data.length && replay.replay_data[replay.lastCursor].offset < timestamp)
         replay.lastCursor++;
@@ -172,6 +280,7 @@ async function parseReplay(buf, decompress = true){
 		if (data.hasOwnProperty("score_info")) {
 			isSetOnLazer = true;
 			score_info = data.score_info;
+            console.log(JSON.stringify(score_info, undefined, 2))
 		}
         replay_data = data.replay_data;
 	}
@@ -259,9 +368,17 @@ function binomialCoef(n, k){
 	return r;
 }
 
+function vectorLength(v) {
+    return Math.sqrt(Math.pow(v[0], 2) + Math.pow(v[1], 2))
+}
+
 function vectorDistance(hitObject1, hitObject2){
     return Math.sqrt((hitObject2[0] - hitObject1[0]) * (hitObject2[0] - hitObject1[0])
         + (hitObject2[1] - hitObject1[1]) * (hitObject2[1] - hitObject1[1]));
+}
+
+function vectorEquals(a, b) {
+    return a[0] == b[0] && a[1] == b[1];
 }
 
 function vectorSubtract(a, b){
@@ -289,6 +406,16 @@ function vectorDivide(a, d){
     return [
         a[0] / d,
         a[1] / d
+    ];
+}
+
+function vectorRotate(v, rotation)
+{
+    const angle = Math.atan2(v[1], v[0]) + rotation;
+    const length = vectorLength(v);
+    return [
+        length * Math.cos(angle),
+        length * Math.sin(angle)
     ];
 }
 
@@ -419,6 +546,357 @@ function getCursorAtRaw(replay, time){
     return replay.replay_data[lastIndex] || replay.replay_data[replay.replay_data.length - 1];
 }
 
+function RandomGaussian(random, mean = 0, stdDev = 1){
+    // Generate 2 random numbers in the interval (0,1].
+    // x1 must not be 0 since log(0) = undefined.
+    const x1 = 1 - random.sample();
+    const x2 = 1 - random.sample();
+
+    const stdNormal = Math.sqrt(-2 * Math.log(x1)) * Math.sin(2 * Math.PI * x2);
+    return mean + stdDev * stdNormal;
+}
+
+function getRandomOffset(random, stdDev, angleSharpness = 7){
+    // Range: [0.5, 2]
+    // Higher angle sharpness -> lower multiplier
+    const customMultiplier = (1.5 * 10 - angleSharpness) / (1.5 * 10 - 7);
+
+    return RandomGaussian(random, 0, stdDev * customMultiplier);
+}
+
+function getRelativeTargetAngle(angleSharpness = 7, targetDistance, offset, flowDirection) {
+    // Range: [0.1, 1]
+    angleSharpness = angleSharpness / 10;
+    // Range: [0, 0.9]
+    const angleWideness = 1 - angleSharpness;
+
+    // Range: [-60, 30]
+    const customOffsetX = angleSharpness * 100 - 70;
+    // Range: [-0.075, 0.15]
+    const customOffsetY = angleWideness * 0.25 - 0.075;
+
+    targetDistance += customOffsetX;
+    let angle = 2.16 / (1 + 200 * Math.exp(0.036 * (targetDistance - 310 + customOffsetX))) + 0.5;
+    angle += offset + customOffsetY;
+
+    const relativeAngle = Math.PI - angle;
+
+    return flowDirection ? -relativeAngle : relativeAngle;
+}
+
+function IsHitObjectOnBeat(hitObject, downbeatsOnly = false) {
+    const timingPoint = getTimingPoint(beatmap.timingPoints, hitObject.startTime);
+
+    const timeSinceTimingPoint = hitObject.startTime - timingPoint.offset;
+    let { beatLength } = timingPoint.beatLength;
+
+    if (downbeatsOnly)
+        beatLength *= timingPoint.timingSignature;
+
+    // Ensure within 1ms of expected location.
+    return Math.abs(timeSinceTimingPoint + 1) % beatLength < 2;
+}
+
+function shouldStartNewSection(random, i){
+    if (i == 0)
+        return true;
+
+    // Exclude new-combo-spam and 1-2-combos.
+    const previousObjectStartedCombo = (beatmap.hitObjects[Math.max(0, i - 2)].ComboNumber - 1) > 1 &&
+                                        beatmap.hitObjects[i - 1].newCombo;
+    const previousObjectWasOnDownbeat = IsHitObjectOnBeat(beatmap.hitObjects[i - 1], true);
+    const previousObjectWasOnBeat = IsHitObjectOnBeat(beatmap.hitObjects[i - 1]);
+
+    return (previousObjectStartedCombo && random.sample() < 0.6) ||
+            previousObjectWasOnDownbeat ||
+            (previousObjectWasOnBeat &&  random.sample() < 0.4);
+}
+
+function shouldApplyFlowChange(random, i) {
+    const previousObjectStartedCombo = (beatmap.hitObjects[Math.max(0, i - 2)].ComboNumber - 1) > 1 &&
+                                        beatmap.hitObjects[i - 1].newCombo;
+
+    return previousObjectStartedCombo && random.sample() < 0.6;
+}
+
+function FlipSliderInPlaceHorizontally(slider) {
+    slider.position[0] = PLAYFIELD_WIDTH - slider.position[0];
+    slider.endPosition[0] = PLAYFIELD_WIDTH - slider.endPosition[0];
+
+    for (let point of slider.points)
+        point[0] = PLAYFIELD_WIDTH - point[0];
+
+    for (let dot of slider.SliderDots)
+        dot[0] = PLAYFIELD_WIDTH - dot[0];
+
+    for (let tick of slider.SliderTicks)
+        tick[0] = PLAYFIELD_WIDTH - tick[0];
+}
+
+function RotateSlider(slider, rotation) {
+    slider.position = vectorRotate(slider.position, rotation);
+    slider.endPosition = vectorRotate(slider.endPosition, rotation);
+
+    for (let point of slider.points)
+        point = vectorRotate(point, rotation);
+
+    for (let dot of slider.SliderDots)
+        dot = vectorRotate(dot, rotation);
+
+    for (let tick of slider.SliderTicks)
+        tick = vectorRotate(tick, rotation);
+}
+
+function RotateAwayFromEdge(prevObjectPos, posRelativeToPrev, rotationRatio = 0.5) {
+    let relativeRotationDistance = 0;
+
+    if (prevObjectPos[0] < PLAYFIELD_CENTER[0]) {
+        relativeRotationDistance = Math.max(
+            (BORDER_DISTANCE_X - prevObjectPos[0]) / BORDER_DISTANCE_X,
+            relativeRotationDistance
+        );
+    } else {
+        relativeRotationDistance = Math.max(
+            (prevObjectPos[0] - (PLAYFIELD_WIDTH - BORDER_DISTANCE_X)) / BORDER_DISTANCE_X,
+            relativeRotationDistance
+        );
+    }
+
+    if (prevObjectPos[1] < PLAYFIELD_CENTER[1]) {
+        relativeRotationDistance = Math.max(
+            (BORDER_DISTANCE_Y - prevObjectPos[1]) / BORDER_DISTANCE_Y,
+            relativeRotationDistance
+        );
+    } else {
+        relativeRotationDistance = Math.max(
+            (prevObjectPos[1] - (PLAYFIELD_HEIGHT - BORDER_DISTANCE_Y)) / BORDER_DISTANCE_Y,
+            relativeRotationDistance
+        );
+    }
+
+    return RotateVectorTowardsVector(
+        posRelativeToPrev,
+        vectorSubtract(PLAYFIELD_CENTER, prevObjectPos),
+        Math.min(1, relativeRotationDistance * rotationRatio)
+    );
+}
+
+function RotateVectorTowardsVector(initial, destination, rotationRatio) {
+    const initialAngleRad = Math.atan2(initial[1], initial[0]);
+    const destAngleRad = Math.atan2(destination[1], destination[0]);
+
+    let diff = destAngleRad - initialAngleRad;
+
+    while (diff < -Math.PI) diff += 2 * Math.PI;
+
+    while (diff > Math.PI) diff -= 2 * Math.PI;
+
+    const finalAngleRad = initialAngleRad + rotationRatio * diff;
+
+    return [
+        vectorLength(initial) * Math.cos(finalAngleRad),
+        vectorLength(initial) * Math.sin(finalAngleRad)
+    ];
+}
+
+function calculateCentreOfMass(slider) {
+    const sample_step = 50;
+
+    // just sample the start and end positions if the slider is too short
+    if (slider.pixelLength <= sample_step) {
+        return vectorDivide(vectorAdd(slider.position, slider.endPosition), 2);
+    }
+
+    let count = 0;
+    let sum = [0, 0];
+    const pathDistance = slider.pixelLength;
+
+    for (let i = 0; i < pathDistance; i += sample_step)
+    {
+        sum = vectorAdd(sum, slider.SliderDots[Math.max(0, Math.floor(i / pathDistance) * slider.SliderDots.length - 1)])
+        count++;
+    }
+
+    return vectorDivide(sum, count);
+}
+
+function getSliderRotation(slider) {
+    return Math.atan2(slider.endPosition[1], slider.endPosition[0]);
+}
+
+function getAngleDifference(angle1, angle2) {
+    const diff = Math.abs(angle1 - angle2) % (Math.PI * 2);
+    return Math.min(diff, Math.PI * 2 - diff);
+}
+
+function computeModifiedPosition(current, previous, beforePrevious) {
+    let previousAbsoluteAngle = 0;
+
+    if (previous != null) {
+        if (previous.objectName == 'slider') {
+            previousAbsoluteAngle = getSliderRotation(previous);
+        } else {
+            const earliestPosition = beforePrevious?.endPosition ?? PLAYFIELD_CENTER;
+            const relativePosition = vectorSubtract(previous.position, earliestPosition);
+            previousAbsoluteAngle = Math.atan2(relativePosition[1], relativePosition[0]);
+        }
+    }
+
+    let absoluteAngle = previousAbsoluteAngle + current.RelativeAngle;
+
+    let posRelativeToPrev = [
+        current.DistanceFromPrevious * Math.cos(absoluteAngle),
+        current.DistanceFromPrevious * Math.sin(absoluteAngle)
+    ];
+
+    const lastEndPosition = previous?.endPosition ?? PLAYFIELD_CENTER;
+
+    posRelativeToPrev = RotateAwayFromEdge(lastEndPosition, posRelativeToPrev);
+
+    current.position = vectorAdd(lastEndPosition, posRelativeToPrev);
+
+    if (!(current.objectName == 'slider'))
+        return;
+
+    absoluteAngle = Math.atan2(posRelativeToPrev[1], posRelativeToPrev[0]);
+
+    const centreOfMassOriginal = calculateCentreOfMass(current);
+    let centreOfMassModified = vectorRotate(centreOfMassOriginal, current.Rotation + absoluteAngle - getSliderRotation(current));
+    centreOfMassModified = RotateAwayFromEdge(current.position, centreOfMassModified);
+
+    const relativeRotation = Math.atan2(centreOfMassModified[1], centreOfMassModified[0]) - Math.atan2(centreOfMassOriginal[1], centreOfMassOriginal[0]);
+    if (!AlmostEquals(relativeRotation, 0))
+        RotateSlider(current, relativeRotation);
+}
+
+function GeneratePositionInfos() {
+    let previousPosition = PLAYFIELD_CENTER;
+    let previousAngle = 0;
+
+    for (const hitObject of beatmap.hitObjects) {
+        const relativePosition = vectorSubtract(hitObject.position, previousPosition);
+        const absoluteAngle = Math.atan2(relativePosition[1], relativePosition[0]);
+        const relativeAngle = absoluteAngle - previousAngle;
+
+        hitObject.RelativeAngle = relativeAngle;
+        hitObject.DistanceFromPrevious = vectorLength(relativePosition);
+
+        if (hitObject.objectName == 'slider') {
+            const absoluteRotation = getSliderRotation(hitObject);
+            hitObject.Rotation = absoluteRotation - absoluteAngle;
+        }
+
+        previousPosition = hitObject.endPosition;
+        previousAngle = absoluteAngle;
+    }
+}
+
+function clampToPlayfieldWithPadding(position, padding) {
+    return [
+        clamp(position[0], padding, PLAYFIELD_WIDTH - padding),
+        clamp(position[1], padding, PLAYFIELD_HEIGHT - padding)
+    ]
+}
+
+function clampHitCircleToPlayfield(hitObject)
+{
+    const previousPosition = hitObject.position;
+    hitObject.endPosition = hitObject.position = clampToPlayfieldWithPadding(
+        hitObject.position,
+        beatmap.Radius
+    );
+
+    return vectorSubtract(hitObject.position, previousPosition);
+}
+
+function CalculatePossibleMovementBounds(slider) {
+    const sliderDotXs = slider.SliderDots.map(d => d[0]);
+    const sliderDotYs = slider.SliderDots.map(d => d[1]);
+
+    // Compute the bounding box of the slider.
+    let minX = Math.min(...sliderDotXs);
+    let maxX = Math.max(...sliderDotXs);
+
+    let minY = Math.min(...sliderDotYs);
+    let maxY = Math.max(...sliderDotYs);
+
+    // Take the circle radius into account.
+    const { Radius } = beatmap;
+
+    minX -= Radius;
+    minY -= Radius;
+
+    maxX += Radius;
+    maxY += Radius;
+
+    // Given the bounding box of the slider (via min/max X/Y),
+    // the amount that the slider can move to the left is minX (with the sign flipped, since positive X is to the right),
+    // and the amount that it can move to the right is WIDTH - maxX.
+    // Same calculation applies for the Y axis.
+    const left = -minX;
+    const right = PLAYFIELD_WIDTH - maxX;
+    const top = -minY;
+    const bottom = PLAYFIELD_HEIGHT - maxY;
+
+    return {
+        left,
+        right,
+        top,
+        bottom,
+        width: right - left,
+        height:  bottom - top
+    }
+}
+
+function clampSliderToPlayfield(slider) {
+    let possibleMovementBounds = CalculatePossibleMovementBounds(slider);
+
+    // The slider rotation applied in computeModifiedPosition might make it impossible to fit the slider into the playfield
+    // For example, a long horizontal slider will be off-screen when rotated by 90 degrees
+    // In this case, limit the rotation to either 0 or 180 degrees
+    if (possibleMovementBounds.width < 0 || possibleMovementBounds.height < 0)
+    {
+        const currentRotation = getSliderRotation(slider);
+        const diff1 = getAngleDifference(slider.Rotation, currentRotation);
+        const diff2 = getAngleDifference(slider.Rotation + Math.PI, currentRotation);
+
+        if (diff1 < diff2) {
+            RotateSlider(slider, slider.Rotation - getSliderRotation(slider));
+        } else {
+            RotateSlider(slider, slider.Rotation + Math.PI - getSliderRotation(slider));
+        }
+
+        possibleMovementBounds = CalculatePossibleMovementBounds(slider);
+    }
+
+    let previousPosition = slider.position;
+
+    // Clamp slider position to the placement area
+    // If the slider is larger than the playfield, at least make sure that the head circle is inside the playfield
+    const newX = possibleMovementBounds.width < 0
+        ? clamp(possibleMovementBounds.left, 0, PLAYFIELD_WIDTH)
+        : clamp(previousPosition[0], possibleMovementBounds.left, possibleMovementBounds.right);
+
+        const newY = possibleMovementBounds.height < 0
+        ? clamp(possibleMovementBounds.top, 0, PLAYFIELD_HEIGHT)
+        : clamp(previousPosition[1], possibleMovementBounds.top, possibleMovementBounds.bottom);
+
+    slider.position = [newX, newY];
+
+    return vectorSubtract(slider.position, previousPosition);
+}
+
+function applyDecreasingShift(hitObjects, shift) {
+    for (const [i, hitObject] of hitObjects.entries()) {
+        // The first object is shifted by a vector slightly smaller than shift
+        // The last object is shifted by a vector slightly larger than zero
+        const position = vectorAdd(hitObject.position, vectorMultiply(shift, (hitObjects.length - i) / (hitObjects.length + 1)));
+
+        hitObject.position = clampToPlayfieldWithPadding(position, beatmap.Radius);
+    }
+}
+
+
 function processBeatmap(osuContents){
     // AR
     //beatmap.TimeFadein = difficultyRange(beatmap.ApproachRate, 1800, 1200, 450);
@@ -466,6 +944,13 @@ function processBeatmap(osuContents){
 
     if(isNaN(beatmap.StackLeniency))
         beatmap.StackLeniency = 0.7;
+
+    for (const hitObject of beatmap.hitObjects) {
+        if (hitObject.objectName != 'circle') continue;
+
+        hitObject.endTime = hitObject.startTime;
+        hitObject.endPosition = hitObject.position;
+    }
 
     // HR/MR inversion
 	// MR default setting is horizontal (settings is missing), reflection=1 means vertical, reflection=2 means both vertical and horizontal
@@ -678,9 +1163,6 @@ function processBeatmap(osuContents){
     beatmap.hitObjects.forEach((hitObject, i) => {
         hitObject.StackHeight = 0;
 
-        if(hitObject.objectName == "circle")
-            hitObject.endTime = hitObject.startTime;
-
         if(hitObject.objectName == "spinner"){
             hitObject.duration = hitObject.endTime - hitObject.startTime;
 
@@ -700,9 +1182,6 @@ function processBeatmap(osuContents){
             hitObject.latestHit = Math.min(hitObject.latestHit, hitObject.endTime);
 
         let timingPoint = getTimingPoint(beatmap.timingPoints, hitObject.startTime);
-
-        if(hitObject.objectName == "circle")
-            hitObject.endPosition = hitObject.position;
 
         if(hitObject.objectName == 'slider'){
             hitObject.endPosition = hitObject.SliderDots[hitObject.SliderDots.length - 1];
@@ -839,6 +1318,99 @@ function processBeatmap(osuContents){
             });
         }
     });
+
+    if (enabled_mods.includes('RD')) {
+        const settings = score_info?.mods?.find(m => m.acronym == 'RD')?.settings;
+
+        const seed = settings?.seed ?? Math.floor(Math.random() * INT32_MAX_VALUE); 
+        const angleSharpness = settings?.angle_sharpness ?? 7; 
+
+        const random = new Random(seed);
+
+        GeneratePositionInfos();
+
+        let sectionOffset = 0;
+
+        // Whether the angles are positive or negative (clockwise or counter-clockwise flow).
+        let flowDirection = false;
+
+        for (const [i, hitObject] of beatmap.hitObjects.entries()) {
+            if (shouldStartNewSection(random, i)) {
+                sectionOffset = getRandomOffset(random, 0.0008, angleSharpness);
+                flowDirection = !flowDirection;
+            }
+
+            if (hitObject.objectName == 'slider' && random.sample() < 0.5) {
+                FlipSliderInPlaceHorizontally(hitObject);
+            }
+
+            if (i == 0) {
+                hitObject.DistanceFromPrevious = random.sample() * PLAYFIELD_HEIGHT / 2;
+                hitObject.RelativeAngle = random.sample() * 2 * Math.PI - Math.PI;
+            } else {
+                // Offsets only the angle of the current hit object if a flow change occurs.
+                let flowChangeOffset = 0;
+
+                // Offsets only the angle of the current hit object.
+                let oneTimeOffset = getRandomOffset(random, 0.002, angleSharpness);
+
+                if (shouldApplyFlowChange(random, i)) {
+                    flowChangeOffset = getRandomOffset(random, 0.002, angleSharpness);
+                    flowDirection = !flowDirection;
+                }
+
+                const totalOffset =
+                    // sectionOffset and oneTimeOffset should mainly affect patterns with large spacing.
+                    (sectionOffset + oneTimeOffset) * hitObject.DistanceFromPrevious +
+                    // flowChangeOffset should mainly affect streams.
+                    flowChangeOffset * (PLAYFIELD_DIAGONAL - hitObject.DistanceFromPrevious);
+
+                hitObject.RelativeAngle = getRelativeTargetAngle(angleSharpness, hitObject.DistanceFromPrevious, totalOffset, flowDirection);
+            }
+        }
+
+        let previous;
+
+        for (const [i, hitObject] of beatmap.hitObjects.entries()) {
+            if (hitObject.objectName == 'spinner') {
+                previous = hitObject;
+                continue;
+            }
+
+            computeModifiedPosition(hitObject, previous, i > 1 ? beatmap.hitObjects[i - 2] : undefined);
+
+            let shift = [0, 0];
+
+            switch (hitObject.objectName) {
+                case 'circle':
+                    shift = clampHitCircleToPlayfield(hitObject);
+                    break;
+
+                case 'slider':
+                    shift = clampSliderToPlayfield(hitObject);
+                    break;
+            }
+
+            const preceding_hitobjects_to_shift = 10;
+
+            if (!vectorEquals(shift, [0, 0])) {
+                const toBeShifted = []
+
+                for (let j = i - 1; j >= i - preceding_hitobjects_to_shift && j >= 0; j--)
+                {
+                    // only shift hit circles
+                    if (hitObject.objectName != 'circle') break;
+
+                    toBeShifted.push(beatmap.hitObjects[j]);
+                }
+
+                if (toBeShifted.Count > 0)
+                    applyDecreasingShift(toBeShifted, shift);
+            }
+
+            previous = hitObject;
+        }
+    }
 
     if(renderTime == 0 && options.percent){
         renderTime = beatmap.hitObjects[Math.floor(options.percent * (beatmap.hitObjects.length - 1))].startTime - 2000;
