@@ -535,27 +535,6 @@ function getModSettingsString(mods) {
 	let string = "";
 	for (const mod of mods) {
 		switch (mod.acronym) {
-			case "RD":
-				if (mod.settings?.angle_sharpness)
-					string += `**RD** ~ Seed: \`${mod.settings.seed}\`\n**RD** ~ Angle Sharpness: \`${mod.settings.angle_sharpness}\`\n`;
-				else
-					string += `**RD** ~ Seed: \`${mod.settings.seed}\`\n`;
-				break;
-			case "MR":
-				if (mod.settings?.reflection)
-					string += `**MR** ~ Axis: \`${mod.settings.reflection == 1 ? "vertical" : "both"}\`\n`;
-				else
-					string += `**MR** ~ Axis: \`horizontal\`\n`;
-				break;
-			case "WG":
-				string += `**WG** ~ Strength: \`${mod.settings.strength}\`\n`;
-				break;
-			case "DF":
-				string += `**DF** ~ Start Scale: \`${mod.settings.start_scale}\`\n`;
-				break;
-			case "GR":
-				string += `**GR** ~ Start Scale: \`${mod.settings.start_scale}\`\n`;
-				break;
 			case "MU":
 				if (!mod.settings)
 					break;
@@ -573,6 +552,20 @@ function getModSettingsString(mods) {
 					break;
 				string += `**EZ** ~ Extra Lives: \`${mod.settings.retries}\`\n`;
 				break;
+            case "HT":
+            case "DT":
+                if (!mod.settings)
+                    break;
+                if (mod.settings.adjust_pitch)
+                    string += `**${mod.acronym}** ~ Adjust pitch: \`${mod.settings.adjust_pitch}\`\n`;
+                break;
+            case "SD":
+            case "PF":
+                if (!mod.settings)
+                    break;
+                if (mod.settings.restart)
+                    string += `**${mod.acronym}** ~ Restart on fail: \`${mod.settings.restart}\`\n`;
+                break;
 			case "HD":
 				if (!mod.settings)
 					break;
@@ -594,7 +587,19 @@ function getModSettingsString(mods) {
 					break;
 				if (mod.settings.minimum_accuracy)
 					string += `**AC** ~ Minimum accuracy: \`${mod.settings.minimum_accuracy}\`\n`;
+                if (mod.settings.accuracy_judge_mode)
+                    string += `**AC** ~ Accuracy mode: \`${mod.settings.accuracy_judge_mode}\`\n`;
+                if (mod.settings.restart)
+                    string += `**AC** ~ Restart on fail: \`${mod.settings.restart}\`\n`;
 				break;
+            case "TP":
+                if (!mod.settings)
+                    break;
+                if (mod.settings.seed)
+                    string += `**TP** ~ Seed: \`${mod.settings.seed}\`\n`;
+                if (mod.settings.metronome)
+                    string += `**TP** ~ Metronome ticks: \`${mod.settings.metronome}\`\n`;
+                break;
 			case "CL":
 				if (!mod.settings)
 					break;
@@ -605,21 +610,43 @@ function getModSettingsString(mods) {
 				if (mod.settings.classic_health)
 					string += `**CL** ~ Classic health: \`${mod.settings.classic_health}\`\n`;
 				break;
+            case "RD":
+                if (!mod.settings)
+                    break;
+                if (mod.settings.seed)
+                    string += `**RD** ~ Seed: \`${mod.settings.seed}\`\n`;
+                if (mod.settings.angle_sharpness)
+                    string += `**RD** ~ Angle sharpness: \`${mod.settings.angle_sharpness}\`\n`;
+                break;
+            case "MR":
+                if (!mod.settings)
+                    string += `**MR** ~ Axis: \`horizontal\`\n`;
+                else if (mod.settings.reflection == 1)
+                    string += `**MR** ~ Axis: \`vertical\`\n`;
+                else if (mod.settings.reflection == 2)
+                    string += `**MR** ~ Axis: \`both\`\n`;
+                break;
+            case "WG":
+                if (!mod.settings)
+                    break;
+                if (mod.settings.strength)
+                    string += `**WG** ~ Strength: \`${mod.settings.strength}\`\n`;
+                break;
+            case "GR":
+            case "DF":
+                if (!mod.settings)
+                    break;
+                if (mod.settings.start_scale)
+                    string += `**${mod.acronym}** ~ Starting Size: \`${mod.settings.start_scale}\`\n`;
+                break;
 			case "WU":
+            case "WD":
 				if (!mod.settings)
 					break;
 				if (mod.settings.initial_rate)
-					string += `**WU** ~ Initial rate: \`${mod.settings.initial_rate}\`\n`;
+					string += `**${mod.acronym}** ~ Initial rate: \`${mod.settings.initial_rate}\`\n`;
 				if (mod.settings.final_rate)
-					string += `**WU** ~ Final rate: \`${mod.settings.final_rate}\`\n`;
-				break;
-			case "WD":
-				if (!mod.settings)
-					break;
-				if (mod.settings.initial_rate)
-					string += `**WD** ~ Initial rate: \`${mod.settings.initial_rate}\`\n`;
-				if (mod.settings.final_rate)
-					string += `**WD** ~ Final rate: \`${mod.settings.final_rate}\`\n`;
+					string += `**${mod.acronym}** ~ Final rate: \`${mod.settings.final_rate}\`\n`;
 				break;
 			case "BR":
 				if (!mod.settings)
