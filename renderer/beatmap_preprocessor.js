@@ -20,7 +20,8 @@ let isSetOnLazer = false;
 
 const PLAYFIELD_WIDTH = 512;
 const PLAYFIELD_HEIGHT = 384;
-const PLAYFIELD_DIAGONAL = vectorLength([PLAYFIELD_WIDTH, PLAYFIELD_HEIGHT]);
+const PLAYFIELD_DIAGONAL_REAL = vectorLength([PLAYFIELD_WIDTH, PLAYFIELD_HEIGHT]);
+const PLAYFIELD_DIAGONAL = 640.995056;
 const PLAYFIELD_CENTER = [PLAYFIELD_WIDTH / 2, PLAYFIELD_HEIGHT / 2];
 
 const PLAYFIELD_EDGE_RATIO = 0.375;
@@ -197,7 +198,10 @@ class Random {
     }
 
     sample () {
-        return this.InternalSample() * (1.0 / INT32_MAX_VALUE);
+		let sample = this.InternalSample() * (1.0 / INT32_MAX_VALUE);
+		while (sample < 0) sample++;
+		while (sample > 1) sample--;
+        return sample;
     }
 
     InternalSample () {
@@ -369,12 +373,28 @@ function binomialCoef(n, k){
 }
 
 function vectorLength(v) {
-    return Math.sqrt(Math.pow(v[0], 2) + Math.pow(v[1], 2))
+    return Math.sqrt(v[0] ** 2 + v[1] ** 2);
+}
+
+function vectorLengthFast(v) {
+	let x = v[0] ** 2 + v[1] ** 2;
+	const xhalf = 0.5 * x;
+	let i = x;
+	i = 0x5fe6eb50c7b537a9 - (i >> 1); // Make an initial guess for Newton-Raphson approximation
+	x = x * (1.5 - (xhalf * x * x)); // Perform left single Newton-Raphson step.
+	return x;
 }
 
 function vectorDistance(hitObject1, hitObject2){
     return Math.sqrt((hitObject2[0] - hitObject1[0]) * (hitObject2[0] - hitObject1[0])
         + (hitObject2[1] - hitObject1[1]) * (hitObject2[1] - hitObject1[1]));
+}
+
+function vectorFround(v) {
+	return [
+		Math.fround(v[0]),
+		Math.fround(v[1])
+	];
 }
 
 function vectorEquals(a, b) {
@@ -553,7 +573,7 @@ function RandomGaussian(random, mean = 0, stdDev = 1){
     const x2 = 1 - random.sample();
 
     const stdNormal = Math.sqrt(-2 * Math.log(x1)) * Math.sin(2 * Math.PI * x2);
-    return mean + stdDev * stdNormal;
+    return mean + stdDev * Math.fround(stdNormal);
 }
 
 function getRandomOffset(random, stdDev, angleSharpness = 7){
@@ -576,10 +596,10 @@ function getRelativeTargetAngle(angleSharpness = 7, targetDistance, offset, flow
     const customOffsetY = angleWideness * 0.25 - 0.075;
 
     targetDistance += customOffsetX;
-    let angle = 2.16 / (1 + 200 * Math.exp(0.036 * (targetDistance - 310 + customOffsetX))) + 0.5;
+    let angle = Math.fround(2.16 / (1 + 200 * Math.exp(0.036 * (targetDistance - 310 + customOffsetX))) + 0.5);
     angle += offset + customOffsetY;
 
-    const relativeAngle = Math.PI - angle;
+    const relativeAngle = Math.fround(Math.PI) - angle;
 
     return flowDirection ? -relativeAngle : relativeAngle;
 }
@@ -588,7 +608,7 @@ function IsHitObjectOnBeat(hitObject, downbeatsOnly = false) {
     const timingPoint = getTimingPoint(beatmap.timingPoints, hitObject.startTime);
 
     const timeSinceTimingPoint = hitObject.startTime - timingPoint.offset;
-    let { beatLength } = timingPoint.beatLength;
+    let { beatLength } = timingPoint;
 
     if (downbeatsOnly)
         beatLength *= timingPoint.timingSignature;
@@ -619,18 +639,24 @@ function shouldApplyFlowChange(random, i) {
     return previousObjectStartedCombo && random.sample() < 0.6;
 }
 
+function FlipSliderPointHorizontally(slider, point) {
+	const relPosX = point[0] - slider.position[0];
+	point[0] = -relPosX + slider.position[0];
+}
+
 function FlipSliderInPlaceHorizontally(slider) {
-    slider.position[0] = PLAYFIELD_WIDTH - slider.position[0];
-    slider.endPosition[0] = PLAYFIELD_WIDTH - slider.endPosition[0];
+    FlipSliderPointHorizontally(slider, slider.endPosition);
 
     for (let point of slider.points)
-        point[0] = PLAYFIELD_WIDTH - point[0];
+        FlipSliderPointHorizontally(slider, point); 
 
     for (let dot of slider.SliderDots)
-        dot[0] = PLAYFIELD_WIDTH - dot[0];
+        FlipSliderPointHorizontally(slider, dot); 
 
     for (let tick of slider.SliderTicks)
-        tick[0] = PLAYFIELD_WIDTH - tick[0];
+        FlipSliderPointHorizontally(slider, tick); 
+
+	1;
 }
 
 function RotateSlider(slider, rotation) {
@@ -736,7 +762,7 @@ function computeModifiedPosition(current, previous, beforePrevious) {
         if (previous.objectName == 'slider') {
             previousAbsoluteAngle = getSliderRotation(previous);
         } else {
-            const earliestPosition = beforePrevious?.endPosition ?? PLAYFIELD_CENTER;
+            const earliestPosition = beforePrevious?.endPositionModified ?? PLAYFIELD_CENTER;
             const relativePosition = vectorSubtract(previous.position, earliestPosition);
             previousAbsoluteAngle = Math.atan2(relativePosition[1], relativePosition[0]);
         }
@@ -749,20 +775,20 @@ function computeModifiedPosition(current, previous, beforePrevious) {
         current.DistanceFromPrevious * Math.sin(absoluteAngle)
     ];
 
-    const lastEndPosition = previous?.endPosition ?? PLAYFIELD_CENTER;
+    const lastEndPosition = previous?.endPositionModified ?? PLAYFIELD_CENTER;
 
     posRelativeToPrev = RotateAwayFromEdge(lastEndPosition, posRelativeToPrev);
 
-    current.position = vectorAdd(lastEndPosition, posRelativeToPrev);
+    current.positionModified = vectorFround(vectorAdd(lastEndPosition, posRelativeToPrev));
 
-    if (!(current.objectName == 'slider'))
+    if (current.objectName != 'slider')
         return;
 
     absoluteAngle = Math.atan2(posRelativeToPrev[1], posRelativeToPrev[0]);
 
     const centreOfMassOriginal = calculateCentreOfMass(current);
     let centreOfMassModified = vectorRotate(centreOfMassOriginal, current.Rotation + absoluteAngle - getSliderRotation(current));
-    centreOfMassModified = RotateAwayFromEdge(current.position, centreOfMassModified);
+    centreOfMassModified = RotateAwayFromEdge(current.positionModified, centreOfMassModified);
 
     const relativeRotation = Math.atan2(centreOfMassModified[1], centreOfMassModified[0]) - Math.atan2(centreOfMassOriginal[1], centreOfMassOriginal[0]);
     if (!AlmostEquals(relativeRotation, 0))
@@ -774,12 +800,12 @@ function GeneratePositionInfos() {
     let previousAngle = 0;
 
     for (const hitObject of beatmap.hitObjects) {
-        const relativePosition = vectorSubtract(hitObject.position, previousPosition);
-        const absoluteAngle = Math.atan2(relativePosition[1], relativePosition[0]);
-        const relativeAngle = absoluteAngle - previousAngle;
+        const relativePosition = vectorFround(vectorSubtract(hitObject.position, previousPosition));
+        const absoluteAngle = Math.fround(Math.atan2(relativePosition[1], relativePosition[0]));
+        const relativeAngle = Math.fround(absoluteAngle - previousAngle);
 
         hitObject.RelativeAngle = relativeAngle;
-        hitObject.DistanceFromPrevious = vectorLength(relativePosition);
+        hitObject.DistanceFromPrevious = Math.fround(vectorLength(relativePosition));
 
         if (hitObject.objectName == 'slider') {
             const absoluteRotation = getSliderRotation(hitObject);
@@ -792,21 +818,23 @@ function GeneratePositionInfos() {
 }
 
 function clampToPlayfieldWithPadding(position, padding) {
-    return [
+    return vectorFround([
         clamp(position[0], padding, PLAYFIELD_WIDTH - padding),
         clamp(position[1], padding, PLAYFIELD_HEIGHT - padding)
-    ]
+    ]);
 }
 
 function clampHitCircleToPlayfield(hitObject)
 {
-    const previousPosition = hitObject.position;
-    hitObject.endPosition = hitObject.position = clampToPlayfieldWithPadding(
-        hitObject.position,
-        beatmap.Radius
+    const previousPosition = hitObject.positionModified.slice();
+    hitObject.endPositionModified = hitObject.positionModified = clampToPlayfieldWithPadding(
+        hitObject.positionModified,
+        Math.fround(beatmap.Radius)
     );
 
-    return vectorSubtract(hitObject.position, previousPosition);
+	hitObject.position = hitObject.positionModified.slice();
+
+    return vectorFround(vectorSubtract(hitObject.positionModified, previousPosition));
 }
 
 function CalculatePossibleMovementBounds(slider) {
@@ -821,13 +849,13 @@ function CalculatePossibleMovementBounds(slider) {
     let maxY = Math.max(...sliderDotYs);
 
     // Take the circle radius into account.
-    const { Radius } = beatmap;
+	const radius = Math.fround(beatmap.Radius);
 
-    minX -= Radius;
-    minY -= Radius;
+    minX -= radius;
+    minY -= radius;
 
-    maxX += Radius;
-    maxY += Radius;
+    maxX += radius;
+    maxY += radius;
 
     // Given the bounding box of the slider (via min/max X/Y),
     // the amount that the slider can move to the left is minX (with the sign flipped, since positive X is to the right),
@@ -869,7 +897,7 @@ function clampSliderToPlayfield(slider) {
         possibleMovementBounds = CalculatePossibleMovementBounds(slider);
     }
 
-    let previousPosition = slider.position;
+    const previousPosition = slider.positionModified;
 
     // Clamp slider position to the placement area
     // If the slider is larger than the playfield, at least make sure that the head circle is inside the playfield
@@ -881,16 +909,17 @@ function clampSliderToPlayfield(slider) {
         ? clamp(possibleMovementBounds.top, 0, PLAYFIELD_HEIGHT)
         : clamp(previousPosition[1], possibleMovementBounds.top, possibleMovementBounds.bottom);
 
-    slider.position = [newX, newY];
+    slider.position = slider.positionModified = [newX, newY];
+	slider.endPositionModified = slider.endPosition;
 
-    return vectorSubtract(slider.position, previousPosition);
+    return vectorSubtract(slider.positionModified, previousPosition);
 }
 
 function applyDecreasingShift(hitObjects, shift) {
     for (const [i, hitObject] of hitObjects.entries()) {
         // The first object is shifted by a vector slightly smaller than shift
         // The last object is shifted by a vector slightly larger than zero
-        const position = vectorAdd(hitObject.position, vectorMultiply(shift, (hitObjects.length - i) / (hitObjects.length + 1)));
+        const position = vectorFround(vectorAdd(hitObject.position, vectorMultiply(shift, (hitObjects.length - i) / (hitObjects.length + 1))));
 
         hitObject.position = clampToPlayfieldWithPadding(position, beatmap.Radius);
     }
@@ -1159,6 +1188,36 @@ function processBeatmap(osuContents){
         hitObject.SliderDots = slider_dots;
     });
 
+	let currentCombo = 1;
+    let currentComboNumber = 0;
+
+    // Set combo colors
+    beatmap.hitObjects.forEach((hitObject, i) => {
+        if(beatmap["Combo1"] === undefined){
+            beatmap["Combo1"] = "255,192,0";
+            beatmap["Combo2"] = "0,202,0";
+            beatmap["Combo3"] = "18,124,255";
+            beatmap["Combo4"] = "242,24,57";
+        }
+
+        let maxComboColor = 1;
+
+        while(beatmap["Combo" + (maxComboColor + 1)] !== undefined)
+            maxComboColor++;
+
+        if(hitObject.newCombo || i == 0){
+            currentComboNumber = 0;
+            for(let x = hitObject.comboSkip; x >= 0; x--){
+                currentCombo++;
+                if(currentCombo > maxComboColor) currentCombo = 1;
+            }
+        }
+
+        currentComboNumber++;
+        hitObject.Color = "rgba(" + beatmap["Combo" + currentCombo] + ",0.6)";
+        hitObject.ComboNumber = currentComboNumber;
+	});
+
     // Generate slider ticks and apply lazy end position
     beatmap.hitObjects.forEach((hitObject, i) => {
         hitObject.StackHeight = 0;
@@ -1318,99 +1377,6 @@ function processBeatmap(osuContents){
             });
         }
     });
-
-    if (enabled_mods.includes('RD')) {
-        const settings = score_info?.mods?.find(m => m.acronym == 'RD')?.settings;
-
-        const seed = settings?.seed ?? Math.floor(Math.random() * INT32_MAX_VALUE); 
-        const angleSharpness = settings?.angle_sharpness ?? 7; 
-
-        const random = new Random(seed);
-
-        GeneratePositionInfos();
-
-        let sectionOffset = 0;
-
-        // Whether the angles are positive or negative (clockwise or counter-clockwise flow).
-        let flowDirection = false;
-
-        for (const [i, hitObject] of beatmap.hitObjects.entries()) {
-            if (shouldStartNewSection(random, i)) {
-                sectionOffset = getRandomOffset(random, 0.0008, angleSharpness);
-                flowDirection = !flowDirection;
-            }
-
-            if (hitObject.objectName == 'slider' && random.sample() < 0.5) {
-                FlipSliderInPlaceHorizontally(hitObject);
-            }
-
-            if (i == 0) {
-                hitObject.DistanceFromPrevious = random.sample() * PLAYFIELD_HEIGHT / 2;
-                hitObject.RelativeAngle = random.sample() * 2 * Math.PI - Math.PI;
-            } else {
-                // Offsets only the angle of the current hit object if a flow change occurs.
-                let flowChangeOffset = 0;
-
-                // Offsets only the angle of the current hit object.
-                let oneTimeOffset = getRandomOffset(random, 0.002, angleSharpness);
-
-                if (shouldApplyFlowChange(random, i)) {
-                    flowChangeOffset = getRandomOffset(random, 0.002, angleSharpness);
-                    flowDirection = !flowDirection;
-                }
-
-                const totalOffset =
-                    // sectionOffset and oneTimeOffset should mainly affect patterns with large spacing.
-                    (sectionOffset + oneTimeOffset) * hitObject.DistanceFromPrevious +
-                    // flowChangeOffset should mainly affect streams.
-                    flowChangeOffset * (PLAYFIELD_DIAGONAL - hitObject.DistanceFromPrevious);
-
-                hitObject.RelativeAngle = getRelativeTargetAngle(angleSharpness, hitObject.DistanceFromPrevious, totalOffset, flowDirection);
-            }
-        }
-
-        let previous;
-
-        for (const [i, hitObject] of beatmap.hitObjects.entries()) {
-            if (hitObject.objectName == 'spinner') {
-                previous = hitObject;
-                continue;
-            }
-
-            computeModifiedPosition(hitObject, previous, i > 1 ? beatmap.hitObjects[i - 2] : undefined);
-
-            let shift = [0, 0];
-
-            switch (hitObject.objectName) {
-                case 'circle':
-                    shift = clampHitCircleToPlayfield(hitObject);
-                    break;
-
-                case 'slider':
-                    shift = clampSliderToPlayfield(hitObject);
-                    break;
-            }
-
-            const preceding_hitobjects_to_shift = 10;
-
-            if (!vectorEquals(shift, [0, 0])) {
-                const toBeShifted = []
-
-                for (let j = i - 1; j >= i - preceding_hitobjects_to_shift && j >= 0; j--)
-                {
-                    // only shift hit circles
-                    if (hitObject.objectName != 'circle') break;
-
-                    toBeShifted.push(beatmap.hitObjects[j]);
-                }
-
-                if (toBeShifted.Count > 0)
-                    applyDecreasingShift(toBeShifted, shift);
-            }
-
-            previous = hitObject;
-        }
-    }
 
     if(renderTime == 0 && options.percent){
         renderTime = beatmap.hitObjects[Math.floor(options.percent * (beatmap.hitObjects.length - 1))].startTime - 2000;
@@ -1574,40 +1540,13 @@ function processBeatmap(osuContents){
         }
     }    
 
-    let currentCombo = 1;
-    let currentComboNumber = 0;
-
-    // Set combo colors and stacking offset
+    // Set stacking offset
     beatmap.hitObjects.forEach((hitObject, i) => {
-        if(beatmap["Combo1"] === undefined){
-            beatmap["Combo1"] = "255,192,0";
-            beatmap["Combo2"] = "0,202,0";
-            beatmap["Combo3"] = "18,124,255";
-            beatmap["Combo4"] = "242,24,57";
-        }
-
-        let maxComboColor = 1;
-
-        while(beatmap["Combo" + (maxComboColor + 1)] !== undefined)
-            maxComboColor++;
-
-        if(hitObject.newCombo || i == 0){
-            currentComboNumber = 0;
-            for(let x = hitObject.comboSkip; x >= 0; x--){
-                currentCombo++;
-                if(currentCombo > maxComboColor) currentCombo = 1;
-            }
-        }
-
-        currentComboNumber++;
-        hitObject.Color = "rgba(" + beatmap["Combo" + currentCombo] + ",0.6)";
-        hitObject.ComboNumber = currentComboNumber;
         hitObject.StackOffset = hitObject.StackHeight * beatmap.Scale * -6.4;
         hitObject.position = [hitObject.position[0] + hitObject.StackOffset, hitObject.position[1] + hitObject.StackOffset];
+		hitObject.endPosition = [hitObject.endPosition[0] + hitObject.StackOffset, hitObject.endPosition[1] + hitObject.StackOffset];
 
         if(hitObject.objectName == "slider"){
-            hitObject.endPosition = [hitObject.endPosition[0] + hitObject.StackOffset, hitObject.endPosition[1] + hitObject.StackOffset];
-
             for(let x = 0; x < hitObject.SliderDots.length; x++){
                 if(!Array.isArray(hitObject.SliderDots[x]) || hitObject.SliderDots[x].length != 2)
                     continue;
@@ -1629,6 +1568,99 @@ function processBeatmap(osuContents){
             }
         }
     });
+
+	if (enabled_mods.includes('RD')) {
+        const settings = score_info?.mods?.find(m => m.acronym == 'RD')?.settings;
+
+        const seed = settings?.seed ?? Math.floor(Math.random() * INT32_MAX_VALUE); 
+        const angleSharpness = settings?.angle_sharpness ?? 7; 
+
+        const random = new Random(seed);
+
+        GeneratePositionInfos();
+
+        let sectionOffset = 0;
+
+        // Whether the angles are positive or negative (clockwise or counter-clockwise flow).
+        let flowDirection = false;
+
+        for (const [i, hitObject] of beatmap.hitObjects.entries()) {
+            if (shouldStartNewSection(random, i)) {
+                sectionOffset = getRandomOffset(random, 0.0008, angleSharpness);
+                flowDirection = !flowDirection;
+            }
+
+            if (hitObject.objectName == 'slider' && random.sample() < 0.5) {
+                FlipSliderInPlaceHorizontally(hitObject);
+            }
+
+            if (i == 0) {
+                hitObject.DistanceFromPrevious = Math.fround(random.sample() * PLAYFIELD_HEIGHT / 2);
+				hitObject.RelativeAngle = Math.fround(random.sample() * 2 * Math.PI - Math.PI);
+			} else {
+                // Offsets only the angle of the current hit object if a flow change occurs.
+                let flowChangeOffset = 0;
+
+                // Offsets only the angle of the current hit object.
+                let oneTimeOffset = getRandomOffset(random, 0.002, angleSharpness);
+
+                if (shouldApplyFlowChange(random, i)) {
+                    flowChangeOffset = getRandomOffset(random, 0.002, angleSharpness);
+                    flowDirection = !flowDirection;
+                }
+
+                const totalOffset =
+                    // sectionOffset and oneTimeOffset should mainly affect patterns with large spacing.
+                    (sectionOffset + oneTimeOffset) * hitObject.DistanceFromPrevious +
+                    // flowChangeOffset should mainly affect streams.
+                    flowChangeOffset * (PLAYFIELD_DIAGONAL - hitObject.DistanceFromPrevious);
+
+                hitObject.RelativeAngle = getRelativeTargetAngle(angleSharpness, hitObject.DistanceFromPrevious, totalOffset, flowDirection);
+            }
+        }
+
+        let previous;
+
+        for (const [i, hitObject] of beatmap.hitObjects.entries()) {
+            if (hitObject.objectName == 'spinner') {
+                previous = hitObject;
+                continue;
+            }
+
+            computeModifiedPosition(hitObject, previous, i > 1 ? beatmap.hitObjects[i - 2] : undefined);
+
+            let shift = [0, 0];
+
+            switch (hitObject.objectName) {
+                case 'circle':
+                    shift = clampHitCircleToPlayfield(hitObject);
+                    break;
+
+                case 'slider':
+                    shift = clampSliderToPlayfield(hitObject);
+                    break;
+            }
+
+            const preceding_hitobjects_to_shift = 10;
+
+            if (!vectorEquals(shift, [0, 0])) {
+                const toBeShifted = []
+
+                for (let j = i - 1; j >= i - preceding_hitobjects_to_shift && j >= 0; j--)
+                {
+                    // only shift hit circles
+                    if (hitObject.objectName != 'circle') break;
+
+                    toBeShifted.push(beatmap.hitObjects[j]);
+                }
+
+                if (toBeShifted.Count > 0)
+                    applyDecreasingShift(toBeShifted, shift);
+            }
+
+            previous = hitObject;
+        }
+    }
 
     // Generate auto replay
     if(!beatmap.Replay){
