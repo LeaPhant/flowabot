@@ -12,6 +12,8 @@ const _ = require('lodash');
 const helper = require('../helper.js');
 const config = require('../config.json');
 
+const { fround: float } = Math;
+
 let options, beatmap_path, enabled_mods, mods_raw, beatmap, score_info, speed_override, speed_multiplier = 1, renderTime, renderLength, firstHitobjectIndex, lastHitobjectIndex;
 let isUsingClassicNotelock = false;
 let isUsingSliderHeadAccuracy = true;
@@ -390,10 +392,10 @@ function vectorDistance(hitObject1, hitObject2){
         + (hitObject2[1] - hitObject1[1]) * (hitObject2[1] - hitObject1[1]));
 }
 
-function vectorFround(v) {
+function vectorFloat(v) {
 	return [
-		Math.fround(v[0]),
-		Math.fround(v[1])
+		float(v[0]),
+		float(v[1])
 	];
 }
 
@@ -573,7 +575,7 @@ function RandomGaussian(random, mean = 0, stdDev = 1){
     const x2 = 1 - random.sample();
 
     const stdNormal = Math.sqrt(-2 * Math.log(x1)) * Math.sin(2 * Math.PI * x2);
-    return mean + stdDev * Math.fround(stdNormal);
+    return mean + stdDev * float(stdNormal);
 }
 
 function getRandomOffset(random, stdDev, angleSharpness = 7){
@@ -586,20 +588,20 @@ function getRandomOffset(random, stdDev, angleSharpness = 7){
 
 function getRelativeTargetAngle(angleSharpness = 7, targetDistance, offset, flowDirection) {
     // Range: [0.1, 1]
-    angleSharpness = angleSharpness / 10;
+    angleSharpness = float(angleSharpness / 10);
     // Range: [0, 0.9]
-    const angleWideness = 1 - angleSharpness;
+    const angleWideness = float(1 - angleSharpness);
 
     // Range: [-60, 30]
-    const customOffsetX = angleSharpness * 100 - 70;
+    const customOffsetX = float(angleSharpness * 100 - 70);
     // Range: [-0.075, 0.15]
-    const customOffsetY = angleWideness * 0.25 - 0.075;
+    const customOffsetY = float(angleWideness * 0.25 - 0.075);
 
-    targetDistance += customOffsetX;
-    let angle = Math.fround(2.16 / (1 + 200 * Math.exp(0.036 * (targetDistance - 310 + customOffsetX))) + 0.5);
-    angle += offset + customOffsetY;
+    targetDistance = float(targetDistance + customOffsetX);
+    let angle = float(2.16 / (1 + 200 * Math.exp(0.036 * (targetDistance - 310 + customOffsetX))) + 0.5);
+    angle = float(angle + offset + customOffsetY);
 
-    const relativeAngle = Math.fround(Math.PI) - angle;
+    const relativeAngle = float(float(Math.PI) - angle);
 
     return flowDirection ? -relativeAngle : relativeAngle;
 }
@@ -678,24 +680,24 @@ function RotateAwayFromEdge(prevObjectPos, posRelativeToPrev, rotationRatio = 0.
 
     if (prevObjectPos[0] < PLAYFIELD_CENTER[0]) {
         relativeRotationDistance = Math.max(
-            (BORDER_DISTANCE_X - prevObjectPos[0]) / BORDER_DISTANCE_X,
+            float((BORDER_DISTANCE_X - prevObjectPos[0]) / BORDER_DISTANCE_X),
             relativeRotationDistance
         );
     } else {
         relativeRotationDistance = Math.max(
-            (prevObjectPos[0] - (PLAYFIELD_WIDTH - BORDER_DISTANCE_X)) / BORDER_DISTANCE_X,
+            float((prevObjectPos[0] - (PLAYFIELD_WIDTH - BORDER_DISTANCE_X)) / BORDER_DISTANCE_X),
             relativeRotationDistance
         );
     }
 
     if (prevObjectPos[1] < PLAYFIELD_CENTER[1]) {
         relativeRotationDistance = Math.max(
-            (BORDER_DISTANCE_Y - prevObjectPos[1]) / BORDER_DISTANCE_Y,
+            float((BORDER_DISTANCE_Y - prevObjectPos[1]) / BORDER_DISTANCE_Y),
             relativeRotationDistance
         );
     } else {
         relativeRotationDistance = Math.max(
-            (prevObjectPos[1] - (PLAYFIELD_HEIGHT - BORDER_DISTANCE_Y)) / BORDER_DISTANCE_Y,
+            float((prevObjectPos[1] - (PLAYFIELD_HEIGHT - BORDER_DISTANCE_Y)) / BORDER_DISTANCE_Y),
             relativeRotationDistance
         );
     }
@@ -708,21 +710,25 @@ function RotateAwayFromEdge(prevObjectPos, posRelativeToPrev, rotationRatio = 0.
 }
 
 function RotateVectorTowardsVector(initial, destination, rotationRatio) {
-    const initialAngleRad = Math.atan2(initial[1], initial[0]);
-    const destAngleRad = Math.atan2(destination[1], destination[0]);
+	initial = vectorFloat(initial);
+	destination = vectorFloat(destination);
+	rotationRatio = float(rotationRatio);
 
-    let diff = destAngleRad - initialAngleRad;
+    const initialAngleRad = float(Math.atan2(initial[1], initial[0]));
+    const destAngleRad = float(Math.atan2(destination[1], destination[0]));
 
-    while (diff < -Math.PI) diff += 2 * Math.PI;
+    let diff = float(destAngleRad - initialAngleRad);
 
-    while (diff > Math.PI) diff -= 2 * Math.PI;
+    while (diff < -float(Math.PI)) diff += 2 * float(Math.PI);
 
-    const finalAngleRad = initialAngleRad + rotationRatio * diff;
+    while (diff > float(Math.PI)) diff -= 2 * float(Math.PI);
 
-    return [
-        vectorLength(initial) * Math.cos(finalAngleRad),
-        vectorLength(initial) * Math.sin(finalAngleRad)
-    ];
+    const finalAngleRad = float(initialAngleRad + rotationRatio * diff);
+
+    return vectorFloat([
+        float(vectorLength(initial)) * float(Math.cos(finalAngleRad)),
+        float(vectorLength(initial)) * float(Math.sin(finalAngleRad))
+    ]);
 }
 
 function calculateCentreOfMass(slider) {
@@ -764,22 +770,22 @@ function computeModifiedPosition(current, previous, beforePrevious) {
         } else {
             const earliestPosition = beforePrevious?.endPositionModified ?? PLAYFIELD_CENTER;
             const relativePosition = vectorSubtract(previous.position, earliestPosition);
-            previousAbsoluteAngle = Math.atan2(relativePosition[1], relativePosition[0]);
+            previousAbsoluteAngle = float(Math.atan2(float(relativePosition[1]), float(relativePosition[0])));
         }
     }
 
-    let absoluteAngle = previousAbsoluteAngle + current.RelativeAngle;
+    let absoluteAngle = float(previousAbsoluteAngle + current.RelativeAngle);
 
     let posRelativeToPrev = [
-        current.DistanceFromPrevious * Math.cos(absoluteAngle),
-        current.DistanceFromPrevious * Math.sin(absoluteAngle)
+        current.DistanceFromPrevious * float(Math.cos(absoluteAngle)),
+        current.DistanceFromPrevious * float(Math.sin(absoluteAngle))
     ];
 
     const lastEndPosition = previous?.endPositionModified ?? PLAYFIELD_CENTER;
 
     posRelativeToPrev = RotateAwayFromEdge(lastEndPosition, posRelativeToPrev);
 
-    current.positionModified = vectorFround(vectorAdd(lastEndPosition, posRelativeToPrev));
+    current.positionModified = vectorFloat(vectorAdd(lastEndPosition, posRelativeToPrev));
 
     if (current.objectName != 'slider')
         return;
@@ -800,12 +806,12 @@ function GeneratePositionInfos() {
     let previousAngle = 0;
 
     for (const hitObject of beatmap.hitObjects) {
-        const relativePosition = vectorFround(vectorSubtract(hitObject.position, previousPosition));
-        const absoluteAngle = Math.fround(Math.atan2(relativePosition[1], relativePosition[0]));
-        const relativeAngle = Math.fround(absoluteAngle - previousAngle);
+        const relativePosition = vectorFloat(vectorSubtract(hitObject.position, previousPosition));
+        const absoluteAngle = float(Math.atan2(relativePosition[1], relativePosition[0]));
+        const relativeAngle = float(absoluteAngle - previousAngle);
 
         hitObject.RelativeAngle = relativeAngle;
-        hitObject.DistanceFromPrevious = Math.fround(vectorLength(relativePosition));
+        hitObject.DistanceFromPrevious = float(vectorLength(vectorFloat(relativePosition)));
 
         if (hitObject.objectName == 'slider') {
             const absoluteRotation = getSliderRotation(hitObject);
@@ -818,7 +824,7 @@ function GeneratePositionInfos() {
 }
 
 function clampToPlayfieldWithPadding(position, padding) {
-    return vectorFround([
+    return vectorFloat([
         clamp(position[0], padding, PLAYFIELD_WIDTH - padding),
         clamp(position[1], padding, PLAYFIELD_HEIGHT - padding)
     ]);
@@ -829,12 +835,12 @@ function clampHitCircleToPlayfield(hitObject)
     const previousPosition = hitObject.positionModified.slice();
     hitObject.endPositionModified = hitObject.positionModified = clampToPlayfieldWithPadding(
         hitObject.positionModified,
-        Math.fround(beatmap.Radius)
+        float(beatmap.Radius)
     );
 
 	hitObject.position = hitObject.positionModified.slice();
 
-    return vectorFround(vectorSubtract(hitObject.positionModified, previousPosition));
+    return vectorFloat(vectorSubtract(hitObject.positionModified, previousPosition));
 }
 
 function CalculatePossibleMovementBounds(slider) {
@@ -849,7 +855,7 @@ function CalculatePossibleMovementBounds(slider) {
     let maxY = Math.max(...sliderDotYs);
 
     // Take the circle radius into account.
-	const radius = Math.fround(beatmap.Radius);
+	const radius = float(beatmap.Radius);
 
     minX -= radius;
     minY -= radius;
@@ -919,7 +925,7 @@ function applyDecreasingShift(hitObjects, shift) {
     for (const [i, hitObject] of hitObjects.entries()) {
         // The first object is shifted by a vector slightly smaller than shift
         // The last object is shifted by a vector slightly larger than zero
-        const position = vectorFround(vectorAdd(hitObject.position, vectorMultiply(shift, (hitObjects.length - i) / (hitObjects.length + 1))));
+        const position = vectorFloat(vectorAdd(hitObject.position, vectorMultiply(shift, (hitObjects.length - i) / float(hitObjects.length + 1))));
 
         hitObject.position = clampToPlayfieldWithPadding(position, beatmap.Radius);
     }
@@ -965,7 +971,7 @@ function processBeatmap(osuContents){
 
     // CS
     beatmap.Scale = (1.0 - 0.7 * (beatmap.CircleSize - 5) / 5) / 2;
-    beatmap.Radius = 23.05 - (beatmap.CircleSize - 7) * 4.4825;
+    beatmap.Radius = 33.357669830322266 ?? 23.05 - (beatmap.CircleSize - 7) * 4.4825;
     beatmap.FollowpointRadius = beatmap.Radius * 2;
     beatmap.ActualFollowpointRadius = beatmap.Radius * 2.4;
 
@@ -1595,8 +1601,8 @@ function processBeatmap(osuContents){
             }
 
             if (i == 0) {
-                hitObject.DistanceFromPrevious = Math.fround(random.sample() * PLAYFIELD_HEIGHT / 2);
-				hitObject.RelativeAngle = Math.fround(random.sample() * 2 * Math.PI - Math.PI);
+                hitObject.DistanceFromPrevious = float(random.sample() * PLAYFIELD_HEIGHT / 2);
+				hitObject.RelativeAngle = float(random.sample() * 2 * float(Math.PI) - float(Math.PI));
 			} else {
                 // Offsets only the angle of the current hit object if a flow change occurs.
                 let flowChangeOffset = 0;
@@ -1654,7 +1660,7 @@ function processBeatmap(osuContents){
                     toBeShifted.push(beatmap.hitObjects[j]);
                 }
 
-                if (toBeShifted.Count > 0)
+                if (toBeShifted.length > 0)
                     applyDecreasingShift(toBeShifted, shift);
             }
 
