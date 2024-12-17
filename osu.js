@@ -535,18 +535,6 @@ function getModSettingsString(mods) {
 	let string = "";
 	for (const mod of mods) {
 		switch (mod.acronym) {
-			case "MU":
-				if (!mod.settings)
-					break;
-				if (mod.settings.inverse_muting)
-					string += `**MU** ~ Start muted: \`${mod.settings.inverse_muting}\`\n`;
-				if (mod.settings.enable_metronome)
-					string += `**MU** ~ Metronome: \`${mod.settings.enable_metronome}\`\n`;
-				if (mod.settings.mute_combo_count)
-					string += `**MU** ~ Final volume at combo: \`${mod.settings.mute_combo_count}\`\n`;
-				if (mod.settings.affects_hit_sounds)
-					string += `**MU** ~ Mute hit sounds: \`${mod.settings.affects_hit_sounds}\`\n`;
-				break;
 			case "EZ":
 				if (!mod.settings)
 					break;
@@ -556,152 +544,168 @@ function getModSettingsString(mods) {
             case "DT":
                 if (!mod.settings)
                     break;
-                if (mod.settings.adjust_pitch)
+                if (mod.settings.hasOwnProperty("adjust_pitch"))
                     string += `**${mod.acronym}** ~ Adjust pitch: \`${mod.settings.adjust_pitch}\`\n`;
                 break;
             case "SD":
             case "PF":
                 if (!mod.settings)
                     break;
-                if (mod.settings.restart)
+                if (mod.settings.hasOwnProperty("restart"))
                     string += `**${mod.acronym}** ~ Restart on fail: \`${mod.settings.restart}\`\n`;
                 break;
 			case "HD":
 				if (!mod.settings)
 					break;
-				if (mod.settings.only_fade_approach_circles)
+				if (mod.settings.hasOwnProperty("only_fade_approach_circles"))
 					string += `**HD** ~ Only fade approach circles: \`${mod.settings.only_fade_approach_circles}\`\n`;
 				break;
 			case "FL":
 				if (!mod.settings)
 					break;
-				if (mod.settings.follow_delay)
+				if (mod.settings.hasOwnProperty("follow_delay"))
 					string += `**FL** ~ Follow delay: \`${mod.settings.follow_delay}\`\n`;
-				if (mod.settings.size_multiplier)
+				if (mod.settings.hasOwnProperty("size_multiplier"))
 					string += `**FL** ~ Flashlight size: \`${mod.settings.size_multiplier}\`\n`;
-				if (mod.settings.combo_based_size)
+				if (mod.settings.hasOwnProperty("combo_based_size"))
 					string += `**FL** ~ Change size based on combo: \`${mod.settings.combo_based_size}\`\n`;
 				break;
 			case "AC":
 				if (!mod.settings)
 					break;
-				if (mod.settings.minimum_accuracy)
+				if (mod.settings.hasOwnProperty("minimum_accuracy"))
 					string += `**AC** ~ Minimum accuracy: \`${mod.settings.minimum_accuracy}\`\n`;
-                if (mod.settings.accuracy_judge_mode)
+                if (mod.settings.hasOwnProperty("accuracy_judge_mode"))
                     string += `**AC** ~ Accuracy mode: \`${mod.settings.accuracy_judge_mode}\`\n`;
-                if (mod.settings.restart)
+                if (mod.settings.hasOwnProperty("restart"))
                     string += `**AC** ~ Restart on fail: \`${mod.settings.restart}\`\n`;
 				break;
             case "TP":
                 if (!mod.settings)
                     break;
-                if (mod.settings.seed)
+                if (mod.settings.hasOwnProperty("seed"))
                     string += `**TP** ~ Seed: \`${mod.settings.seed}\`\n`;
-                if (mod.settings.metronome)
+                if (mod.settings.hasOwnProperty("metronome"))
                     string += `**TP** ~ Metronome ticks: \`${mod.settings.metronome}\`\n`;
                 break;
 			case "CL":
 				if (!mod.settings)
 					break;
-				if (mod.settings.no_slider_head_accuracy)
+				if (mod.settings.hasOwnProperty("no_slider_head_accuracy"))
 					string += `**CL** ~ No slider head accuracy: \`${mod.settings.no_slider_head_accuracy}\`\n`;
-				if (mod.settings.classic_note_lock)
+				if (mod.settings.hasOwnProperty("classic_note_lock"))
 					string += `**CL** ~ Apply Classic note lock: \`${mod.settings.classic_note_lock}\`\n`;
-				if (mod.settings.classic_health)
+                if (mod.settings.hasOwnProperty("always_play_tail_sample"))
+                    string += `**CL** ~ Always play a slider's tail sample: \`${mod.settings.always_play_tail_sample}\`\n`;
+                if (mod.settings.hasOwnProperty("fade_hit_circle_early"))
+                    string += `**CL** ~ Fade out hit circsles earlier: \`${mod.settings.fade_hit_circle_early}\`\n`;
+				if (mod.settings.hasOwnProperty("classic_health"))
 					string += `**CL** ~ Classic health: \`${mod.settings.classic_health}\`\n`;
 				break;
             case "RD":
                 if (!mod.settings)
                     break;
-                if (mod.settings.seed)
+                if (mod.settings.hasOwnProperty("seed"))
                     string += `**RD** ~ Seed: \`${mod.settings.seed}\`\n`;
-                if (mod.settings.angle_sharpness)
+                if (mod.settings.hasOwnProperty("angle_sharpness"))
                     string += `**RD** ~ Angle sharpness: \`${mod.settings.angle_sharpness}\`\n`;
                 break;
             case "MR":
                 if (!mod.settings)
                     string += `**MR** ~ Axis: \`horizontal\`\n`;
-                else if (mod.settings.reflection == 1)
+                else if (mod.settings.hasOwnProperty("reflection") && mod.settings.reflection == 1)
                     string += `**MR** ~ Axis: \`vertical\`\n`;
-                else if (mod.settings.reflection == 2)
+                else if (mod.settings.hasOwnProperty("reflection") && mod.settings.reflection == 2)
                     string += `**MR** ~ Axis: \`both\`\n`;
                 break;
             case "WG":
                 if (!mod.settings)
                     break;
-                if (mod.settings.strength)
+                if (mod.settings.hasOwnProperty("strength"))
                     string += `**WG** ~ Strength: \`${mod.settings.strength}\`\n`;
                 break;
             case "GR":
             case "DF":
                 if (!mod.settings)
                     break;
-                if (mod.settings.start_scale)
+                if (mod.settings.hasOwnProperty("start_scale"))
                     string += `**${mod.acronym}** ~ Starting Size: \`${mod.settings.start_scale}\`\n`;
                 break;
 			case "WU":
             case "WD":
 				if (!mod.settings)
 					break;
-				if (mod.settings.initial_rate)
+				if (mod.settings.hasOwnProperty("initial_rate"))
 					string += `**${mod.acronym}** ~ Initial rate: \`${mod.settings.initial_rate}\`\n`;
-				if (mod.settings.final_rate)
+				if (mod.settings.hasOwnProperty("final_rate"))
 					string += `**${mod.acronym}** ~ Final rate: \`${mod.settings.final_rate}\`\n`;
 				break;
 			case "BR":
 				if (!mod.settings)
 					break;
-				if (mod.settings.spin_speed)
+				if (mod.settings.hasOwnProperty("spin_speed"))
 					string += `**BR** ~ Roll speed: \`${mod.settings.spin_speed}\`\n`;
-				if (mod.settings.direction)
+				if (mod.settings.hasOwnProperty("direction"))
 					string += `**BR** ~ Direction: \`${mod.settings.direction}\`\n`;
 				break;
 			case "AD":
 				if (!mod.settings)
 					break;
-				if (mod.settings.scale)
+				if (mod.settings.hasOwnProperty("scale"))
 					string += `**AD** ~ Initial size: \`${mod.settings.scale}\`\n`;
-				if (mod.settings.style)
+				if (mod.settings.hasOwnProperty("style"))
 					string += `**AD** ~ Style: \`${mod.settings.style}\`\n`;
+				break;
+			case "MU":
+				if (!mod.settings)
+					break;
+				if (mod.settings.hasOwnProperty("inverse_muting"))
+					string += `**MU** ~ Start muted: \`${mod.settings.inverse_muting}\`\n`;
+				if (mod.settings.hasOwnProperty("enable_metronome"))
+					string += `**MU** ~ Metronome: \`${mod.settings.enable_metronome}\`\n`;
+				if (mod.settings.hasOwnProperty("mute_combo_count"))
+					string += `**MU** ~ Final volume at combo: \`${mod.settings.mute_combo_count}\`\n`;
+				if (mod.settings.hasOwnProperty("affects_hit_sounds"))
+					string += `**MU** ~ Mute hit sounds: \`${mod.settings.affects_hit_sounds}\`\n`;
 				break;
 			case "NS":
 				if (!mod.settings)
 					break;
-				if (mod.settings.hidden_combo_count)
+				if (mod.settings.hasOwnProperty("hidden_combo_count"))
 					string += `**NS** ~ Hidden at combo: \`${mod.settings.hidden_combo_count}\`\n`;
 				break;
 			case "MG":
 				if (!mod.settings)
 					break;
-				if (mod.settings.attraction_strength)
+				if (mod.settings.hasOwnProperty("attraction_strength"))
 					string += `**MG** ~ Attraction strength: \`${mod.settings.attraction_strength}\`\n`;
 				break;
 			case "RP":
 				if (!mod.settings)
 					break;
-				if (mod.settings.repulsion_strength)
+				if (mod.settings.hasOwnProperty("repulsion_strength"))
 					string += `**RP** ~ Repulsion strength: \`${mod.settings.repulsion_strength}\`\n`;
 				break;
 			case "AS":
 				if (!mod.settings)
 					break;
-				if (mod.settings.initial_rate)
+				if (mod.settings.hasOwnProperty("initial_rate"))
 					string += `**AS** ~ Initial rate: \`${mod.settings.initial_rate}\`\n`;
 				break;
 			case "DP":
 				if (!mod.settings)
 					break;
-				if (mod.settings.max_depth)
+				if (mod.settings.hasOwnProperty("max_depth"))
 					string += `**DP** ~ Maximum depth: \`${mod.settings.max_depth}\`\n`;
-				if (mod.settings.show_approach_circles)
+				if (mod.settings.hasOwnProperty("show_approach_circles"))
 					string += `**DP** ~ Show Approach Circles: \`${mod.settings.show_approach_circles}\`\n`;
 				break;
 			case "BM":
 				if (!mod.settings)
 					break;
-				if (mod.settings.max_size_combo_count)
+				if (mod.settings.hasOwnProperty("max_size_combo_count"))
 					string += `**BM** ~ Maximum size at combo: \`${mod.settings.max_size_combo_count}\`\n`;
-				if (mod.settings.max_cursor_size)
+				if (mod.settings.hasOwnProperty("max_cursor_size"))
 					string += `**BM** ~ Final size multiplier: \`${mod.settings.max_cursor_size}\`\n`;
 				break;
 		}
