@@ -47,6 +47,7 @@ const BEZIER_DETAIL = 100;
 
 const STACK_DISTANCE = 3;
 const OBJECT_RADIUS = 64;
+const ROUNDING_ALLOWANCE = float(1.00041);
 
 const ar_ms_step1 = 120;
 const ar_ms_step2 = 150;
@@ -477,6 +478,9 @@ function vectorFDistanceSquared(a, b) {
 }
 
 function difficultyRange(difficulty, min, mid, max){
+	if (arguments.length == 1)
+		return (difficulty - 5) / 5;
+
     let result;
 
     if(difficulty > 5)
@@ -1000,8 +1004,8 @@ function processBeatmap(osuContents){
     beatmap.HitWindowMiss = 400;
 
     // CS
-    beatmap.Scale = (1.0 - 0.7 * (beatmap.CircleSize - 5) / 5) / 2;
-    beatmap.Radius = 33.357669830322266 ?? 23.05 - (beatmap.CircleSize - 7) * 4.4825;
+    beatmap.Scale = float(float(1 - float(0.7) * difficultyRange(beatmap.CircleSize)) / 2 * ROUNDING_ALLOWANCE );
+    beatmap.Radius = OBJECT_RADIUS * beatmap.Scale;
     beatmap.FollowpointRadius = beatmap.Radius * 2;
     beatmap.ActualFollowpointRadius = beatmap.Radius * 2.4;
 
