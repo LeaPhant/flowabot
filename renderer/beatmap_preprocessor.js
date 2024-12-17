@@ -147,8 +147,10 @@ class Cursor {
     }
 }
 
-const INT32_MIN_VALUE = -2147483648;
-const INT32_MAX_VALUE = 2147483647;
+const INT32_MIN_VALUE = -0x80000000;
+const INT32_MAX_VALUE = 0x7fffffff;
+
+const int = x => Math.imul(x, 1);
 
 // https://source.dot.net/#System.Private.CoreLib/src/libraries/System.Private.CoreLib/src/System/Random.CompatImpl.cs,241
 class Random {
@@ -157,12 +159,12 @@ class Random {
     _inextp;
 
     constructor(seed) {
-        this.seed = seed;
+        this.seed = int(seed);
 
         let seedArray = new Array(56);
  
-        let subtraction = (seed == INT32_MIN_VALUE) ? INT32_MAX_VALUE : Math.abs(seed);
-        let mj = 161803398 - subtraction; // magic number based on Phi (golden ratio)
+        let subtraction = int((seed == INT32_MIN_VALUE) ? INT32_MAX_VALUE : Math.abs(seed));
+        let mj = int(161803398 - subtraction); // magic number based on Phi (golden ratio)
         seedArray[55] = mj;
         let mk = 1;
 
@@ -172,17 +174,17 @@ class Random {
             // The range [1..55] is special (Knuth) and so we're wasting the 0'th position.
             if ((ii += 21) >= 55)
             {
-                ii -= 55;
+                ii = ii - 55;
             }
 
             seedArray[ii] = mk;
-            mk = mj - mk;
+            mk = int(mj - mk);
             if (mk < 0)
             {
-                mk += INT32_MAX_VALUE;
+                mk = int(mk + INT32_MAX_VALUE);
             }
 
-            mj = seedArray[ii];
+            mj = int(seedArray[ii]);
         }
 
         for (let k = 1; k < 5; k++)
@@ -195,10 +197,10 @@ class Random {
                     n -= 55;
                 }
 
-                seedArray[i] -= seedArray[1 + n];
+                seedArray[i] = int(seedArray[i] - seedArray[1 + n]);
                 if (seedArray[i] < 0)
                 {
-                    seedArray[i] += INT32_MAX_VALUE;
+                    seedArray[i] = int(seedArray[i] + INT32_MAX_VALUE);
                 }
             }
         }
@@ -210,13 +212,12 @@ class Random {
 
     sample () {
 		let sample = this.InternalSample() * (1.0 / INT32_MAX_VALUE);
-		while (sample < 0) sample++;
-		while (sample > 1) sample--;
         return sample;
     }
 
     InternalSample () {
         let locINext = this._inext;
+
         if (++locINext >= 56)
         {
             locINext = 1;
@@ -229,15 +230,15 @@ class Random {
         }
 
         let seedArray = this._seedArray;
-        let retVal = seedArray[locINext] - seedArray[locINextp];
+        let retVal = int(seedArray[locINext] - seedArray[locINextp]);
 
         if (retVal == INT32_MAX_VALUE)
         {
-            retVal--;
+            retVal = int(retVal - 1);
         }
         if (retVal < 0)
         {
-            retVal += INT32_MAX_VALUE;
+            retVal = int(retVal + INT32_MAX_VALUE);
         }
 
         seedArray[locINext] = retVal;
