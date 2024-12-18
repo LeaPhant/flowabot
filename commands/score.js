@@ -54,12 +54,15 @@ module.exports = {
                 let b = osu.parse_beatmap_url_sync(arg, false);
                 if(b)
                     options.beatmap_id = b;
+				let s = osu.parse_score_url_sync(arg, false);
+				if(s)
+					options.score_id = s;
             });
 
             if(score_user != '*')
                 options.user = score_user;
 
-            if(!score_user || !options.beatmap_id){
+            if(!options.score_id && (!score_user || !options.beatmap_id)){
                 if(user_ign[msg.author.id] == undefined)
                     reject(helper.commandHelp('ign-set'));
                 else

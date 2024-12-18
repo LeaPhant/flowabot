@@ -1709,140 +1709,154 @@ module.exports = {
         });
     },
 
+	get_beatmap: async function(beatmap_id) {
+		try {
+			return await api.get(`/beatmaps/lookup`, { params: { id: beatmap_id }})
+		} catch (err) {
+			throw "Couldn't find that beatmap. 😔";
+		}
+	},
+
     get_score: async function(options, cb){
         let beatmap;
-        try {
-            beatmap = await api.get(`/beatmaps/lookup`, { params: { id: options.beatmap_id }})
-        } catch (err) {
-            cb("Couldn't find that beatmap. 😔")
-            return
-        }
 
-        beatmap = beatmap.data
+		if (options.score_id) {
+			const { data: score } = await api.get(`/scores/${options.score_id}`, { params: { mode: "osu" } });
 
-        if(options.solo_score) {
-            if(options.mods) {
-                let route = `/beatmaps/${options.beatmap_id}/solo-scores/?type=global&mode=osu`
-
-                options.mods.forEach( mod => route += `&mods[]=${mod}`)
-
-                api.get(route).then(response => {
-                    response = response.data;
-
-                    if(response.scores.length < options.index)
-                    options.index = response.scores.length - 1;
-    
-                    let recent_raw = response.scores[options.index - 1];
-                    recent_raw.beatmap = beatmap;
-                    recent_raw.beatmapset = beatmap.beatmapset;
-                    //recent_raw.beatmap.id = options.beatmap_id;
-        
-                    getScore(recent_raw, cb);
-                })         
-                .catch(err => {
-                    console.log(err);
-                    cb(`No scores matching criteria found. 💀`);
-                });
-    
-            } else {
-                api.get(`/beatmaps/${options.beatmap_id}/solo-scores/`, { params: { mode: "osu" } }).then(response => {
-                    response = response.data;
-        
-                    if(response.scores.length < options.index)
-                        options.index = response.scores.length - 1;
-        
-                    let recent_raw = response.scores[options.index - 1];
-                    recent_raw.beatmap = beatmap;
-                    recent_raw.beatmapset = beatmap.beatmapset;
-                    //recent_raw.beatmap.id = options.beatmap_id;
-        
-                    getScore(recent_raw, cb);
-                })
-                .catch(err => {
-                    console.log(err);
-                    cb(`No scores matching criteria found. 💀`);
-                });
-            }
-        } else if(options.user) {
-            let { user_id, error } = await getUserId(options.user);
-            if(error) { cb("Couldn't reach osu!api. 💀") }
-
-            if(options.mods) {
-                api.get(`/beatmaps/${options.beatmap_id}/scores/users/${user_id}`, { params: { mods: options.mods } }).then(response => {
-                    //console.log(response);
-                    response = response.data;
-        
-                    let recent_raw = response.score;
-                    recent_raw.beatmap = beatmap;
-                    recent_raw.beatmapset = beatmap.beatmapset;
-                    //recent_raw.beatmap.id = options.beatmap_id;
-        
-                    getScore(recent_raw, cb);
-                })         
-                .catch(err => {
-                    console.log(err);
-                    cb(`No scores matching criteria found. 💀`);
-                });
-    
-            } else {
-                api.get(`/beatmaps/${options.beatmap_id}/scores/users/${user_id}/all`, { params: { mode: "osu" } }).then(response => {
-                    response = response.data;
-        
-                    if(response.scores.length < options.index)
-                        options.index = response.scores.length - 1;
-        
-                    let recent_raw = response.scores[options.index - 1];
-                    recent_raw.beatmap = beatmap;
-                    recent_raw.beatmapset = beatmap.beatmapset;
-                    //recent_raw.beatmap.id = options.beatmap_id;
-        
-                    getScore(recent_raw, cb);
-                })
-                .catch(err => {
-                    console.log(err);
-                    cb(`No scores matching criteria found. 💀`);
-                });
-            }
+			getScore(score, cb);
         } else {
-            if(options.mods) {
-                api.get(`/beatmaps/${options.beatmap_id}/scores`, { params: { mods: options.mods } }).then(response => {
-                    response = response.data;
-        
-                    if(response.scores.length < options.index)
-                        options.index = response.scores.length - 1;
-        
-                    let recent_raw = response.scores[options.index - 1];
-                    recent_raw.beatmap = beatmap;
-                    recent_raw.beatmapset = beatmap.beatmapset;
-                    //recent_raw.beatmap.id = options.beatmap_id;
-        
-                    getScore(recent_raw, cb);
-                })
-                .catch(err => {
-                    console.log(err);
-                    cb(`No scores matching criteria found. 💀`);
-                });
-            } else {
-                api.get(`/beatmaps/${options.beatmap_id}/scores`, { params: { mode: "osu" } }).then(response => {
-                    response = response.data;
-        
-                    if(response.scores.length < options.index)
-                        options.index = response.scores.length - 1;
-        
-                    let recent_raw = response.scores[options.index - 1];
+			try {
+				beatmap = await module.exports.get_beatmap(options.beatmap_id);
+			} catch(err) {
+				cb(err);
+			}
+	
+			beatmap = beatmap.data
 
-                    recent_raw.beatmap = beatmap;
-                    recent_raw.beatmapset = beatmap.beatmapset;
-                    //recent_raw.beatmap.id = options.beatmap_id;
-        
-                    getScore(recent_raw, cb);
-                })
-                .catch(err => {
-                    console.log(err);
-                    cb(`No scores matching criteria found. 💀`);
-                });
-            }
-        }
+			if(options.solo_score) {
+				if(options.mods) {
+					let route = `/beatmaps/${options.beatmap_id}/solo-scores/?type=global&mode=osu`
+
+					options.mods.forEach( mod => route += `&mods[]=${mod}`)
+
+					api.get(route).then(response => {
+						response = response.data;
+
+						if(response.scores.length < options.index)
+						options.index = response.scores.length - 1;
+		
+						let recent_raw = response.scores[options.index - 1];
+						recent_raw.beatmap = beatmap;
+						recent_raw.beatmapset = beatmap.beatmapset;
+						//recent_raw.beatmap.id = options.beatmap_id;
+			
+						getScore(recent_raw, cb);
+					})         
+					.catch(err => {
+						console.log(err);
+						cb(`No scores matching criteria found. 💀`);
+					});
+		
+				} else {
+					api.get(`/beatmaps/${options.beatmap_id}/solo-scores/`, { params: { mode: "osu" } }).then(response => {
+						response = response.data;
+			
+						if(response.scores.length < options.index)
+							options.index = response.scores.length - 1;
+			
+						let recent_raw = response.scores[options.index - 1];
+						recent_raw.beatmap = beatmap;
+						recent_raw.beatmapset = beatmap.beatmapset;
+						//recent_raw.beatmap.id = options.beatmap_id;
+			
+						getScore(recent_raw, cb);
+					})
+					.catch(err => {
+						console.log(err);
+						cb(`No scores matching criteria found. 💀`);
+					});
+				}
+			} else if(options.user) {
+				let { user_id, error } = await getUserId(options.user);
+				if(error) { cb("Couldn't reach osu!api. 💀") }
+
+				if(options.mods) {
+					api.get(`/beatmaps/${options.beatmap_id}/scores/users/${user_id}`, { params: { mods: options.mods } }).then(response => {
+						//console.log(response);
+						response = response.data;
+			
+						let recent_raw = response.score;
+						recent_raw.beatmap = beatmap;
+						recent_raw.beatmapset = beatmap.beatmapset;
+						//recent_raw.beatmap.id = options.beatmap_id;
+			
+						getScore(recent_raw, cb);
+					})         
+					.catch(err => {
+						console.log(err);
+						cb(`No scores matching criteria found. 💀`);
+					});
+		
+				} else {
+					api.get(`/beatmaps/${options.beatmap_id}/scores/users/${user_id}/all`, { params: { mode: "osu" } }).then(response => {
+						response = response.data;
+			
+						if(response.scores.length < options.index)
+							options.index = response.scores.length - 1;
+			
+						let recent_raw = response.scores[options.index - 1];
+						recent_raw.beatmap = beatmap;
+						recent_raw.beatmapset = beatmap.beatmapset;
+						//recent_raw.beatmap.id = options.beatmap_id;
+			
+						getScore(recent_raw, cb);
+					})
+					.catch(err => {
+						console.log(err);
+						cb(`No scores matching criteria found. 💀`);
+					});
+				}
+			} else {
+				if(options.mods) {
+					api.get(`/beatmaps/${options.beatmap_id}/scores`, { params: { mods: options.mods } }).then(response => {
+						response = response.data;
+			
+						if(response.scores.length < options.index)
+							options.index = response.scores.length - 1;
+			
+						let recent_raw = response.scores[options.index - 1];
+						recent_raw.beatmap = beatmap;
+						recent_raw.beatmapset = beatmap.beatmapset;
+						//recent_raw.beatmap.id = options.beatmap_id;
+			
+						getScore(recent_raw, cb);
+					})
+					.catch(err => {
+						console.log(err);
+						cb(`No scores matching criteria found. 💀`);
+					});
+				} else {
+					api.get(`/beatmaps/${options.beatmap_id}/scores`, { params: { mode: "osu" } }).then(response => {
+						response = response.data;
+			
+						if(response.scores.length < options.index)
+							options.index = response.scores.length - 1;
+			
+						let recent_raw = response.scores[options.index - 1];
+
+						recent_raw.beatmap = beatmap;
+						recent_raw.beatmapset = beatmap.beatmapset;
+						//recent_raw.beatmap.id = options.beatmap_id;
+			
+						getScore(recent_raw, cb);
+					})
+					.catch(err => {
+						console.log(err);
+						cb(`No scores matching criteria found. 💀`);
+					});
+				}
+			}
+		}
     },
 
 	get_tops: async function(options, cb){
@@ -2262,15 +2276,12 @@ module.exports = {
         }
     },
 
-    parse_beatmap_url: function(beatmap_url, id_only){
+    parse_beatmap_url: function(beatmap_url, id_only = false){
 		return new Promise((resolve, reject) => {
 			if(beatmap_url.startsWith('<') && beatmap_url.endsWith('>'))
 	            beatmap_url = beatmap_url.substring(1, beatmap_url.length - 1);
 
 	        let beatmap_id;
-
-	        if(id_only === undefined)
-				id_only = false;
 
 	        if(beatmap_url.includes("#osu/"))
 	            beatmap_id = parseInt(beatmap_url.split("#osu/").pop());
@@ -2291,13 +2302,14 @@ module.exports = {
 		});
     },
 
-	parse_beatmap_url_sync: function(beatmap_url, id_only){
+	parse_beatmap_url_sync: function(beatmap_url, id_only = false){
 		if(beatmap_url.startsWith('<') && beatmap_url.endsWith('>'))
             beatmap_url = beatmap_url.substring(1, beatmap_url.length - 1);
 
+		if(beatmap_url.endsWith('/'))
+			beatmap_url = beatmap_url.substring(0, beatmap_url.length - 1);
+
         let beatmap_id;
-        let _id_only = id_only;
-        if(id_only === undefined) _id_only = false;
 
         if(beatmap_url.includes("#osu/"))
             beatmap_id = parseInt(beatmap_url.split("#osu/").pop());
@@ -2307,11 +2319,28 @@ module.exports = {
             beatmap_id = parseInt(beatmap_url.split("/osu/").pop());
         else if(beatmap_url.includes("/beatmaps/"))
             beatmap_id = parseInt(beatmap_url.split("/beatmaps/").pop());
-        else if(parseInt(beatmap_url) == beatmap_url && _id_only)
+        else if(parseInt(beatmap_url) == beatmap_url && id_only)
             beatmap_id = parseInt(beatmap_url);
 
 		return beatmap_id;
     },
+
+	parse_score_url_sync: function(score_url, id_only = false){
+		if(score_url.startsWith('<') && score_url.endsWith('>'))
+            score_url = score_url.substring(1, score_url.length - 1);
+
+		if(score_url.endsWith('/'))
+			score_url = score_url.substring(0, score_url.length - 1);
+
+		let score_id;
+
+		if(score_url.includes('/scores/'))
+			score_id = score_url.split('/').pop();
+		else if(parseInt(score_id) == score_id && id_only)
+			score_id = parseInt(score_id);
+
+		return score_id;
+	},
 
     get_bpm_graph: async function(osu_file_path, mods_string = ""){
         try{
