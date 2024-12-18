@@ -42,7 +42,7 @@ module.exports = {
     configRequired: ['debug'],
     call: obj => {
         return new Promise((resolve, reject) => {
-            let { argv, msg, last_beatmap } = obj;
+            let { argv, msg, last_beatmap, webui } = obj;
 
             let beatmap_id, beatmap_url, beatmap_promise, mods = [], time = 0,
             ar, cs, od, length = 0, percent = 0, custom_url = false,
@@ -232,7 +232,7 @@ module.exports = {
                             frame.get_frames(download_path, time, length * 1000, mods, size, {
                                 combo,
                                 type: video_type, cs, ar, od, analyze, lagtrain, argon, hidden, custom_url, traceable, flashlight, black: false, osr, score_id, audio, fps, speed,
-                                fill: video_type == 'mp4', noshadow: true, percent, border: false, objects, msg, nointerpolate
+                                fill: video_type == 'mp4', noshadow: true, percent, border: false, objects, msg, nointerpolate, webui
                             });
 						}else{
 							frame.get_frame(download_path, time, mods, [800, 600], {

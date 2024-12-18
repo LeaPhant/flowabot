@@ -829,7 +829,7 @@ module.exports = {
                             console.log('size', stat.size / 1024, 'KiB');
                             console.log('max size', MAX_SIZE / 1024, 'KiB');
 
-                            if(stat.size < MAX_SIZE && msg.channel.type == "text"){
+                            if(stat.size < MAX_SIZE && msg.channel.type == "text" || options.webui){
                                 resolveRender({files: [{
                                     attachment: `${file_path}/video.${options.type}`,
                                     name: `video.${options.type}`
