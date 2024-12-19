@@ -355,9 +355,9 @@ class BeatmapProcessor {
 		this.Beatmap = await this.parseBeatmap();
 
 		await this.applySettings();
-		await this.applyMods();
 		await this.applyComboColors();
 		await this.applySliders();
+		await this.applyMods();
 		await this.applyStacking();
 		await this.applyHitsounds();
 		await this.applyReplay();
