@@ -21,6 +21,8 @@ class ReflectionMod {
 	apply () {
 		const mirrorMod = this.Beatmap.Mods.get('MR');
 
+
+		// MR.reflection: undefined = horizontal, 1 = vertical, 2 = both
 		const invertVertical = 
 			this.Beatmap.Mods.has('HR') || 
 			mirrorMod?.reflection >= 1;
