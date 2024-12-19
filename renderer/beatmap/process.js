@@ -42,10 +42,10 @@ class BeatmapProcessor {
 
 		const Beatmap = osuBeatmapParser.parseContent(this.osuContents);
 
-		Beatmap.CircleSize = Beatmap.CircleSize ?? 5;
-		Beatmap.OverallDifficulty = Beatmap.OverallDifficulty ?? 5;
+		Beatmap.CircleSize = Number(Beatmap.CircleSize ?? 5);
+		Beatmap.OverallDifficulty =  Number(Beatmap.OverallDifficulty ?? 5);
 		// Very old maps use the OD as the AR 
-		Beatmap.ApproachRate = Beatmap.ApproachRate ?? Beatmap.OverallDifficulty;
+		Beatmap.ApproachRate = Number(Beatmap.ApproachRate ?? Beatmap.OverallDifficulty ?? 5);
 
 		console.time("download/parse replay");
 
