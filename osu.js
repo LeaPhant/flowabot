@@ -1,6 +1,7 @@
 const axios = require('axios');
 const ojsama = require('ojsama');
 const rosu = require("rosu-pp-js");
+const bparser = require("bparser-js");
 
 const osuBeatmapParser = require('osu-parser');
 const path = require('path');
@@ -1776,10 +1777,7 @@ module.exports = {
 
         const tops = user_best.slice(0, options.count || 5);
 
-        const { data } = await axios(`${config.beatmap_api}/b/${tops.map(a => a.beatmap.id).join(",")}`);
-
         for(const top of tops){
-            const { beatmap } = data.find(a => a.beatmap.beatmap_id == top.beatmap.id);
 
             top.accuracy = (top.accuracy * 100).toFixed(2);
 
@@ -1791,8 +1789,8 @@ module.exports = {
                 speed *= top.mods.filter(mod => mod.acronym == "HT" || mod.acronym == "DC")[0].settings?.speed_change ?? 0.75;
             }
 
-            await helper.downloadBeatmap(beatmap.beatmap_id)
-            const beatmap_path = path.resolve(config.osu_cache_path, `${beatmap.beatmap_id}.osu`);
+            await helper.downloadBeatmap(top.beatmap.id)
+            const beatmap_path = path.resolve(config.osu_cache_path, `${top.beatmap.id}.osu`);
 			const beatmap_content = await fs.readFile(beatmap_path, 'utf8');
 
             const play_params = {
@@ -1812,8 +1810,6 @@ module.exports = {
             top.pp_fc = pp_fc.pp;
             top.acc_fc = calculateAccuracy({great: play_params.n300, ok: play_params.n100, meh: play_params.n50}).toFixed(2);
             top.rank_emoji = getRankEmoji(top.rank);
-
-            top.beatmap = beatmap;
         }
 
         cb(null, { user, tops });
@@ -1839,14 +1835,7 @@ module.exports = {
             return;
         }
 
-        let { data } = await axios(`${config.beatmap_api}/b/${pins.map(a => a.beatmap.id).join(",")}`)
-        
-        if(Array.isArray(data) == false){
-            data = [data]
-        }
-
         for(const pin of pins){
-            const { beatmap } = data.find(a => a.beatmap.beatmap_id == pin.beatmap.id);
 
             pin.accuracy = (pin.accuracy * 100).toFixed(2);
 
@@ -1858,8 +1847,8 @@ module.exports = {
                 speed *= pin.mods.filter(mod => mod.acronym == "HT" || mod.acronym == "DC")[0].settings?.speed_change ?? 0.75;
             }
 
-            await helper.downloadBeatmap(beatmap.beatmap_id)
-            const beatmap_path = path.resolve(config.osu_cache_path, `${beatmap.beatmap_id}.osu`);
+            await helper.downloadBeatmap(pin.beatmap.id)
+            const beatmap_path = path.resolve(config.osu_cache_path, `${pin.beatmap.id}.osu`);
 			const beatmap_content = await fs.readFile(beatmap_path, 'utf8');
 
             const play_params = {
@@ -1880,7 +1869,6 @@ module.exports = {
             pin.acc_fc = calculateAccuracy({great: play_params.n300, ok: play_params.n100, meh: play_params.n50}).toFixed(2);
             pin.rank_emoji = getRankEmoji(pin.rank);
 
-            pin.beatmap = beatmap;
         }
         
         cb(null, { user, pins });
@@ -1906,14 +1894,7 @@ module.exports = {
             return;
         }
 
-        let { data } = await axios(`${config.beatmap_api}/b/${firsts.map(a => a.beatmap.id).join(",")}`)
-        
-        if(Array.isArray(data) == false){
-            data = [data]
-        }
-
         for(const first of firsts){
-            const { beatmap } = data.find(a => a.beatmap.beatmap_id == first.beatmap.id);
 
             first.accuracy = (first.accuracy * 100).toFixed(2);
 
@@ -1925,8 +1906,8 @@ module.exports = {
                 speed *= first.mods.filter(mod => mod.acronym == "HT" || mod.acronym == "DC")[0].settings?.speed_change ?? 0.75;
             }
 
-            await helper.downloadBeatmap(beatmap.beatmap_id)
-            const beatmap_path = path.resolve(config.osu_cache_path, `${beatmap.beatmap_id}.osu`);
+            await helper.downloadBeatmap(first.beatmap.id)
+            const beatmap_path = path.resolve(config.osu_cache_path, `${first.beatmap.id}.osu`);
 			const beatmap_content = await fs.readFile(beatmap_path, 'utf8');
 
             const play_params = {
@@ -1946,8 +1927,6 @@ module.exports = {
             first.pp_fc = pp_fc.pp;
             first.acc_fc = calculateAccuracy({great: play_params.n300, ok: play_params.n100, meh: play_params.n50}).toFixed(2);
             first.rank_emoji = getRankEmoji(first.rank);
-
-            first.beatmap = beatmap;
         }
         
         cb(null, { user, firsts });
@@ -1993,11 +1972,8 @@ module.exports = {
 
     get_pp: async function(options, cb){
         try {
-            const result = await axios.get(`${config.beatmap_api}/b/${options.beatmap_id}`)
-            const response = result.data;
-            //helper.log(response);
-
-            const beatmap = response.beatmap;
+			const result = await api.get(`/beatmaps/${options.beatmap_id}`);
+            const beatmap = result.data;
 
             if(options.speed_change && options.speed_change > 1) {
                 let mod = options.mods.find(m => m.acronym === "DT")
@@ -2028,7 +2004,7 @@ module.exports = {
 				})
 			}
 
-            let diff_settings = calculateCsArOdHp(beatmap.cs, beatmap.ar, beatmap.od, beatmap.hp, options.mods);
+            let diff_settings = calculateCsArOdHp(beatmap.cs, beatmap.ar, beatmap.accuracy, beatmap.drain, options.mods);
 
             let speed = 1;
 
@@ -2045,11 +2021,9 @@ module.exports = {
                 speed *= isHT.settings?.speed_change ?? 0.75;;
 
             let bpm = beatmap.bpm * speed;
-            let bpm_min = beatmap.bpm_min * speed;
-            let bpm_max = beatmap.bpm_max * speed;
 
-            await helper.downloadBeatmap(beatmap.beatmap_id)
-            const beatmap_path = path.resolve(config.osu_cache_path, `${beatmap.beatmap_id}.osu`);
+            await helper.downloadBeatmap(beatmap.id)
+            const beatmap_path = path.resolve(config.osu_cache_path, `${beatmap.id}.osu`);
 			const beatmap_content = await fs.readFile(beatmap_path, 'utf8');
 
             const rosu_map = new rosu.Beatmap(beatmap_content);
@@ -2092,8 +2066,8 @@ module.exports = {
             let embed = {};
 
             embed.color = 12277111;
-            embed.title = `${beatmap.artist} – ${beatmap.title} [${beatmap.version}]`;
-            embed.url = `https://osu.ppy.sh/b/${beatmap.beatmap_id}`;
+            embed.title = `${beatmap.beatmapset.artist} – ${beatmap.beatmapset.title} [${beatmap.version}]`;
+            embed.url = `https://osu.ppy.sh/b/${beatmap.id}`;
             embed.description = `**${mods.length > 0 ? '+' + sanitizeMods(options.mods).join('') : 'NOMOD'}**`;
 
             let lines = ['', '', 'Difficulty', ''];
@@ -2122,20 +2096,10 @@ module.exports = {
 
             lines[3] = `CS**${+diff_settings.cs.toFixed(2)}** AR**${+diff.ar.toFixed(2)}** OD**${+diff.od.toFixed(2)}** HP**${+diff_settings.hp.toFixed(2)}** - `;
 
-            if(bpm_min != bpm_max)
-                lines[3] += `${+bpm_min.toFixed(2)}-${+bpm_max.toFixed(2)} (**`;
-            else
-                lines[3] += '**';
-
-            lines[3] += +bpm.toFixed(1);
-
-            if(bpm_min != bpm_max)
-                lines[3] += '**)';
-            else
-                lines[3] += '**';
-
-            lines[3] += ' BPM ~ ';
+            lines[3] += `**${+bpm.toFixed(1)}** BPM ~ `;
             lines[3] += `**${+diff.stars.toFixed(2)}**★`;
+
+			const bparsed = new bparser.BeatmapParser(beatmap_path);
 
             embed.fields = [
                 {
@@ -2147,18 +2111,13 @@ module.exports = {
                     value: lines[3],
                 },
                 {
-                    name: "Eyup Stars",
-                    value: `**${beatmap.eyup_star_rating ? beatmap.eyup_star_rating.toFixed(2) + "**★": "Unavailable**"}`,
+                    name: 'ScoreV1 Nomod SS',
+                    value: `${bparsed.maxScore.toLocaleString()} Score`,
                     inline: true
                 },
                 {
-                    name: 'Nomod SS',
-                    value: beatmap.max_score ? beatmap.max_score.toLocaleString() + " Score" : "Unavailable",
-                    inline: true
-                },
-                {
-                    name: "HDHRDTFL SS",
-                    value: beatmap.max_score_fullmod ? beatmap.max_score_fullmod.toLocaleString() + " Score" : "Unavailable",
+                    name: "ScoreV1 HDHRDTFL SS",
+                    value: `${bparsed.getMaxScore(1112).toLocaleString()} Score`,
                     inline: true
                 },
             ];

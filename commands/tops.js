@@ -62,14 +62,14 @@ module.exports = {
                         embed.fields = [];
 
                         for(const top of tops){
-                            let name = `${top.rank_emoji} ${top.stars.toFixed(2)}★ ${top.beatmap.artist} - ${top.beatmap.title} [${top.beatmap.version}]`;
+                            let name = `${top.rank_emoji} ${top.stars.toFixed(2)}★ ${top.beatmapset.artist} - ${top.beatmapset.title} [${top.beatmap.version}]`;
 
                             if(top.mods.length > 0)
                                 name += ` +${osu.sanitize_mods(top.mods).join(",")}`;
 
                             name += ` ${top.accuracy}%`;
 
-                            let value = `[🔗](https://osu.ppy.sh/b/${top.beatmap.beatmap_id}) `;
+                            let value = `[🔗](https://osu.ppy.sh/b/${top.beatmap.id}) `;
 
                             if(Number(top.max_combo) < top.beatmap.max_combo && top.pp_fc > top.pp)
                                 value += `**${Number(top.pp).toFixed(2)}pp** ➔ ${top.pp_fc.toFixed(2)}pp for ${top.acc_fc}% FC${helper.sep}`;
