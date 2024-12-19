@@ -62,7 +62,7 @@ class BeatmapProcessor {
 		if (this.options.osr) {
 			try {
 				// @ts-ignore
-				const response = await axios.get(options.osr, { timeout: 5000, responseType: 'arraybuffer' });
+				const response = await axios.get(this.options.osr, { timeout: 5000, responseType: 'arraybuffer' });
 
 				Replay = await parseReplay(response.data);
 				
