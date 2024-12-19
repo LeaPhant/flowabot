@@ -1,46 +1,49 @@
-const fs = require('fs');
+const { promises: fs } = require('fs');
 const path = require('path');
 
 const osuBeatmapParser = require('osu-parser');
 const axios = require('axios');
 
+const config = require('../../config.json');
 const { parseReplay } = require('./replay');
 const { difficultyRange, float } = require('./util');
+
+const exists = path => fs.access(path).then(() => true, () => false);
 
 const OBJECT_RADIUS = 64;
 const ROUNDING_ALLOWANCE = float(1.00041);
 
 const parseBeatmap = async (beatmap_path, options, mods_raw) => {
-	const Beatmap = new Object();
+	const osuContents = await fs.readFile(beatmap_path, 'utf8');
 
-	const osuContents = await fs.promises.readFile(beatmap_path, 'utf8');
-
-    Beatmap = osuBeatmapParser.parseContent(osuContents);
+    const Beatmap = osuBeatmapParser.parseContent(osuContents);
 
     Beatmap.CircleSize = Beatmap.CircleSize ?? 5;
     Beatmap.OverallDifficulty = Beatmap.OverallDifficulty ?? 5;
 	// Very old maps use the OD as the AR 
     Beatmap.ApproachRate = Beatmap.ApproachRate ?? Beatmap.OverallDifficulty;
 
-    let Replay;
-	Beatmap.Replay = Replay;
-
 	console.time("download/parse replay");
 
-    if (options.score_id) {
-        let replay_path = path.resolve(config.replay_path, `${options.score_id}.osr`);
+	let Replay;
 
-        if(fs.existsSync(replay_path))
-            Replay = {lastCursor: 0, replay_data: await parseReplay(fs.readFileSync(replay_path))};
+    if (options.score_id) {
+        const replay_path = path.resolve(config.replay_path, `${options.score_id}.osr`);
+
+        if (exists(replay_path)) {
+            Replay = await parseReplay(await fs.readFile(replay_path));
+		}
     }
 
     if (options.osr) {
         try {
+            // @ts-ignore
             const response = await axios.get(options.osr, { timeout: 5000, responseType: 'arraybuffer' });
 
-            Replay = {lastCursor: 0, replay_data: await parseReplay(response.data)};
-			if (score_info) {
-				mods_raw = score_info.mods;
+			Replay = await parseReplay(response.data);
+			
+			if (Replay.score_info) {
+				mods_raw = Replay.score_info.mods;
 			}
         } catch(e) {
             console.error(e);
@@ -48,6 +51,8 @@ const parseBeatmap = async (beatmap_path, options, mods_raw) => {
             throw "Couldn't download replay";
         }
     }
+
+	Beatmap.Replay = Replay;
 
 	console.timeEnd("download/parse replay");
 
@@ -87,9 +92,9 @@ const parseBeatmap = async (beatmap_path, options, mods_raw) => {
 	if (Mods.has('DA')) {
 		const mod = Mods.get('DA');
 
-		beatmap.CircleSize = mod.circle_size ?? Beatmap.CircleSize;
-		beatmap.ApproachRate = mod.approach_rate ?? Beatmap.ApproachRate;
-		beatmap.OverallDifficulty = mod.overall_difficulty ?? Beatmap.OverallDifficulty;
+		Beatmap.CircleSize = mod.circle_size ?? Beatmap.CircleSize;
+		Beatmap.ApproachRate = mod.approach_rate ?? Beatmap.ApproachRate;
+		Beatmap.OverallDifficulty = mod.overall_difficulty ?? Beatmap.OverallDifficulty;
 	}
 
 	if (Mods.has('CL')) {
@@ -121,7 +126,7 @@ const parseBeatmap = async (beatmap_path, options, mods_raw) => {
 	};
 
 	for (const key in hitWindows) {
-		const judgement = hitWindows[key];
+		let judgement = hitWindows[key];
 
 		if (Mods.has('CL'))
 			judgement -= 0.5;
