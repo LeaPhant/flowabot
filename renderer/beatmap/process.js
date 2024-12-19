@@ -96,7 +96,7 @@ class BeatmapProcessor {
 
 		if (Mods.has('HR')) {
 			Beatmap.CircleSize = Math.min(10, Beatmap.CircleSize * 1.3);
-			Beatmap.ApproachRate = Math.min(10, Beatmap.CircleSize * 1.4);
+			Beatmap.ApproachRate = Math.min(10, Beatmap.ApproachRate * 1.4);
 			Beatmap.OverallDifficulty = Math.min(10, Beatmap.OverallDifficulty * 1.4);
 		}
 	
