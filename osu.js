@@ -532,7 +532,9 @@ function convertStandardisedToClassic(score, object_count) {
 }
 
 function getModSettingsString(mods) {
+	const appraochDifferentStyles = ["Linear", "Gravity", "InOut1", "InOut2", "Accelerate1", "Accelerate2", "Accelerate3", "Decelerate1", "Decelerate2", "Decelerate3"];
 	let string = "";
+
 	for (const mod of mods) {
 		switch (mod.acronym) {
 			case "EZ":
@@ -654,7 +656,7 @@ function getModSettingsString(mods) {
 				if (mod.settings.hasOwnProperty("scale"))
 					string += `**AD** ~ Initial size: \`${mod.settings.scale}\`\n`;
 				if (mod.settings.hasOwnProperty("style"))
-					string += `**AD** ~ Style: \`${mod.settings.style}\`\n`;
+					string += `**AD** ~ Style: \`${appraochDifferentStyles[mod.settings.style]}\`\n`;
 				break;
 			case "MU":
 				if (!mod.settings)
