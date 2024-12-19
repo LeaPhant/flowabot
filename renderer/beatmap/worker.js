@@ -1,9 +1,11 @@
 const parseBeatmap = require('./parse');
+const applyMods = require('./mods/mods');
 
 const processBeatmap = async (obj) => {
-	const beatmap = await parseBeatmap(obj);
+	const Beatmap = await parseBeatmap(obj);
+	applyMods(Beatmap);
 	
-	return beatmap;
+	return Beatmap;
 }
 
 process.on('message', async obj => {
