@@ -147,12 +147,6 @@ class BeatmapProcessor {
 		Beatmap.TimePreempt = difficultyRange(Beatmap.ApproachRate, 1800, 1200, 450);
 		Beatmap.TimeFadein = difficultyRange(Beatmap.ApproachRate, 1200, 800, 300);
 	
-		// don't apply rate changing if user is supplying custom AR
-		if (!options.ar) {
-			Beatmap.TimeFadein /= Beatmap.SpeedMultiplier;
-			Beatmap.TimePreempt /= Beatmap.SpeedMultiplier;
-		}
-	
 		if (Mods.has('HD') && options.hidden)
 			Beatmap.TimeFadein = Beatmap.TimePreempt * 0.4;
 	
