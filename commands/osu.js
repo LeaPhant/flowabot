@@ -14,7 +14,7 @@ module.exports = {
         return new Promise((resolve, reject) => {
             let { argv, msg, user_ign } = obj;
 
-            let extended = argv[0] == 'osu2';
+            let extended = argv[0].toLowerCase() == 'osu2';
 
             let osu_user = helper.getUsername(argv, msg, user_ign);
 
