@@ -50,7 +50,7 @@ if(helper.getItem('last_message')){
 }
 
 if(config.credentials.client_id && config.credentials.client_secret)
-    osu.init(client, config.credentials.client_id, config.credentials.client_secret, last_beatmap, config.credentials.osu_api_key);
+    osu.init(client, config.credentials.client_id, config.credentials.client_secret, last_beatmap);
 
 function checkCommand(msg, command){
     if(!msg.content.startsWith(config.prefix))

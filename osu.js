@@ -1,6 +1,7 @@
 const axios = require('axios');
 const ojsama = require('ojsama');
 const rosu = require("rosu-pp-js");
+const bparser = require("bparser-js");
 
 const osuBeatmapParser = require('osu-parser');
 const path = require('path');
@@ -532,7 +533,9 @@ function convertStandardisedToClassic(score, object_count) {
 }
 
 function getModSettingsString(mods) {
+	const appraochDifferentStyles = ["Linear", "Gravity", "InOut1", "InOut2", "Accelerate1", "Accelerate2", "Accelerate3", "Decelerate1", "Decelerate2", "Decelerate3"];
 	let string = "";
+
 	for (const mod of mods) {
 		switch (mod.acronym) {
 			case "EZ":
@@ -654,7 +657,7 @@ function getModSettingsString(mods) {
 				if (mod.settings.hasOwnProperty("scale"))
 					string += `**AD** ~ Initial size: \`${mod.settings.scale}\`\n`;
 				if (mod.settings.hasOwnProperty("style"))
-					string += `**AD** ~ Style: \`${mod.settings.style}\`\n`;
+					string += `**AD** ~ Style: \`${appraochDifferentStyles[mod.settings.style]}\`\n`;
 				break;
 			case "MU":
 				if (!mod.settings)
@@ -1154,7 +1157,7 @@ async function getUserId(u){
 }
 
 module.exports = {
-    init: async function(client, client_id, client_secret, _last_beatmap, api_key){
+    init: async function(client, client_id, client_secret, _last_beatmap){
 		discord_client = client;
 		last_beatmap = _last_beatmap;
 
@@ -1162,17 +1165,6 @@ module.exports = {
             await getAccessToken();
             updateTrackedUsers();
 		}
-
-        if(api_key){
-	        settings.api_key = api_key;
-	        apiv1 = axios.create({
-	            baseURL: 'https://osu.ppy.sh/api',
-	            params: {
-	                k: api_key
-	            }
-	        });
-        }
-
     },
 
     sanitize_mods: function(mods) {
@@ -1613,102 +1605,6 @@ module.exports = {
         });
     },
 
-    get_compare: async function(options, cb){
-
-        let { user_id, error } = await getUserId(options.user);
-        if(error) { cb("Couldn't reach osu!api. 💀") }
-
-        if(options.mods) {
-            api.get(`/beatmaps/${options.beatmap_id}/scores/users/${user_id}`, { params: { mods: options.mods } }).then(response => {
-                //console.log(response);
-                response = response.data;
-    
-                let recent_raw = response.score;
-                recent_raw.beatmap = {};
-                recent_raw.beatmap.id = options.beatmap_id;
-    
-                getScore(recent_raw, cb);
-            })         
-            .catch(err => {
-                console.log(err);
-                cb(`No scores matching criteria found. 💀`);
-            });
-
-        } else {
-            api.get(`/beatmaps/${options.beatmap_id}/scores/users/${user_id}/all`, { params: { mode: "osu" } }).then(response => {
-                response = response.data;
-    
-                if(response.scores.length < options.index)
-                    optiins.index = response.scores.length - 1;
-    
-                let recent_raw = response.scores[options.index - 1];
-                recent_raw.beatmap = {};
-                recent_raw.beatmap.id = options.beatmap_id;
-    
-                getScore(recent_raw, cb);
-            })
-            .catch(err => {
-                console.log(err);
-                cb(`No scores matching criteria found. 💀`);
-            });
-        }
-
-
-
-        let params = {
-            b: options.beatmap_id,
-        };
-
-        if(options.user){
-            params.u = options.user;
-        }else{
-            if(options.mods)
-                params.mods = getModsEnum(options.mods);
-        }
-
-        apiv1.get('/get_scores', { params: params }).then(response => {
-            response = response.data;
-
-            let score;
-            let filter = [];
-
-            if(options.mods){
-                let mods_enum = getModsEnum(options.mods);
-                filter = response.filter(a => parseInt(a.enabled_mods) == mods_enum);
-
-                if(options.mods[0] == 'mods'){
-                    filter = [];
-
-                    filter = getBestMods(response, options.mods);
-
-                    if(filter.length == 0){
-                        filter = response.filter(a => parseInt(a.enabled_mods) == mods_enum);
-                        if(filter.length == 0)
-                            score = response[0];
-                        else
-                            score = filter[0];
-                    }else{
-                        score = filter[0];
-                    }
-                }else{
-                    score = filter[0];
-                }
-            }else{
-                if(response.length > 0)
-                    score = response[0];
-            }
-
-            if(!score){
-                cb(`No scores matching criteria found. 💀`);
-                return;
-            }
-
-            score.beatmap_id = options.beatmap_id;
-
-            getScore(score, cb);
-        });
-    },
-
 	get_beatmap: async function(beatmap_id) {
 		try {
 			return await api.get(`/beatmaps/lookup`, { params: { id: beatmap_id }})
@@ -1881,10 +1777,7 @@ module.exports = {
 
         const tops = user_best.slice(0, options.count || 5);
 
-        const { data } = await axios(`${config.beatmap_api}/b/${tops.map(a => a.beatmap.id).join(",")}`);
-
         for(const top of tops){
-            const { beatmap } = data.find(a => a.beatmap.beatmap_id == top.beatmap.id);
 
             top.accuracy = (top.accuracy * 100).toFixed(2);
 
@@ -1896,8 +1789,8 @@ module.exports = {
                 speed *= top.mods.filter(mod => mod.acronym == "HT" || mod.acronym == "DC")[0].settings?.speed_change ?? 0.75;
             }
 
-            await helper.downloadBeatmap(beatmap.beatmap_id)
-            const beatmap_path = path.resolve(config.osu_cache_path, `${beatmap.beatmap_id}.osu`);
+            await helper.downloadBeatmap(top.beatmap.id)
+            const beatmap_path = path.resolve(config.osu_cache_path, `${top.beatmap.id}.osu`);
 			const beatmap_content = await fs.readFile(beatmap_path, 'utf8');
 
             const play_params = {
@@ -1917,8 +1810,6 @@ module.exports = {
             top.pp_fc = pp_fc.pp;
             top.acc_fc = calculateAccuracy({great: play_params.n300, ok: play_params.n100, meh: play_params.n50}).toFixed(2);
             top.rank_emoji = getRankEmoji(top.rank);
-
-            top.beatmap = beatmap;
         }
 
         cb(null, { user, tops });
@@ -1944,14 +1835,7 @@ module.exports = {
             return;
         }
 
-        let { data } = await axios(`${config.beatmap_api}/b/${pins.map(a => a.beatmap.id).join(",")}`)
-        
-        if(Array.isArray(data) == false){
-            data = [data]
-        }
-
         for(const pin of pins){
-            const { beatmap } = data.find(a => a.beatmap.beatmap_id == pin.beatmap.id);
 
             pin.accuracy = (pin.accuracy * 100).toFixed(2);
 
@@ -1963,8 +1847,8 @@ module.exports = {
                 speed *= pin.mods.filter(mod => mod.acronym == "HT" || mod.acronym == "DC")[0].settings?.speed_change ?? 0.75;
             }
 
-            await helper.downloadBeatmap(beatmap.beatmap_id)
-            const beatmap_path = path.resolve(config.osu_cache_path, `${beatmap.beatmap_id}.osu`);
+            await helper.downloadBeatmap(pin.beatmap.id)
+            const beatmap_path = path.resolve(config.osu_cache_path, `${pin.beatmap.id}.osu`);
 			const beatmap_content = await fs.readFile(beatmap_path, 'utf8');
 
             const play_params = {
@@ -1985,7 +1869,6 @@ module.exports = {
             pin.acc_fc = calculateAccuracy({great: play_params.n300, ok: play_params.n100, meh: play_params.n50}).toFixed(2);
             pin.rank_emoji = getRankEmoji(pin.rank);
 
-            pin.beatmap = beatmap;
         }
         
         cb(null, { user, pins });
@@ -2011,14 +1894,7 @@ module.exports = {
             return;
         }
 
-        let { data } = await axios(`${config.beatmap_api}/b/${firsts.map(a => a.beatmap.id).join(",")}`)
-        
-        if(Array.isArray(data) == false){
-            data = [data]
-        }
-
         for(const first of firsts){
-            const { beatmap } = data.find(a => a.beatmap.beatmap_id == first.beatmap.id);
 
             first.accuracy = (first.accuracy * 100).toFixed(2);
 
@@ -2030,8 +1906,8 @@ module.exports = {
                 speed *= first.mods.filter(mod => mod.acronym == "HT" || mod.acronym == "DC")[0].settings?.speed_change ?? 0.75;
             }
 
-            await helper.downloadBeatmap(beatmap.beatmap_id)
-            const beatmap_path = path.resolve(config.osu_cache_path, `${beatmap.beatmap_id}.osu`);
+            await helper.downloadBeatmap(first.beatmap.id)
+            const beatmap_path = path.resolve(config.osu_cache_path, `${first.beatmap.id}.osu`);
 			const beatmap_content = await fs.readFile(beatmap_path, 'utf8');
 
             const play_params = {
@@ -2051,8 +1927,6 @@ module.exports = {
             first.pp_fc = pp_fc.pp;
             first.acc_fc = calculateAccuracy({great: play_params.n300, ok: play_params.n100, meh: play_params.n50}).toFixed(2);
             first.rank_emoji = getRankEmoji(first.rank);
-
-            first.beatmap = beatmap;
         }
         
         cb(null, { user, firsts });
@@ -2098,11 +1972,8 @@ module.exports = {
 
     get_pp: async function(options, cb){
         try {
-            const result = await axios.get(`${config.beatmap_api}/b/${options.beatmap_id}`)
-            const response = result.data;
-            //helper.log(response);
-
-            const beatmap = response.beatmap;
+			const result = await api.get(`/beatmaps/${options.beatmap_id}`);
+            const beatmap = result.data;
 
             if(options.speed_change && options.speed_change > 1) {
                 let mod = options.mods.find(m => m.acronym === "DT")
@@ -2133,7 +2004,7 @@ module.exports = {
 				})
 			}
 
-            let diff_settings = calculateCsArOdHp(beatmap.cs, beatmap.ar, beatmap.od, beatmap.hp, options.mods);
+            let diff_settings = calculateCsArOdHp(beatmap.cs, beatmap.ar, beatmap.accuracy, beatmap.drain, options.mods);
 
             let speed = 1;
 
@@ -2150,11 +2021,9 @@ module.exports = {
                 speed *= isHT.settings?.speed_change ?? 0.75;;
 
             let bpm = beatmap.bpm * speed;
-            let bpm_min = beatmap.bpm_min * speed;
-            let bpm_max = beatmap.bpm_max * speed;
 
-            await helper.downloadBeatmap(beatmap.beatmap_id)
-            const beatmap_path = path.resolve(config.osu_cache_path, `${beatmap.beatmap_id}.osu`);
+            await helper.downloadBeatmap(beatmap.id)
+            const beatmap_path = path.resolve(config.osu_cache_path, `${beatmap.id}.osu`);
 			const beatmap_content = await fs.readFile(beatmap_path, 'utf8');
 
             const rosu_map = new rosu.Beatmap(beatmap_content);
@@ -2197,8 +2066,8 @@ module.exports = {
             let embed = {};
 
             embed.color = 12277111;
-            embed.title = `${beatmap.artist} – ${beatmap.title} [${beatmap.version}]`;
-            embed.url = `https://osu.ppy.sh/b/${beatmap.beatmap_id}`;
+            embed.title = `${beatmap.beatmapset.artist} – ${beatmap.beatmapset.title} [${beatmap.version}]`;
+            embed.url = `https://osu.ppy.sh/b/${beatmap.id}`;
             embed.description = `**${mods.length > 0 ? '+' + sanitizeMods(options.mods).join('') : 'NOMOD'}**`;
 
             let lines = ['', '', 'Difficulty', ''];
@@ -2227,20 +2096,10 @@ module.exports = {
 
             lines[3] = `CS**${+diff_settings.cs.toFixed(2)}** AR**${+diff.ar.toFixed(2)}** OD**${+diff.od.toFixed(2)}** HP**${+diff_settings.hp.toFixed(2)}** - `;
 
-            if(bpm_min != bpm_max)
-                lines[3] += `${+bpm_min.toFixed(2)}-${+bpm_max.toFixed(2)} (**`;
-            else
-                lines[3] += '**';
-
-            lines[3] += +bpm.toFixed(1);
-
-            if(bpm_min != bpm_max)
-                lines[3] += '**)';
-            else
-                lines[3] += '**';
-
-            lines[3] += ' BPM ~ ';
+            lines[3] += `**${+bpm.toFixed(1)}** BPM ~ `;
             lines[3] += `**${+diff.stars.toFixed(2)}**★`;
+
+			const bparsed = new bparser.BeatmapParser(beatmap_path);
 
             embed.fields = [
                 {
@@ -2252,18 +2111,13 @@ module.exports = {
                     value: lines[3],
                 },
                 {
-                    name: "Eyup Stars",
-                    value: `**${beatmap.eyup_star_rating ? beatmap.eyup_star_rating.toFixed(2) + "**★": "Unavailable**"}`,
+                    name: 'ScoreV1 Nomod SS',
+                    value: `${bparsed.maxScore.toLocaleString()} Score`,
                     inline: true
                 },
                 {
-                    name: 'Nomod SS',
-                    value: beatmap.max_score ? beatmap.max_score.toLocaleString() + " Score" : "Unavailable",
-                    inline: true
-                },
-                {
-                    name: "HDHRDTFL SS",
-                    value: beatmap.max_score_fullmod ? beatmap.max_score_fullmod.toLocaleString() + " Score" : "Unavailable",
+                    name: "ScoreV1 HDHRDTFL SS",
+                    value: `${bparsed.getMaxScore(1112).toLocaleString()} Score`,
                     inline: true
                 },
             ];
@@ -2776,36 +2630,38 @@ module.exports = {
     },
 
     track_user: function(channel_id, user, top, cb){
-        apiv1.get('/get_user', { params: { u: user } }).then(response => {
+        api.get(`/users/${user}/osu`).then(response => {
             response = response.data;
 
-            if(response.length > 0){
-                let user = response[0];
-                if(user.user_id in tracked_users){
-                    if(tracked_users[user.user_id].channels.includes(channel_id)){
-                        cb(`${user.username} is already being tracked in this channel. 🤡`);
-                    }else{
-                        tracked_users[user.user_id].channels.push(channel_id);
-                        tracked_users[user.user_id].top = top;
+			if(response.length == 0){
+				cb(`Couldn't find user \`${user}\`. 😔`);
+				return;
+			}
 
-                        delete top_plays[user.user_id];
+			let user = response;
+			if(user.id in tracked_users){
+				if(tracked_users[user.id].channels.includes(channel_id)){
+					cb(`${user.username} is already being tracked in this channel. 🤡`);
+				}else{
+					tracked_users[user.id].channels.push(channel_id);
+					tracked_users[user.id].top = top;
 
-                        cb(null, `Now tracking ${user.username}'s top ${top} in this channel. 🤓`);
-                    }
-                }else{
-                    tracked_users[user.user_id] = {
-                        top: top,
-                        channels: [channel_id]
-                    };
+					delete top_plays[user.id];
 
-                    cb(null, `Now tracking ${user.username}'s top ${top}. 🤓`);
-                }
+					cb(null, `Now tracking ${user.username}'s top ${top} in this channel. 🤓`);
+				}
+			}else{
+				tracked_users[user.id] = {
+					top: top,
+					channels: [channel_id]
+				};
 
-                helper.setItem('tracked_users', JSON.stringify(tracked_users));
-                helper.setItem('top_plays', JSON.stringify(top_plays));
-            }else{
-                cb(`Couldn't find user \`${user}\`. 😔`);
-            }
+				cb(null, `Now tracking ${user.username}'s top ${top}. 🤓`);
+			}
+
+			helper.setItem('tracked_users', JSON.stringify(tracked_users));
+			helper.setItem('top_plays', JSON.stringify(top_plays));
+
 		}).catch(err => {
 			if(err.status == 404)
 				cb("Couldn't find user. 😔");
@@ -2818,36 +2674,39 @@ module.exports = {
     },
 
     untrack_user: function(channel_id, user, cb){
-        apiv1.get('/get_user', { params: { u: user } }).then(response => {
+        api.get(`/users/${user}/osu`).then(response => {
             response = response.data;
 
-            if(response.length > 0){
-                let user = response[0];
-                if(user.user_id in tracked_users){
-                    if(tracked_users[user.user_id].channels.includes(channel_id)){
-                        tracked_users[user.user_id].channels
-                        = tracked_users[user.user_id].channels.filter(a => a != channel_id);
 
-                        if(tracked_users[user.user_id].channels.length > 0){
-                            cb(null, `Stopped tracking ${user.username} in this channel. 😔`);
-                        }else{
-                            cb(null, `Stopped tracking ${user.username}. 😔`);
+			if(response.length == 0){
+				cb(`Couldn't find user \`${user}\`. 😔`);
+				return;
+			}
 
-                            delete tracked_users[user.user_id];
-                            delete top_plays[user.user_id];
-                        }
+			let user = response;	
+			if(user.id in tracked_users){
+				if(tracked_users[user.id].channels.includes(channel_id)){
+					tracked_users[user.id].channels
+					= tracked_users[user.id].channels.filter(a => a != channel_id);
 
-                        helper.setItem('tracked_users', JSON.stringify(tracked_users));
-                        helper.setItem('top_plays', JSON.stringify(top_plays));
-                    }else{
-                        cb(`${user.username} is not being tracked in this channel. 🤡`);
-                    }
-                }else{
-                    cb(`${user.username} is not being tracked. 🤡`);
-                }
-            }else{
-                cb(`Couldn't find \`${user}\`. 😔`);
-            }
+					if(tracked_users[user.id].channels.length > 0){
+						cb(null, `Stopped tracking ${user.username} in this channel. 😔`);
+					}else{
+						cb(null, `Stopped tracking ${user.username}. 😔`);
+
+						delete tracked_users[user.id];
+						delete top_plays[user.id];
+					}
+
+					helper.setItem('tracked_users', JSON.stringify(tracked_users));
+					helper.setItem('top_plays', JSON.stringify(top_plays));
+				}else{
+					cb(`${user.username} is not being tracked in this channel. 🤡`);
+				}
+			}else{
+				cb(`${user.username} is not being tracked. 🤡`);
+			}
+
         }).catch(err => {
 			if(err.status == 404)
 				cb("Couldn't find user. 😔");

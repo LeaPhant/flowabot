@@ -64,14 +64,14 @@ module.exports = {
                         embed.fields = [];
 
                         for(const pin of pins){
-                            let name = `${pin.rank_emoji} ${pin.stars.toFixed(2)}★ ${pin.beatmap.artist} - ${pin.beatmap.title} [${pin.beatmap.version}]`;
+                            let name = `${pin.rank_emoji} ${pin.stars.toFixed(2)}★ ${pin.beatmapset.artist} - ${pin.beatmapset.title} [${pin.beatmap.version}]`;
 
                             if(pin.mods.length > 0)
                                 name += ` +${pin.mods.map(mod => mod.acronym).join(",")}`;
 
                             name += ` ${pin.accuracy}%`;
 
-                            let value = `[🔗](https://osu.ppy.sh/b/${pin.beatmap.beatmap_id}) `;
+                            let value = `[🔗](https://osu.ppy.sh/b/${pin.beatmap.id})`;
 
                             if(Number(pin.max_combo) < pin.beatmap.max_combo && pin.pp_fc > pin.pp)
                                 value += `**${Number(pin.pp).toFixed(2)}pp** ➔ ${pin.pp_fc.toFixed(2)}pp for ${pin.acc_fc}% FC${helper.sep}`;

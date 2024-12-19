@@ -64,14 +64,14 @@ module.exports = {
                         embed.fields = [];
 
                         for(const first of firsts){
-                            let name = `${first.rank_emoji} ${first.stars.toFixed(2)}★ ${first.beatmap.artist} - ${first.beatmap.title} [${first.beatmap.version}]`;
+                            let name = `${first.rank_emoji} ${first.stars.toFixed(2)}★ ${first.beatmapset.artist} - ${first.beatmapset.title} [${first.beatmap.version}]`;
 
                             if(first.mods.length > 0)
                                 name += ` +${first.mods.map(mod => mod.acronym).join(",")}`;
 
                             name += ` ${first.accuracy}%`;
 
-                            let value = `[🔗](https://osu.ppy.sh/b/${first.beatmap.beatmap_id}) `;
+                            let value = `[🔗](https://osu.ppy.sh/b/${first.beatmap.id}) `;
 
                             if(Number(first.max_combo) < first.beatmap.max_combo && first.pp_fc > first.pp)
                                 value += `**${Number(first.pp).toFixed(2)}pp** ➔ ${first.pp_fc.toFixed(2)}pp for ${first.acc_fc}% FC${helper.sep}`;
