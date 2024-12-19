@@ -432,7 +432,7 @@ let beatmap, speed_multiplier;
 module.exports = {
     get_frame: function(beatmap_path, time, mods_raw, size, options, cb){
 		enabled_mods = mods_raw.map(mod => mod.acronym);
-        let worker = fork(path.resolve(__dirname, 'beatmap_preprocessor.js'), ['--max-old-space-size=512']);
+        let worker = fork(path.resolve(__dirname, 'beatmap/worker.js'), ['--max-old-space-size=512']);
 
         worker.send({
             beatmap_path,
@@ -515,7 +515,7 @@ module.exports = {
 
 		console.time('process beatmap');
 
-        let worker = fork(path.resolve(__dirname, 'beatmap_preprocessor.js'));
+        let worker = fork(path.resolve(__dirname, 'beatmap/worker.js'));
 
 		let frames_rendered = [], frames_piped = [], current_frame = 0;
 
