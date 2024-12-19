@@ -378,7 +378,7 @@ class ReplayProcessor {
 	generateScoringFrames () {
 		const { Beatmap, cursor } = this;
 
-		const sliderHeadAccuracy = !(Beatmap.Mods.get('CL')?.no_slider_head_accuracy ?? false);
+		const sliderHeadAccuracy = Beatmap.Mods.get('CL')?.no_slider_head_accuracy ?? true;
 
 		const ScoringFrames = [];
 		const allhits = [];
