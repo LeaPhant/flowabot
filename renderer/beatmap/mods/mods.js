@@ -1,8 +1,8 @@
 const RandomMod = require('./random');
-const InversionMod = require('./inversion');
+const ReflectionMod = require('./reflection');
 
 const applyMods = Beatmap => {
-	new InversionMod(Beatmap).apply();
+	new ReflectionMod(Beatmap).apply();
 	new RandomMod(Beatmap).apply();
 }
 

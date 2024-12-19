@@ -1,6 +1,6 @@
 const { PLAYFIELD_WIDTH, PLAYFIELD_HEIGHT } = require("../util");
 
-class InversionMod {
+class ReflectionMod {
 	Beatmap;
 
 	constructor (Beatmap) {
@@ -19,14 +19,14 @@ class InversionMod {
 	}
 
 	apply () {
-		const reflectionMod = this.Beatmap.Mods.get('MR');
+		const mirrorMod = this.Beatmap.Mods.get('MR');
 
 		const invertVertical = 
 			this.Beatmap.Mods.has('HR') || 
-			reflectionMod?.reflection >= 1;
+			mirrorMod?.reflection >= 1;
 
 		const invertHorizontal = 
-			reflectionMod?.reflection != 1; // undefined equals 0
+			mirrorMod?.reflection != 1; // undefined equals 0
 
 		if (invertVertical)
 			this.invert(1, PLAYFIELD_HEIGHT);
@@ -36,4 +36,4 @@ class InversionMod {
 	}
 }
 
-module.exports = InversionMod;
+module.exports = ReflectionMod;
