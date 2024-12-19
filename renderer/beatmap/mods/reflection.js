@@ -15,6 +15,12 @@ class ReflectionMod {
 
 			for (const point of hitObject.points)
 				point[axis] = length - point[axis];
+
+			for (const tick of hitObject.SliderTicks)
+				tick[axis] = length - tick[axis];
+
+			for (const dot of hitObject.SliderDots)
+				dot[axis] = length - dot[axis];
 		}
 	}
 
