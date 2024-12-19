@@ -92,7 +92,7 @@ class BeatmapProcessor {
 
 	async applySettings () {
 		const { Beatmap, options } = this;
-		const { Mods } = Beatmap;
+		const { Mods } = Beatmap;		
 
 		if (Mods.has('HR')) {
 			Beatmap.CircleSize = Math.min(10, Beatmap.CircleSize * 1.3);
@@ -340,6 +340,10 @@ class BeatmapProcessor {
 
 		Beatmap.renderTime = time;
     	Beatmap.renderLength = length;
+
+		// trim beatmap
+		Beatmap.hitObjects[Beatmap.hitObjects.length - 1].lastObject = true;
+    	Beatmap.hitObjects = Beatmap.hitObjects.slice(firstHitobjectIndex, lastHitobjectIndex + 1);
 	}
 
 	async applyCounter() {
@@ -355,6 +359,7 @@ class BeatmapProcessor {
 		await this.applyComboColors();
 		await this.applySliders();
 		await this.applyStacking();
+		await this.applyHitsounds();
 		await this.applyReplay();
 		await this.applyTimespan();
 		await this.applyCounter();
