@@ -29,7 +29,7 @@ module.exports = {
             result: "Returns the #1 HD score on the last beatmap."
         }
     ],
-    configRequired: ['credentials.osu_api_key'],
+    configRequired: ["credentials.client_id", "credentials.client_secret"],
     call: obj => {
         return new Promise((resolve, reject) => {
             let { argv, msg, user_ign, last_beatmap } = obj;

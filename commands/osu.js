@@ -9,7 +9,7 @@ module.exports = {
         run: "osu nathan_on_osu",
         result: "Returns nathan on osu's osu! stats."
     },
-    configRequired: ['credentials.osu_api_key'],
+    configRequired: ["credentials.client_id", "credentials.client_secret"],
     call: obj => {
         return new Promise((resolve, reject) => {
             let { argv, msg, user_ign } = obj;

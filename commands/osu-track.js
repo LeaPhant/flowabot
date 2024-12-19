@@ -11,7 +11,7 @@ module.exports = {
         run: "osu-track nathan_on_osu 50",
         result: "Start tracking nathan on osu's top 50 top plays."
     },
-    configRequired: ['credentials.osu_api_key'],
+    configRequired: ["credentials.client_id", "credentials.client_secret"],
     call: obj => {
         return new Promise((resolve, reject) => {
             let { argv, msg, user_ign } = obj;

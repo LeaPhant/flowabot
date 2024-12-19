@@ -18,7 +18,7 @@ module.exports = {
             result: "Returns Vaxei's top 7 plays."
         }
     ],
-    configRequired: ['credentials.osu_api_key'],
+    configRequired: ["credentials.client_id", "credentials.client_secret"],
     call: obj => {
         return new Promise((resolve, reject) => {
             let { argv, msg, user_ign, last_beatmap } = obj;
