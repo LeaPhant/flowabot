@@ -312,8 +312,8 @@ process.on('message', async obj => {
                     ctx.lineWidth = 5 * scale_multiplier;
                     ctx.strokeStyle = "rgba(255,255,255,0.7)";
 
-                    let snakingStart = hitObject.startTime - beatmap.TimePreempt;
-                    let snakingFinish = hitObject.startTime - beatmap.TimeFadein;
+					const snakingStart = hitObject.startTime - beatmap.TimePreempt;
+                    const snakingFinish = snakingStart + beatmap.TimePreempt / 3;
 
                     let snakingProgress = Math.max(0, Math.min(1, (time - snakingStart) / (snakingFinish - snakingStart)));
 
