@@ -78,6 +78,4 @@ commands/disabled
 maps/
 renderer/webui/output
 replays
-package-lock.json
-yarn.lock
 .vscode
