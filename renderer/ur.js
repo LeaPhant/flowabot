@@ -5,43 +5,36 @@ const path = require('path');
 const os = require('os');
 const { fork } = require('child_process');
 const config = require('../config.json');
+const { calculate_ur } = require("./ur_processor");
 
 function calculateUr(options){
 	return new Promise(async (resolve, reject) => {
-		const response = await axios.get('https://osu.ppy.sh/api/get_replay', {
-			params: {
-				k: options.apikey,
-				u: options.player,
-				b: options.beatmap_id,
-				mods: options.mods_enabled
-			}
-		});
 
-		const replay_raw = Buffer.from(response.data.content, "base64");
+		let replay_path = path.resolve(config.replay_path, `${options.score_id}.osr`);
+		let replay_exists = await fs.stat(replay_path).then(() => true, () => false);
 
-		await fs.mkdir(path.resolve(os.tmpdir(), 'replays'), { recursive: true });
-		await fs.writeFile(path.resolve(os.tmpdir(), 'replays', `${options.score_id}`), replay_raw);
+		if(!replay_exists) {
+			const response = await axios.get(`https://osu.ppy.sh/api/v2/scores/${options.score_id}/download`, {
+				responseType: 'arraybuffer',
+				headers: {
+					'Authorization': 'Bearer ' + options.access_token,
+					'Content-Type': 'application/x-osu-replay'
+				}
+			}).catch(error => console.log(error));
 
-		const worker = fork(path.resolve(__dirname, 'beatmap_preprocessor.js'), ['--max-old-space-size=512']);
+			const replay_raw = response.data
+			//const replay_raw = Buffer.from(response.data.content, "base64");
 
-		worker.send({
+			await fs.writeFile(path.resolve(config.replay_path, `${options.score_id}.osr`), replay_raw, { encoding: 'binary' });
+		}
+
+		const ur = await calculate_ur({
 			beatmap_path: path.resolve(config.osu_cache_path, `${options.beatmap_id}.osu`),
 			options,
 			enabled_mods: options.mods
-		});
-
-		worker.on('close', code => {
-			if(code > 0){
-				cb("Error processing beatmap");
-				return false;
-			}
-		});
-
-		worker.on('message', beatmap => {
-			const { HitResults } = beatmap;
-
-			resolve(HitResults);
-		});
+		})
+		
+		resolve({ ur: ur });
 	});
 }
 

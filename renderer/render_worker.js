@@ -61,11 +61,11 @@ process.on('message', async obj => {
 
                 const flSize = sizeRelative * PLAYFIELD_HEIGHT * scale_multiplier / 2;
 
-                const gradient = 
+                const gradient =
                     flCtx.createRadialGradient(
-                        flCanvas.width / 2, flCanvas.height / 2, 
-                        flSize * 0.9, 
-                        flCanvas.width / 2, flCanvas.height / 2, 
+                        flCanvas.width / 2, flCanvas.height / 2,
+                        flSize * 0.9,
+                        flCanvas.width / 2, flCanvas.height / 2,
                         flSize);
 
                 gradient.addColorStop(0, 'rgba(0,0,0,1)');
@@ -122,7 +122,7 @@ process.on('message', async obj => {
         timestamp -= current_start;
         next_start -= current_start;
 
-        let progress = timestamp / next_start;
+        let progress = options.nointerpolate ? 0 : timestamp / next_start;
 
         let distance = vectorDistance(pos_current, pos_next);
 
@@ -299,10 +299,10 @@ process.on('message', async obj => {
 
                     if(options.hidden){
                         const fadeOutStartTime = hitObject.startTime - beatmap.TimePreempt + beatmap.TimeFadein;
-    
+
                         if(time >= fadeOutStartTime)
                             sliderOpacity = 1 - (time - fadeOutStartTime) / (hitObject.endTime - fadeOutStartTime);
-    
+
                         if(sliderOpacity < 0)
                             sliderOpacity = 0;
                     }
@@ -312,8 +312,8 @@ process.on('message', async obj => {
                     ctx.lineWidth = 5 * scale_multiplier;
                     ctx.strokeStyle = "rgba(255,255,255,0.7)";
 
-                    let snakingStart = hitObject.startTime - beatmap.TimePreempt;
-                    let snakingFinish = hitObject.startTime - beatmap.TimeFadein;
+					const snakingStart = hitObject.startTime - beatmap.TimePreempt;
+                    const snakingFinish = snakingStart + beatmap.TimePreempt / 3;
 
                     let snakingProgress = Math.max(0, Math.min(1, (time - snakingStart) / (snakingFinish - snakingStart)));
 
@@ -514,36 +514,38 @@ process.on('message', async obj => {
                     ctx.strokeStyle = "rgba(255,255,255,0.85)";
 
                     if(time < hitObject.startTime){
-                        if(!options.noshadow)
-                            ctx.shadowColor = "rgba(0,0,0,0.7)";
+                        if (!options.traceable) {
+                            if(!options.noshadow)
+                                ctx.shadowColor = "rgba(0,0,0,0.7)";
 
-                        let position = playfieldPosition(...hitObject.position);
+                            let position = playfieldPosition(...hitObject.position);
 
-                        // Fill circle with combo color instead of leaving see-through circles
-                        if(options.fill){
+                            // Fill circle with combo color instead of leaving see-through circles
+                            if(options.fill){
+                                ctx.beginPath();
+                                ctx.fillStyle = hitObject.Color;
+                                ctx.arc(...position, scale_multiplier * beatmap.Radius, 0, 2 * Math.PI, false);
+                                ctx.fill();
+                            }
+
+                            // Draw circle border
                             ctx.beginPath();
-                            ctx.fillStyle = hitObject.Color;
-                            ctx.arc(...position, scale_multiplier * beatmap.Radius, 0, 2 * Math.PI, false);
-                            ctx.fill();
+                            ctx.arc(...position, scale_multiplier * beatmap.Radius - ctx.lineWidth / 2, 0, 2 * Math.PI, false);
+                            ctx.stroke();
+
+                            ctx.fillStyle = 'white';
+                            ctx.textBaseline = "middle";
+                            ctx.textAlign = "center";
+
+                            let fontSize = 16;
+                            fontSize += 16 * (1 - (beatmap.CircleSize / 10));
+
+                            fontSize *= scale_multiplier;
+
+                            // Draw combo number on circle
+                            ctx.font = `${fontSize}px sans-serif`;
+                            ctx.fillText(hitObject.ComboNumber, position[0], position[1]);
                         }
-
-                        // Draw circle border
-                        ctx.beginPath();
-                        ctx.arc(...position, scale_multiplier * beatmap.Radius - ctx.lineWidth / 2, 0, 2 * Math.PI, false);
-                        ctx.stroke();
-
-                        ctx.fillStyle = 'white';
-                        ctx.textBaseline = "middle";
-                        ctx.textAlign = "center";
-
-                        let fontSize = 16;
-                        fontSize += 16 * (1 - (beatmap.CircleSize / 10));
-
-                        fontSize *= scale_multiplier;
-
-                        // Draw combo number on circle
-                        ctx.font = `${fontSize}px sans-serif`;
-                        ctx.fillText(hitObject.ComboNumber, position[0], position[1]);
 
                         // Draw approach circle
                         if(approachCircle > 0 && !options.hidden){
@@ -643,7 +645,7 @@ process.on('message', async obj => {
 
             if(!options.hidden && time >= hitObject.startTime && hitObject.startTime - time > -200){
                 // Draw fading out circles
-                if(hitObject.objectName != "spinner"){
+                if(hitObject.objectName != "spinner" && !options.traceable){
                     // Increase circle size the further it's faded out
                     let hitOffset = 0;
 
@@ -821,23 +823,15 @@ process.on('message', async obj => {
 
                 ctx.textBaseline = "top";
                 ctx.font = `${26 * scale_multiplier}px monospace`;
-                ctx.fillText(`${pp.toFixed(2)}pp`, 15, 45);
+                ctx.fillText(`${parseFloat(pp).toFixed(2)}pp`, 15, 45);
 
                 ctx.font = `${21 * scale_multiplier}px monospace`;
-                ctx.fillText(`★${stars.toFixed(2)}`, 15, 47 + 26 * scale_multiplier);
-                
-                let accuracy = 100;
-
-                const totalHits = currentFrame.count50 * 300 + currentFrame.count100 * 300 + currentFrame.count300 * 300 + currentFrame.countMiss * 300;
-
-                if(totalHits > 0)
-                    accuracy = (currentFrame.count50 * 50 + currentFrame.count100 * 100 + currentFrame.count300 * 300)
-                    / totalHits * 100;
+                ctx.fillText(`★${parseFloat(stars).toFixed(2)}`, 15, 47 + 26 * scale_multiplier);
 
                 ctx.textAlign = "right";
                 ctx.textBaseline = "top";
                 ctx.font = `${26 * scale_multiplier}px monospace`;
-                ctx.fillText(`${accuracy.toFixed(2)}%`, ...accuracyPosition);
+                ctx.fillText(`${currentFrame.accuracy.toFixed(2)}%`, ...accuracyPosition);
 
                 const hitCountPosition = [canvas.width - 15, 45 + 26 * scale_multiplier];
 
@@ -942,7 +936,7 @@ process.on('message', async obj => {
 
                 if(scoringFrame.result == 'miss'){
                     position[1] += (time - scoringFrame.offset) / 750 * 35;
-                    
+
                     ctx.fillStyle = "#f56767";
 
                     ctx.fillText('X', ...playfieldPosition(...position));
@@ -1004,8 +998,8 @@ process.on('message', async obj => {
                 if(frame.offset > time)
                     continue;
 
-                if(time - frame.offset > 5000)
-                    break;
+                // if(time - frame.offset > 5000)
+                //     break;
 
                 ctx.lineWidth = 1;
                 ctx.strokeStyle = "rgba(255,255,255,0.7)";
@@ -1050,7 +1044,7 @@ process.on('message', async obj => {
                         ctx.stroke();
                         smokeActive = false;
                     }
-                    
+
                     continue;
                 }
 
@@ -1089,12 +1083,12 @@ process.on('message', async obj => {
                     ctx.fillStyle = M2 ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.3)';
                     ctx.fillRect(canvas.width - 30, keyOverlayTop + KEY_OVERLAY_SIZE * 3 + KEY_OVERLAY_PADDING * 3, KEY_OVERLAY_SIZE, KEY_OVERLAY_SIZE);
                 }
-                
+
                 if(Array.isArray(replay_point.previous) && !options.analyze){
                     ctx.globalAlpha = .35;
 
                     ctx.beginPath();
-                    
+
                     for(const [index, previousFrame] of replay_point.previous.entries()){
                         let position = playfieldPosition(previousFrame.x, previousFrame.y);
 

@@ -1,0 +1,47 @@
+<!doctype html>
+<html>
+	<head>
+		<link rel="stylesheet" href="index.css">
+		<style>
+			html {
+				background: #121212;
+				color: white;
+				font-family: sans-serif;
+			}
+
+			textarea {
+				background-color: #212121;
+				outline: 0;
+				color: white;
+				padding: 4px;
+				border-radius: 6px;
+				border: 1px solid transparent;
+				min-width: 340px;
+				min-height: 120px;
+			}
+
+			textarea:focus {
+				border: 1px dashed #808080;
+			}
+
+			a {
+				color: #ffa4c2;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="input">
+			<label for="inp_score_id">Render Command <a target="blank" href="https://github.com/respektive/flowabot/blob/master/COMMANDS.md#render">(help)</a></label><br>
+			<textarea placeholder="render ..." value="!render " id="inp_command">render </textarea>
+		</div>
+		<div class="progress">
+			<p>Progress:</p>
+			<pre id="elem_progress">...</pre>
+		</div>
+		<div class="output">
+			<p>Output:</p>
+			<div id="elem_output"></div>
+		</div>
+		<script src="index.js"></script>
+	</body>
+</html>

@@ -180,6 +180,34 @@
 
     default_value = 'none';
 
+    if(config.credentials.client_id)
+        default_value = config.credentials.client_id;
+
+    console.log('');
+    console.log(`(Optional) An osu! client id is needed for the osu! commands to work. You can get one here: ${chalk.blueBright('https://osu.ppy.sh/home/account/edit#oauth')}, at the bottom of the page`);
+    value = readline.question(`oauth2 client id [${chalk.green(default_value)}]: `);
+
+    if(!value)
+        value = default_value;
+
+    config.credentials.client_id = value == 'none' ? "" : value;
+
+    default_value = 'none';
+
+        if(config.credentials.client_secret)
+        default_value = config.credentials.client_secret;
+
+    console.log('');
+    console.log(`(Optional) An osu! client secret is needed for the osu! commands to work. You can get one here: ${chalk.blueBright('https://osu.ppy.sh/home/account/edit#oauth')}, at the bottom of the page`);
+    value = readline.question(`oauth2 client secret [${chalk.green(default_value)}]: `);
+
+    if(!value)
+        value = default_value;
+
+    config.credentials.client_secret = value == 'none' ? "" : value;
+
+    default_value = 'none';
+
     if(config.credentials.twitch_client_id)
         default_value = config.credentials.twitch_client_id;
 

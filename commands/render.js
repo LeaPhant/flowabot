@@ -9,6 +9,10 @@ const helper = require('../helper.js');
 const frame = require('../renderer/render_frame.js')
 const config = require('../config.json');
 
+function isFloat(value) {
+    return (!isNaN(value) && value.toString().indexOf('.') != -1)
+} 
+
 module.exports = {
     command: ['render', 'frame', 'fail'],
     description: "Render picture or gif of a beatmap at a specific time. Videos 10 seconds or longer are automatically rendered as mp4 video with audio and beatmap background.",
@@ -38,11 +42,11 @@ module.exports = {
     configRequired: ['debug'],
     call: obj => {
         return new Promise((resolve, reject) => {
-            let { argv, msg, last_beatmap } = obj;
+            let { argv, msg, last_beatmap, webui } = obj;
 
             let beatmap_id, beatmap_url, beatmap_promise, mods = [], time = 0,
             ar, cs, od, length = 0, percent = 0, custom_url = false,
-            size = [400, 300], type, objects,
+            size = [466, 348], type, objects,
             video_type = 'gif', audio = true, download_promise, osr;
 
             let score_id;
@@ -63,14 +67,18 @@ module.exports = {
             let combo = 0;
             let speed = 1;
             let hidden = false;
+            let traceable = false;
             let flashlight = false;
             let analyze = false;
+			let nointerpolate = false;
+            let lagtrain = false;
+            let argon = false;
 
             argv.map(arg => arg.toLowerCase());
 
             argv.slice(1).forEach(arg => {
                 if(arg.startsWith('+'))
-                    mods = arg.substr(1).toUpperCase().match(/.{1,2}/g);
+                    mods = arg.substr(1).toUpperCase().match(/.{1,2}/g).map(mod => ({ "acronym": mod }));
                 else if(/^([0-9]+)\:([0-9]+)\:([0-9]+)$/g.test(arg)){
                     let parts = arg.split(':');
                     if(parts.length > 2){
@@ -96,6 +104,8 @@ module.exports = {
                     audio = true;
                 }else if(arg == 'hd' || arg == 'hidden'){
                     hidden = true;
+                } else if(arg == 'tc' || arg == 'traceable'){
+                    traceable = true;
                 }else if(arg == 'fl' || arg == 'flashlight'){
                     flashlight = true;
                 }else if(arg == 'mp4'){
@@ -108,6 +118,8 @@ module.exports = {
                 }else if(arg.endsWith('%')){
                     speed = parseInt(arg) / 100;
                     speed = Math.max(0.01, speed);
+                } else if (arg.endsWith('*')){
+                    speed = parseFloat(arg);
                 }else if(arg.endsWith('fps')){
                     let _fps = parseInt(arg);
                     if(!isNaN(_fps)){
@@ -116,13 +128,23 @@ module.exports = {
                     }
                 }else if(arg == 'analyze'){
                     analyze = true;
+				}else if(arg == 'nointerpolate'){
+					nointerpolate = true;
+                }else if(arg == 'lagtrain'){
+                    lagtrain = true;
+                }else if(arg == 'argon'){
+                    argon = true;
                 }else if(arg.endsWith('s')){
                     length = parseFloat(arg);
                 }else if(arg.endsWith('x')){
-                    combo = parseInt(arg);
+                    if (isFloat(arg.slice(0, -1))){
+                        speed = parseFloat(arg);
+                    } else {
+                        combo = parseInt(arg);
+                    }
                 }else if(/^([0-9]+)$/g.test(arg)){
                     time += parseInt(arg) * 1000;
-                }else if(arg.toLowerCase().startsWith('ar')){
+                }else if(/^ar[0-9]+/g.test(arg.toLowerCase())){
                     ar = parseFloat(arg.substr(2));
                 }else if(arg.toLowerCase().startsWith('cs')){
                     cs = parseFloat(arg.substr(2));
@@ -181,11 +203,10 @@ module.exports = {
                 if(config.debug)
                     helper.log('specified ar', ar);
 
-                if(!beatmap_id || custom_url){
-                    let download_url = URL.parse(beatmap_url);
+                if(custom_url){
                     download_path = path.resolve(os.tmpdir(), `${Math.floor(Math.random() * 1000000) + 1}.osu`);
 
-                    download_promise = helper.downloadFile(download_path, download_url);
+                    download_promise = helper.downloadFile(download_path, beatmap_url);
                     download_promise.catch(reject);
                 }
 
@@ -210,8 +231,8 @@ module.exports = {
 
                             frame.get_frames(download_path, time, length * 1000, mods, size, {
                                 combo,
-                                type: video_type, cs, ar, od, analyze, hidden, flashlight, black: false, osr, score_id, audio, fps, speed,
-                                fill: video_type == 'mp4', noshadow: true, percent, border: false, objects, msg
+                                type: video_type, cs, ar, od, analyze, lagtrain, argon, hidden, custom_url, traceable, flashlight, black: false, osr, score_id, audio, fps, speed,
+                                fill: video_type == 'mp4', noshadow: true, percent, border: false, objects, msg, nointerpolate, webui
                             });
 						}else{
 							frame.get_frame(download_path, time, mods, [800, 600], {

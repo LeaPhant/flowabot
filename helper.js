@@ -173,7 +173,7 @@ module.exports = {
                 await module.exports.downloadFile(beatmap_path, `https://osu.ppy.sh/osu/${beatmap_id}`);
             }
         }catch(err){
-            helper.error(err);
+            module.exports.error(err);
 
             throw "Couldn't download beatmap";
         }

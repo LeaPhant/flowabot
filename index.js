@@ -14,9 +14,14 @@ const chalk = require('chalk');
 const osu = require('./osu.js');
 const helper = require('./helper.js');
 
-const client = new Discord.Client({autoReconnect:true});
+const client = new Discord.Client({autoReconnect:true, disableMentions: "everyone"});
 
 client.on('error', helper.error);
+
+process.on('uncaughtException', (err) => {
+    helper.error(err)
+    process.exit(0)
+});
 
 const config = require('./config.json');
 
@@ -44,14 +49,14 @@ if(helper.getItem('last_message')){
 	helper.setItem('last_message', JSON.stringify(last_message));
 }
 
-if(config.credentials.osu_api_key && config.credentials.osu_api_key.length > 0)
-    osu.init(client, config.credentials.osu_api_key, last_beatmap);
+if(config.credentials.client_id && config.credentials.client_secret)
+    osu.init(client, config.credentials.client_id, config.credentials.client_secret, last_beatmap);
 
 function checkCommand(msg, command){
     if(!msg.content.startsWith(config.prefix))
         return false;
 
-	if(msg.author.bot)
+	if(msg.author.bot && msg.webhookID == null)
 		return false;
 
     let argv = msg.content.split(' ');
@@ -246,7 +251,7 @@ function onMessage(msg){
 							message_promise = msg.channel.send(response);
 
 						message_promise.catch(err => {
-							msg.channel.send(`Couldn't run command: \`${err}\``);
+							msg.channel.send(`Couldn't run command: **${err}**`);
 						});
 
 
@@ -261,7 +266,7 @@ function onMessage(msg){
 							if(replace_promise){
 								msg.channel.send(replace_promise)
 								.catch(err => {
-									msg.channel.send(`Couldn't run command: \`${err}\``);
+									msg.channel.send(`Couldn't run command: **${err}**`);
 								}).finally(() => {
 									message.delete();
 
@@ -278,14 +283,14 @@ function onMessage(msg){
                             if(remove_path)
                                 fs.rm(remove_path, { recursive: true }).catch(helper.error);
                         }).catch(err => {
-							msg.channel.send(`Couldn't run command: \`${err}\``);
+							msg.channel.send(`Couldn't run command: **${err}**`);
 						});
                     }
                 }).catch(err => {
                     if(typeof err === 'object')
                         msg.channel.send(err);
                     else
-                        msg.channel.send(`Couldn't run command: \`${err}\``);
+                        msg.channel.send(`Couldn't run command: **${err}**`);
 
                     helper.error(err);
                 });

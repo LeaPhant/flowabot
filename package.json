@@ -6,6 +6,7 @@
     "scripts": {
         "start": "git pull; npm i && [ ! -f ./config.json ] && npm run config; node index",
         "test": "echo \"Error: no test specified\" && exit 1",
+        "webui": "node renderer/webui.js",
         "commands": "node generate-commands-md",
         "config": "node generate-config",
         "emojis": "node upload-emojis"
@@ -17,8 +18,10 @@
     },
     "license": "MIT",
     "dependencies": {
+        "@dmzoneill/urban-dictionary": "^3.0.3",
         "axios": "^0.21.1",
-        "booba": "^0.0.12",
+        "booba": "^0.0.16",
+        "bparser-js": "^1.0.2",
         "canvas": "^2.11.2",
         "chalk": "^4.1.0",
         "chart.js": "^2.9.4",
@@ -27,22 +30,34 @@
         "discord.js": "^12.5.3",
         "diskusage": "^1.2.0",
         "ffmpeg-static": "^4.3.0",
+        "form-data": "^4.0.0",
         "jimp": "^0.16.1",
         "lodash": "^4.17.21",
         "luxon": "^1.26.0",
         "lzma-native": "^7.0.1",
         "mathjs": "^9.3.0",
+        "mysql": "^2.18.1",
         "node-emoji": "^1.10.0",
         "node-fetch": "^2.6.6",
         "node-localstorage": "^2.1.6",
-        "node-osr": "^1.2.1",
+        "node-osr": "github:LeaPhant/node-osr",
         "object-path": "^0.11.5",
         "ojsama": "^2.2.0",
+        "openweather-apis": "^4.4.2",
         "osu-parser": "git+https://github.com/LeaPhant/osu-parser.git",
         "readline-sync": "^1.4.10",
+        "rosu-pp-js": "^2.0.0",
         "semver": "^7.3.5",
+        "table": "^6.7.5",
+        "tcp-ping": "^0.1.1",
         "tz-lookup": "^6.1.25",
         "unzipper": "^0.10.11",
         "vm2": "^3.9.3"
+    },
+    "devDependencies": {
+        "finalhandler": "^1.3.1",
+        "polka": "^0.5.2",
+        "serve-static": "^1.16.2",
+        "ws": "^8.18.0"
     }
 }

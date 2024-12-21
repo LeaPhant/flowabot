@@ -2,7 +2,7 @@ const osu = require('../osu.js');
 const helper = require('../helper.js');
 
 module.exports = {
-    command: 'score',
+    command: ['score', 'soloscore'],
     description: "Search for a score on a beatmap.",
     argsRequired: 1,
     startsWith: true,
@@ -21,7 +21,7 @@ module.exports = {
             result: "Returns the #5 score on this beatmap."
         }
     ],
-    configRequired: ['credentials.osu_api_key'],
+    configRequired: ["credentials.client_id", "credentials.client_secret"],
     call: obj => {
         return new Promise((resolve, reject) => {
             let { argv, msg, user_ign, last_beatmap } = obj;
@@ -32,7 +32,9 @@ module.exports = {
 
             let command = argv[0].toLowerCase().replace(/[0-9]/g, '');
 
-            if(module.exports.command != command)
+            let solo_score = argv[0].toLowerCase().startsWith('soloscore')
+
+            if(!module.exports.command.includes(command))
                 return false;
 
             let index = 1;
@@ -42,7 +44,7 @@ module.exports = {
             if(_index >= 1 && _index <= 100)
                 index = _index;
 
-            let options = { index: index };
+            let options = { index: index, solo_score: solo_score };
 
             argv.forEach(function(arg){
                 if(arg.startsWith('+'))
@@ -52,12 +54,15 @@ module.exports = {
                 let b = osu.parse_beatmap_url_sync(arg, false);
                 if(b)
                     options.beatmap_id = b;
+				let s = osu.parse_score_url_sync(arg, false);
+				if(s)
+					options.score_id = s;
             });
 
             if(score_user != '*')
                 options.user = score_user;
 
-            if(!score_user || !options.beatmap_id){
+            if(!options.score_id && (!score_user || !options.beatmap_id)){
                 if(user_ign[msg.author.id] == undefined)
                     reject(helper.commandHelp('ign-set'));
                 else

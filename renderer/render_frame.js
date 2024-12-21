@@ -6,21 +6,41 @@ const util = require('util');
 const axios = require('axios');
 const Jimp = require('jimp');
 const crypto = require('crypto');
-const ffmpeg = require('ffmpeg-static');
 
 const unzip = require('unzipper');
 const disk = require('diskusage');
 
 const { execFile, fork, spawn } = require('child_process');
 
+const execFilePromise = util.promisify(execFile);
+
 const config = require('../config.json');
 const helper = require('../helper.js');
 
-const MAX_SIZE = 8 * 1024 * 1024;
+const ffmpeg = config.ffmpeg_path || require('ffmpeg-static');
+
+const MAX_SIZE = 25 * 1024 * 1024;
+const MAX_SIZE_DM = 8 * 1024 * 1024;
 
 let enabled_mods = [""];
 
 const resources = path.resolve(__dirname, "res");
+
+
+async function copyDir(src,dest) {
+    const entries = await fs.promises.readdir(src, {withFileTypes: true});
+    await fs.promises.mkdir(dest);
+    for(let entry of entries) {
+        const srcPath = path.join(src, entry.name);
+        const destPath = path.join(dest, entry.name);
+        if(entry.isDirectory()) {
+            await copyDir(srcPath, destPath);
+        } else {
+            await fs.promises.copyFile(srcPath, destPath);
+        }
+    }
+}
+
 
 const mods_enum = {
 	"": 0,
@@ -73,7 +93,7 @@ function getTimingPoint(timingPoints, offset){
     return timingPoint;
 }
 
-async function processHitsounds(beatmap_path){
+async function processHitsounds(beatmap_path, argon){
 	let hitSoundPath = {};
 
 	let setHitSound = (file, base_path, custom) => {
@@ -88,12 +108,12 @@ async function processHitsounds(beatmap_path){
 			hitSoundPath[hitSoundName] = absolutePath;
 	};
 
-	let defaultFiles = await fs.promises.readdir(path.resolve(resources, 'hitsounds'));
+	let defaultFiles = await fs.promises.readdir(path.resolve(resources, argon ? 'argon' : 'hitsounds'));
 
-	defaultFiles.forEach(file => setHitSound(file, path.resolve(resources, 'hitsounds')));
+	defaultFiles.forEach(file => setHitSound(file, path.resolve(resources, argon ? 'argon' : 'hitsounds')));
 
 	// some beatmaps use custom 1 without having a file for it, set default custom 1 hitsounds
-	defaultFiles.forEach(file => setHitSound(file, path.resolve(resources, 'hitsounds'), true));
+	defaultFiles.forEach(file => setHitSound(file, path.resolve(resources, argon ? 'argon' : 'hitsounds'), true));
 
 	// overwrite default hitsounds with beatmap hitsounds
 	let beatmapFiles = await fs.promises.readdir(beatmap_path);
@@ -103,13 +123,11 @@ async function processHitsounds(beatmap_path){
 	return hitSoundPath;
 }
 
-async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length, modded_length, time_scale, file_path){
+async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length, modded_length, time_scale, file_path, argon){
 	let media = await mediaPromise;
 
 	if(!media)
 		throw "Beatmap data not available";
-
-	let execFilePromise = util.promisify(execFile);
 
 	let beatmapAudio = false;
 
@@ -126,7 +144,7 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 		//throw "Error trimming beatmap audio";
 	}
 
-	let hitSoundPaths = await processHitsounds(media.beatmap_path);
+	let hitSoundPaths = await processHitsounds(media.beatmap_path, argon);
 
 	let hitObjects = beatmap.hitObjects.filter(a => a.startTime >= start_time && a.startTime < start_time + actual_length * time_scale);
 	let hitSounds = [];
@@ -311,8 +329,8 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 }
 
 async function downloadMedia(options, beatmap, beatmap_path, size, download_path){
-	if(options.type != 'mp4' || !options.audio || !config.credentials.osu_api_key)
-		return false;
+	if(options.type != 'mp4' || options.custom_url || !options.audio || !config.credentials.osu_api_key)
+		throw 'No mapset available';
 
 	let output = {};
 
@@ -334,19 +352,33 @@ async function downloadMedia(options, beatmap, beatmap_path, size, download_path
 		beatmapset_id = data[0].beatmapset_id;
 	}
 
+	if(await helper.fileExists(path.resolve(config.maps_path, beatmapset_id))){
+		let extraction_path = path.resolve(config.maps_path, beatmapset_id);
+        output.beatmap_path = extraction_path;
+
+		if(options.lagtrain){
+			output.audio_path = path.resolve(resources, "lagtrain.mp3");
+		}else if(beatmap.AudioFilename && fs.existsSync(path.resolve(extraction_path, beatmap.AudioFilename))){
+            output.audio_path = path.resolve(extraction_path, beatmap.AudioFilename);
+		}
+
+        output.background_path = path.resolve(extraction_path, 'bg.png');
+
+        return output;
+    }
+
 	let mapStream;
 
 	try{
-		const chimuCheckMapExists = await axios.get(`https://api.chimu.moe/v1/set/${beatmapset_id}`, { timeout: 2000 });
-
-		if(chimuCheckMapExists.status != 200)
-			throw "Map not found";
-
-		const chimuMap = await axios.get(`https://api.chimu.moe/v1/download/${beatmapset_id}?n=0`, { timeout: 10000, responseType: 'stream' });
-
-		mapStream = chimuMap.data;
+		try {
+			const osuDirectMap = await axios.get(`https://catboy.best/d/${beatmapset_id}n`, { timeout: 10000, responseType: 'stream' });
+			mapStream = osuDirectMap.data;
+		} catch (e) {
+			const nerinyanMap = await axios.get(`https://osu.direct/api/d/${beatmapset_id}`, { responseType: 'stream' });
+			mapStream = nerinyanMap.data;
+		}
 	}catch(e){
-		const beatconnectMap = await axios.get(`https://beatconnect.io/b/${beatmapset_id}`, { responseType: 'stream' });
+		const beatconnectMap = await axios.get(`https://api.nerinyan.moe/d/${beatmapset_id}`, { responseType: 'stream' });
 		mapStream = beatconnectMap.data;
 	}
 
@@ -361,8 +393,11 @@ async function downloadMedia(options, beatmap, beatmap_path, size, download_path
 
 	output.beatmap_path = extraction_path;
 
-	if(beatmap.AudioFilename && await helper.fileExists(path.resolve(extraction_path, beatmap.AudioFilename)))
+	if(options.lagtrain){
+		output.audio_path = path.resolve(resources, "lagtrain.mp3");
+	}else if(beatmap.AudioFilename && await helper.fileExists(path.resolve(extraction_path, beatmap.AudioFilename))){
 		output.audio_path = path.resolve(extraction_path, beatmap.AudioFilename);
+	}
 
 	if(beatmap.bgFilename && await helper.fileExists(path.resolve(extraction_path, beatmap.bgFilename)))
 		output.background_path = path.resolve(extraction_path, beatmap.bgFilename);
@@ -387,19 +422,24 @@ async function downloadMedia(options, beatmap, beatmap_path, size, download_path
 		return false;
 	}
 
+	copyDir(extraction_path, path.resolve(config.maps_path, beatmapset_id)).catch(helper.error);
+
 	return output;
 }
 
 let beatmap, speed_multiplier;
 
 module.exports = {
-    get_frame: function(beatmap_path, time, enabled_mods, size, options, cb){
-        let worker = fork(path.resolve(__dirname, 'beatmap_preprocessor.js'), ['--max-old-space-size=512']);
+    get_frame: function(beatmap_path, time, mods_raw, size, options, cb){
+		enabled_mods = mods_raw.map(mod => mod.acronym);
+        let worker = fork(path.resolve(__dirname, 'beatmap/worker.js'), ['--max-old-space-size=512']);
 
         worker.send({
             beatmap_path,
             options,
-            enabled_mods
+            mods_raw,
+			time,
+			length: 0
         });
 
 		worker.on('close', code => {
@@ -412,12 +452,7 @@ module.exports = {
         worker.on('message', _beatmap => {
             beatmap = _beatmap;
 
-            if(time == 0 && options.percent){
-                time = beatmap.hitObjects[Math.floor(options.percent * beatmap.hitObjects.length)].startTime - 2000;
-            }else{
-                let firstNonSpinner = beatmap.hitObjects.filter(x => x.objectName != 'spinner');
-                time = Math.max(time, firstNonSpinner[0].startTime);
-            }
+			time = beatmap.renderTime;
 
             let worker = fork(path.resolve(__dirname, 'render_worker.js'));
 
@@ -441,19 +476,22 @@ module.exports = {
         });
     },
 
-    get_frames: async function(beatmap_path, time, length, enabled_mods, size, options, cb){
-        if(config.debug)
-            console.time('process beatmap');
-
+    get_frames: async function(beatmap_path, time, length, mods_raw, size, options, cb){
+		enabled_mods = mods_raw.map(mod => mod.acronym);
 		const { msg } = options;
 
 		options.msg = null;
 
 		const renderStatus = ['– processing beatmap', '– rendering frames', '– encoding video'];
 
-		const renderMessage = await msg.channel.send({embed: {description: renderStatus.join("\n")}});
+		let renderMessage;
+
+		msg.channel.send({embed: {description: renderStatus.join("\n")}}).then(msg => {
+			renderMessage = msg;
+		}).catch(helper.error);
 
 		const updateRenderStatus = async () => {
+			if (!renderMessage) return;
 			await renderMessage.edit({
 				embed: {
 					description: renderStatus.join("\n")
@@ -470,20 +508,24 @@ module.exports = {
 			clearInterval(updateInterval);
 
 			await msg.channel.send(opts);
-			await renderMessage.delete();
+			if (renderMessage) await renderMessage.delete();
 		};
 
 		const beatmapProcessStart = Date.now();
 
-        let worker = fork(path.resolve(__dirname, 'beatmap_preprocessor.js'));
+		console.time('process beatmap');
+
+        let worker = fork(path.resolve(__dirname, 'beatmap/worker.js'));
 
 		let frames_rendered = [], frames_piped = [], current_frame = 0;
 
         worker.send({
             beatmap_path,
             options,
-            enabled_mods,
-			speed_override: options.speed
+            mods_raw,
+			speed_override: options.speed,
+			time,
+			length,
         });
 
 		worker.on('close', code => {
@@ -499,10 +541,10 @@ module.exports = {
         worker.on('message', async _beatmap => {
             beatmap = _beatmap;
 
-            if(config.debug)
-                console.timeEnd('process beatmap');
+            console.timeEnd('process beatmap');
 
-            if(time == 0 && options.percent){
+			/* this is in beatmap_preprocessor.js now
+			if(time == 0 && options.percent){
                 time = beatmap.hitObjects[Math.floor(options.percent * (beatmap.hitObjects.length - 1))].startTime - 2000;
             }else if(options.objects){
                 let objectIndex = 0;
@@ -552,13 +594,21 @@ module.exports = {
 							break;
 					}
 				}
-			}
+			}*/
 
+			time = beatmap.renderTime;
+			length = beatmap.renderLength;
+			
 			let lastObject = beatmap.hitObjects[beatmap.hitObjects.length - 1];
 
-			let lastObjectTime = lastObject.endTime + 1500;
+			let lastObjectTime = lastObject.endTime;
 
-            length = Math.min(400 * 1000, length);
+			if (lastObject.lastObject) lastObjectTime += 1500;
+
+            length = Math.min(800 * 1000, length);
+
+			if(length >= 10 * 1000)
+				options.type = 'mp4';
 
             let start_time = time;
 
@@ -575,15 +625,13 @@ module.exports = {
             let time_scale = 1;
 
             if(enabled_mods.includes('DT') || enabled_mods.includes('NC'))
-                time_scale *= 1.5;
+                time_scale *= mods_raw.filter(mod => mod.acronym == "DT" || mod.acronym == "NC")[0].settings?.speed_change ?? 1.5;
 
             if(enabled_mods.includes('HT') || enabled_mods.includes('DC'))
-                time_scale *= 0.75;
+                time_scale *= mods_raw.filter(mod => mod.acronym == "HT" || mod.acronym == "DC")[0].settings?.speed_change ?? 0.75;
 
 			if(options.speed != 1)
 				time_scale = options.speed;
-
-			actual_length = Math.min(length + 1000, Math.max(actual_length, actual_length / time_scale));
 
             if(!('type' in options))
                 options.type = 'gif';
@@ -593,17 +641,7 @@ module.exports = {
 
             let time_frame = 1000 / fps * time_scale;
 
-            let bitrate = 500 * 1024;
-
-            if(actual_length > 160 * 1000 && actual_length < 210 * 1000)
-                size = [350, 262];
-            else if(actual_length >= 210 * 1000)
-                size = [180, 128];
-
-            if(actual_length > 360 * 1000){
-                actual_length = 360 * 1000;
-                max_time = time + actual_length;
-            }
+            let bitrate = 1200;
 
             file_path = path.resolve(config.frame_path != null ? config.frame_path : os.tmpdir(), 'frames', `${rnd}`);
 
@@ -611,7 +649,7 @@ module.exports = {
 
 			let threads = require('os').cpus().length;
 
-			let modded_length = time_scale > 1 ? Math.min(actual_length * time_scale, lastObjectTime) : actual_length;
+			let modded_length = time_scale > 0 ? Math.min(actual_length * time_scale, lastObjectTime) : actual_length;
 
 			let amount_frames = Math.floor(modded_length / time_frame);
 
@@ -673,11 +711,11 @@ module.exports = {
                     '-i', 'pipe:0'
                 ];
 
-                let mediaPromise = downloadMedia(options, beatmap, beatmap_path, size, file_path);
-				let audioProcessingPromise = renderHitsounds(mediaPromise, beatmap, start_time, actual_length, modded_length, time_scale, file_path);
+                let mediaPromise = downloadMedia(options, beatmap, beatmap_path, size, file_path).catch(() => {});
+				let audioProcessingPromise = renderHitsounds(mediaPromise, beatmap, start_time, actual_length, modded_length, time_scale, file_path, options.argon).catch(() => {});
 
                 if(options.type == 'mp4')
-                    bitrate = Math.min(bitrate, (0.7 * MAX_SIZE) * 8 / (actual_length / 1000) / 1024);
+                    bitrate = Math.max(850, Math.min(bitrate, (0.95 * MAX_SIZE) * 8 / (actual_length / 1000) / 1024));
 
                 let workers = [];
 
@@ -717,12 +755,16 @@ module.exports = {
 
 						renderStatus[1] = `✓ encoding video (${((Date.now() - encodingProcessStart) / 1000).toFixed(3)}s)`;
 
-						resolveRender({files: [{
-							attachment: `${file_path}/video.${options.type}`,
-							name: `video.${options.type}`
-						}]}).then(() => {
-							fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
-						}).catch(console.error);
+                        resolveRender({files: [{
+                            attachment: `${file_path}/video.${options.type}`,
+                            name: `video.${options.type}`
+                        }]}).then(() => {
+                            fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
+                        })
+                        .catch(console.error)
+                        .finally(() => {
+                            fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
+                        });
 					});
 
 					pipeFrameLoop(ffmpegProcess, err => {
@@ -758,8 +800,8 @@ module.exports = {
 
 						ffmpeg_args.push(
 							'-filter_complex', `"overlay=(W-w)/2:shortest=1"`,
-							'-pix_fmt', 'yuv420p', '-r', fps, '-c:v', 'libx264', '-b:v', `${bitrate}k`,
-							'-c:a', 'aac', '-b:a', '164k', '-shortest', '-preset', 'veryfast',
+							'-pix_fmt', 'yuv420p', '-r', fps, '-c:v', 'libx264', /*'-b:v', `${bitrate}k`*/ '-crf', 18,
+							'-c:a', 'aac', '-b:a', '164k', '-t', actual_length / 1000, '-preset', 'veryfast',
 							'-movflags', 'faststart', '-g', fps, '-force_key_frames', '00:00:00.000', `${file_path}/video.mp4`
 						);
 
@@ -767,7 +809,7 @@ module.exports = {
 
 						let ffmpegProcess = spawn(ffmpeg, ffmpeg_args, { shell: true });
 
-						ffmpegProcess.on('close', code => {
+						ffmpegProcess.on('close', async code => {
 							if(code > 0){
 								resolveRender("Error encoding video")
 								.then(() => {
@@ -782,12 +824,59 @@ module.exports = {
 
 							renderStatus[2] = `✓ encoding video (${((Date.now() - encodingProcessStart) / 1000).toFixed(3)}s)`;
 
-							resolveRender({files: [{
-								attachment: `${file_path}/video.${options.type}`,
-								name: `video.${options.type}`
-							}]}).then(() => {
-								fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
-							}).catch(console.error);					 
+                             const stat = await fs.promises.stat(`${file_path}/video.${options.type}`);
+
+                            console.log('size', stat.size / 1024, 'KiB');
+                            console.log('max size', MAX_SIZE / 1024, 'KiB');
+
+                            if(stat.size < MAX_SIZE && msg.channel.type == "text" || options.webui){
+                                resolveRender({files: [{
+                                    attachment: `${file_path}/video.${options.type}`,
+                                    name: `video.${options.type}`
+                                }]}).then(() => {
+                                    fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
+                                })
+                                .catch(console.error)
+                                .finally(() => {
+                                    fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
+                                });
+                            }else if(stat.size < MAX_SIZE_DM ){
+                                resolveRender({files: [{
+                                    attachment: `${file_path}/video.${options.type}`,
+                                    name: `video.${options.type}`
+                                }]}).then(() => {
+                                    fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
+                                })
+                                .catch(console.error)
+                                .finally(() => {
+                                    fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
+                                });
+                            }else{
+                                try{
+                                    console.log('uploading to pek.li:', config.pekli_host + '/api/upload');
+
+                                    const response = await execFilePromise('curl',
+                                        [
+                                            '-s', '-X', 'POST', config.pekli_host + '/api/upload',
+                                            '-H',`"Content-Type: multipart/form-data"`,
+                                            '-H', `"authorization: ${config.credentials.pekli_token}"`,
+											'-H', `"Override-Domain: pek.li"`,
+                                            '-F', `"file=@${file_path}/video.${options.type};type=video/mp4"`
+                                        ], {shell: true});
+
+                                    const json = JSON.parse(response.stdout);
+
+                                    resolveRender(json.files[0]).then(() => {
+                                        fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
+                                    }).catch(console.error)
+                                    .finally(() => {
+                                        fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
+                                    });
+                                }catch(err){
+                                    console.error(err);
+                                    fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
+                                }
+                            }
 						});
 
 						ffmpegProcess.stderr.on('data', data => {
