@@ -62,6 +62,49 @@
     config.osu_cache_path = value;
 
 
+	default_value = path.resolve(os.tmpdir(), 'osureplays');
+
+    if(config.replay_path)
+        default_value = config.replay_path;
+
+    console.log('');
+    value = readline.question(`Path where to cache .osr files [${chalk.green(default_value)}]: `);
+
+    if(!value)
+        value = default_value;
+
+    config.replay_path = value;
+
+
+	default_value = path.resolve(os.tmpdir(), 'osumapsets');
+
+    if(config.maps_path)
+        default_value = config.maps_path;
+
+    console.log('');
+    value = readline.question(`Path where to cache mapsets [${chalk.green(default_value)}]: `);
+
+    if(!value)
+        value = default_value;
+
+    config.maps_path = value;
+
+
+	default_value = 'none';
+
+    if(config.ffmpeg_path)
+        default_value = config.ffmpeg_path;
+
+    console.log('');
+	console.log(`(Optional) To speed up renders you may supply a custom FFmpeg binary, e.g. your system's by writing ${chalk.green("'ffmpeg'")}, otherwise a prebuilt is used.`);
+    value = readline.question(`Custom FFmpeg binary path [${chalk.green(default_value)}]: `);
+
+    if(!value)
+        value = default_value;
+
+    config.ffmpeg_path = value == 'none' ? "" : value;
+
+
     default_value = 'none';
 
     if(config.pp_path)
