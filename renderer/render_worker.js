@@ -203,17 +203,11 @@ process.on('message', async obj => {
             + (hitObject2[1] - hitObject1[1]) * (hitObject2[1] - hitObject1[1]));
     }
 
-    function processFrame(time, options){
+	let currentHitObjectIndex = -1;
         let hitObjectsOnScreen = [];
 
+    function processFrame(time, options){
         ctx.globalAlpha = 1;
-
-        // Generate array with all hit objects currently visible
-        beatmap.hitObjects.forEach(hitObject => {
-            if(time >= hitObject.startTime - beatmap.TimePreempt && hitObject.endTime - time > -200)
-                hitObjectsOnScreen.push(hitObject);
-        });
-
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         if(options.black){
@@ -221,7 +215,14 @@ process.on('message', async obj => {
             ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
 
-        hitObjectsOnScreen.sort(function(a, b){ return a.startTime - b.startTime; });
+		while (time >= beatmap.hitObjects[currentHitObjectIndex + 1]?.startTime - beatmap.TimePreempt) {
+			currentHitObjectIndex++;
+			hitObjectsOnScreen.push(beatmap.hitObjects[currentHitObjectIndex]);
+		}
+
+		while (-200 >= hitObjectsOnScreen[0]?.endTime - time) {
+			hitObjectsOnScreen = hitObjectsOnScreen.slice(1);
+		}
 
         ctx.strokeStyle = 'rgba(255,255,255,0.3)';
         ctx.lineWidth = 3 * scale_multiplier;
