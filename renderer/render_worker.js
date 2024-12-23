@@ -2,6 +2,7 @@ const { createCanvas, Image } = require('canvas');
 const path = require('path');
 const fs = require('fs').promises;
 const helper = require('../helper.js');
+const { vectorSubtract, vectorAdd, clamp, vectorMultiply } = require('./beatmap/util.js');
 
 const PLAYFIELD_WIDTH = 512;
 const PLAYFIELD_HEIGHT = 384;
@@ -17,6 +18,8 @@ let images = {
     "arrow": path.resolve(resources, "images", "arrow.svg")
 };
 
+const easeOutQuad = x => 1 - (1 - x) * (1 - x);
+
 process.on('uncaughtException', err => {
     helper.error(err);
     process.exit(1);
@@ -24,6 +27,8 @@ process.on('uncaughtException', err => {
 
 process.on('message', async obj => {
     let { beatmap, start_time, end_time, time_frame, file_path, options, threads, current_frame, size, ctx } = obj;
+
+	let fpGradient;
 
     function resize(){
         active_playfield_width = canvas.width * 0.7;
@@ -50,6 +55,13 @@ process.on('message', async obj => {
         canvas = createCanvas(...size);
         ctx = canvas.getContext("2d");
         resize();
+
+		fpGradient = ctx.createLinearGradient(0, 0, 36, 10);
+
+		fpGradient.addColorStop(0, 'rgba(255,255,255,0)');
+		fpGradient.addColorStop(0.05, 'rgba(255,255,255,0.6)');
+		fpGradient.addColorStop(0.95, 'rgba(255,255,255,0.6)');
+		fpGradient.addColorStop(1, 'rgba(255,255,255,0)');
 
         if(options.flashlight){
             for(const sizeRelative of FL_SIZES){
@@ -204,7 +216,10 @@ process.on('message', async obj => {
     }
 
 	let currentHitObjectIndex = -1;
-        let hitObjectsOnScreen = [];
+	let hitObjectsOnScreen = [];
+
+	let currentFollowpointIndex = -1;
+	let followpointsOnScreen = [];
 
     function processFrame(time, options){
         ctx.globalAlpha = 1;
@@ -224,51 +239,128 @@ process.on('message', async obj => {
 			hitObjectsOnScreen = hitObjectsOnScreen.slice(1);
 		}
 
-        ctx.strokeStyle = 'rgba(255,255,255,0.3)';
-        ctx.lineWidth = 3 * scale_multiplier;
+		while (time >= beatmap.Followpoints[currentFollowpointIndex + 1]?.fadeInStart) {
+			currentFollowpointIndex++;
+			followpointsOnScreen.push(beatmap.Followpoints[currentFollowpointIndex]);
+		}
+
+		while (time > followpointsOnScreen[0]?.fadeOutEnd) {
+			followpointsOnScreen = followpointsOnScreen.slice(1);
+		}
+
+        ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+        ctx.lineWidth = 4 * scale_multiplier;
         ctx.shadowColor = 'transparent';
-
+		ctx.fillStyle = 'white';
         // Draw follow points
-        hitObjectsOnScreen.forEach(function(hitObject, index){
-            if(index < hitObjectsOnScreen.length - 1){
-                let nextObject = hitObjectsOnScreen[index + 1];
 
-                if(isNaN(hitObject.endPosition) && isNaN(nextObject.position))
-                    return false;
+		for (const fp of followpointsOnScreen) {
+			const { fadeInStart, fadeInEnd, fadeOutStart, fadeOutEnd, startPosition, endPosition, rotation } = fp;
 
-                let distance = vectorDistance(hitObject.endPosition, nextObject.position);
+			let progress = Math.min(1, (time - fadeInStart) / (fadeInEnd - fadeInStart));
+			let opacity = time < fadeOutStart ? progress
+			: 1 - Math.min(1, (time - fadeOutStart) / (fadeOutEnd - fadeOutStart));
 
-                if(time >= (nextObject.startTime - beatmap.TimePreempt) && time < (nextObject.startTime + beatmap.HitWindow50) && distance > 80){
-                    let start_position = playfieldPosition(...hitObject.endPosition);
-                    let end_position = playfieldPosition(...nextObject.position);
+			progress = easeOutQuad(progress);
 
-                    let progress_0 = nextObject.startTime - beatmap.TimePreempt
+			if (time >= fadeInStart)
+				opacity = easeOutQuad(opacity);
 
-                    let a = progress_0;
+			opacity *= 0.6;
+			ctx.globalAlpha = opacity;
 
-                    progress_0 += time - progress_0;
-                    let progress_1 = nextObject.startTime - beatmap.TimeFadein;
+			let position = progress == 0 ? startPosition : endPosition;
 
-                    progress_1 -= a
-                    progress_0 -= a;
+			if (progress != 1) {
+				const relEndPosition = vectorSubtract(endPosition, startPosition);
+				position = vectorAdd(startPosition, vectorMultiply(relEndPosition, progress));
+			}
 
-                    let progress = Math.min(1, progress_0 / progress_1 * 2);
+			ctx.save();
+			ctx.translate(...playfieldPosition(...position));
+			ctx.rotate(rotation);
 
-                    let v = vectorSubtract(end_position, start_position);
+			const size = 5 * scale_multiplier;
 
-                    v[0] *= progress;
-                    v[1] *= progress;
+			ctx.translate(size * 0.5 * -1, size * 0.5 * -1);
 
+			ctx.beginPath();
+			ctx.arc(0, 0, size, 0, 2 * Math.PI, false);
+			ctx.fill();
 
-                    ctx.beginPath();
-                    ctx.moveTo(...start_position);
-                    ctx.lineTo(vectorAdd(start_position, v[0]));
-                    ctx.stroke();
+			//
+			//ctx.fillRect(0, 0, width, height);
 
-                    //then shift x by cos(angle)*radius and y by sin(angle)*radius (TODO)
-                }
-            }
-        });
+			ctx.restore();
+		}
+
+		/*for (const [index, hitObject] of beatmap.hitObjects.entries()) {
+			if (index > beatmap.hitObjects.length - 2) 
+				break;
+
+			if (hitObject.objectName == "spinner")
+				continue;			
+
+			const nextObject = beatmap.hitObjects[index + 1];
+
+			if (nextObject.newCombo || nextObject.objectName == "spinner")
+				continue;
+
+			let startFP = hitObject.startTime - beatmap.TimePreempt;
+
+			if (hitObject.objectName == "slider")
+				startFP += beatmap.TimePreempt / 3;
+
+			if (time < startFP)
+				continue;
+
+			const preempt = 800 * Math.min(1, beatmap.TimePreempt / 450);
+
+			const finishFP = nextObject.startTime - beatmap.TimeFadein;
+			const startFadeoutFP = nextObject.startTime - beatmap.HitWindow50;
+			const finishFadeoutFP = nextObject.startTime + beatmap.HitWindow50;
+
+			if (time > finishFadeoutFP)
+				continue;
+
+			const distance = vectorDistance(hitObject.endPosition, nextObject.position);
+
+			if (distance < beatmap.Radius * 2 + 20)
+				continue;
+
+			let progress = clamp((time - startFP) / (finishFP - startFP), 0, 1);
+			progress = progress * 0.9 + 0.1;
+			progress = Math.log(progress * 10) / Math.LN10;
+
+			let opacity = time < startFadeoutFP ? 0 : clamp((time - startFadeoutFP) / (finishFadeoutFP - startFadeoutFP), 0, 1);
+			opacity = opacity * 0.9 + 0.1;
+			opacity = 1 - Math.log(opacity * 10) / Math.LN10;
+
+			ctx.globalAlpha = opacity;
+
+			const startPosition = hitObject.endPosition;
+			const relTargetPosition = vectorSubtract(nextObject.position, startPosition);
+			const endPosition = vectorAdd(startPosition, vectorMultiply(relTargetPosition, progress));
+
+			const from = playfieldPosition(...startPosition);
+			const to = playfieldPosition(...endPosition);
+
+			const gradient = ctx.createLinearGradient(...from, ...playfieldPosition(...nextObject.position));
+
+			gradient.addColorStop(0, 'rgba(255,255,255,0)');
+			gradient.addColorStop(0.2, 'rgba(255,255,255,0.6)');
+			gradient.addColorStop(0.8, 'rgba(255,255,255,0.6)');
+			gradient.addColorStop(1, 'rgba(255,255,255,0)');
+
+			ctx.strokeStyle = gradient;
+
+			ctx.beginPath();
+			ctx.moveTo(...from);
+			ctx.lineTo(...to);
+			ctx.stroke();
+        }*/
+
+		ctx.globalAlpha = 1;
 
         // Sort hit objects from latest to earliest so the earliest hit object is at the front
         hitObjectsOnScreen.reverse();

@@ -14,6 +14,7 @@ const applyHitsounds = require('./hitsounds');
 const applyStacking = require('./stacking');
 const applyMods = require('./mods/mods');
 const applyCounter = require('./pp');
+const applyFollowpoints = require('./followpoints');
 
 const exists = path => fs.access(path).then(() => true, () => false);
 
@@ -351,6 +352,12 @@ class BeatmapProcessor {
 		await applyCounter(Beatmap, osuContents, mods_raw);
 	}
 
+	async applyFollowpoints() {
+		const { Beatmap } = this;
+
+		await applyFollowpoints(Beatmap);
+	}
+
 	async process () {
 		this.Beatmap = await this.parseBeatmap();
 
@@ -363,6 +370,7 @@ class BeatmapProcessor {
 		await this.applyReplay();
 		await this.applyTimespan();
 		await this.applyCounter();
+		await this.applyFollowpoints();
 
 		return this.Beatmap;
 	}
