@@ -2,7 +2,7 @@ const { createCanvas, Image } = require('canvas');
 const path = require('path');
 const fs = require('fs').promises;
 const helper = require('../helper.js');
-const { vectorSubtract, vectorAdd, clamp, vectorMultiply } = require('./beatmap/util.js');
+const { vectorSubtract, vectorAdd, clamp, vectorMultiply, vectorDistance } = require('./beatmap/util.js');
 
 const PLAYFIELD_WIDTH = 512;
 const PLAYFIELD_HEIGHT = 384;
@@ -208,11 +208,6 @@ process.on('message', async obj => {
         }
 
         return {previous, current, next};
-    }
-
-    function vectorDistance(hitObject1, hitObject2){
-        return Math.sqrt((hitObject2[0] - hitObject1[0]) * (hitObject2[0] - hitObject1[0])
-            + (hitObject2[1] - hitObject1[1]) * (hitObject2[1] - hitObject1[1]));
     }
 
 	let currentHitObjectIndex = -1;
@@ -1177,22 +1172,27 @@ process.on('message', async obj => {
                     ctx.fillRect(canvas.width - 30, keyOverlayTop + KEY_OVERLAY_SIZE * 3 + KEY_OVERLAY_PADDING * 3, KEY_OVERLAY_SIZE, KEY_OVERLAY_SIZE);
                 }
 
+				// render cursor trail
                 if(Array.isArray(replay_point.previous) && !options.analyze){
                     ctx.globalAlpha = .35;
 
                     ctx.beginPath();
 
                     for(const [index, previousFrame] of replay_point.previous.entries()){
-                        let position = playfieldPosition(previousFrame.x, previousFrame.y);
+						const previous = [previousFrame.x, previousFrame.y];
+                        const position = playfieldPosition(...previous);
 
-                        if(index == 0)
+                        if (index == 0) {
                             ctx.moveTo(...position);
-                        else
+							continue;
+						}
+
                             ctx.lineTo(...position);
                     }
 
                     ctx.lineWidth = 13 * scale_multiplier;
                     ctx.lineCap = "round";
+					ctx.lineJoin = "round";
 
                     if(options.fill)
                         ctx.strokeStyle = '#fff4ab';
