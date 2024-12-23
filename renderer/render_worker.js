@@ -785,6 +785,8 @@ process.on('message', async obj => {
             }
         });
 
+		hitObjectsOnScreen.reverse();
+
         if(options.analyze){
             for(const hitObject of beatmap.hitObjects){
                 if(hitObject.objectName == 'spinner')
