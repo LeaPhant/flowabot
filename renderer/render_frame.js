@@ -13,6 +13,9 @@ const disk = require('diskusage');
 const { execFile, fork, spawn } = require('child_process');
 
 const execFilePromise = util.promisify(execFile);
+const diskCheck = util.promisify(disk.check);
+
+const processBeatmap = require('./beatmap/process.js');
 
 const config = require('../config.json');
 const helper = require('../helper.js');
@@ -515,432 +518,386 @@ module.exports = {
 
 		console.time('process beatmap');
 
-        let worker = fork(path.resolve(__dirname, 'beatmap/worker.js'));
-
 		let frames_rendered = [], frames_piped = [], current_frame = 0;
 
-        worker.send({
-            beatmap_path,
-            options,
-            mods_raw,
-			speed_override: options.speed,
-			time,
-			length,
-        });
+		if (!config.process_beatmap_sync) {
+			let worker = fork(path.resolve(__dirname, 'beatmap/worker.js'));
 
-		worker.on('close', code => {
-			if(code > 0){
+			worker.send({
+				beatmap_path,
+				options,
+				mods_raw,
+				speed_override: options.speed,
+				time,
+				length,
+			});
+
+			worker.on('close', code => {
+				if(code > 0){
+					resolveRender("Error processing beatmap").catch(console.error);
+
+					return false;
+				}
+
+				renderStatus[0] = `✓ processing beatmap (${((Date.now() - beatmapProcessStart) / 1000).toFixed(3)}s)`;
+			});
+
+			beatmap = await new Promise(resolve => {
+				worker.on('message', _beatmap => {
+					resolve(_beatmap);
+				});
+			});
+		} else {
+			try {
+				beatmap = await processBeatmap(beatmap_path, options, mods_raw, time, length);
+				renderStatus[0] = `✓ processing beatmap (${((Date.now() - beatmapProcessStart) / 1000).toFixed(3)}s)`;
+			} catch(e) {
 				resolveRender("Error processing beatmap").catch(console.error);
-
 				return false;
 			}
-
-			renderStatus[0] = `✓ processing beatmap (${((Date.now() - beatmapProcessStart) / 1000).toFixed(3)}s)`;
-		});
-
-        worker.on('message', async _beatmap => {
-            beatmap = _beatmap;
-
-            console.timeEnd('process beatmap');
-
-			/* this is in beatmap_preprocessor.js now
-			if(time == 0 && options.percent){
-                time = beatmap.hitObjects[Math.floor(options.percent * (beatmap.hitObjects.length - 1))].startTime - 2000;
-            }else if(options.objects){
-                let objectIndex = 0;
-
-                for(let i = 0; i < beatmap.hitObjects.length; i++){
-                    if(beatmap.hitObjects[i].startTime >= time){
-                        objectIndex = i;
-                        break;
-                    }
-                }
-
-                time -= 200;
-
-                if(beatmap.hitObjects.length > objectIndex + options.objects)
-                    length = beatmap.hitObjects[objectIndex + options.objects].startTime - time + 400;
-
-				if(length >= 10 * 1000)
-					options.type = 'mp4';
-
-            }else{
-                let firstNonSpinner = beatmap.hitObjects.filter(x => x.objectName != 'spinner');
-                time = Math.max(time, Math.max(0, firstNonSpinner[0].startTime - 1000));
-            }
-
-			if(options.combo){
-				let current_combo = 0;
-
-				for(let hitObject of beatmap.hitObjects){
-					if(hitObject.objectName == 'slider'){
-						current_combo += 1;
-
-						for(let i = 0; i < hitObject.repeatCount; i++){
-							current_combo += 1 + hitObject.SliderTicks.length;
-							time = hitObject.startTime + i * (hitObject.duration / hitObject.repeatCount);
-
-							if(current_combo >= options.combo)
-								break;
-						}
-
-						if(current_combo >= options.combo)
-							break;
-					}else{
-						current_combo += 1;
-						time = hitObject.endTime;
-
-						if(current_combo >= options.combo)
-							break;
-					}
-				}
-			}*/
-
-			time = beatmap.renderTime;
-			length = beatmap.renderLength;
 			
-			let lastObject = beatmap.hitObjects[beatmap.hitObjects.length - 1];
+		}
 
-			let lastObjectTime = lastObject.endTime;
+		console.timeEnd('process beatmap');
 
-			if (lastObject.lastObject) lastObjectTime += 1500;
+		time = beatmap.renderTime;
+		length = beatmap.renderLength;
+		
+		let lastObject = beatmap.hitObjects[beatmap.hitObjects.length - 1];
 
-            length = Math.min(800 * 1000, length);
+		let lastObjectTime = lastObject.endTime;
 
-			if(length >= 10 * 1000)
-				options.type = 'mp4';
+		if (lastObject.lastObject) lastObjectTime += 1500;
 
-            let start_time = time;
+		length = Math.min(800 * 1000, length);
 
-            let time_max = Math.min(time + length + 1000, lastObjectTime);
+		if(length >= 10 * 1000)
+			options.type = 'mp4';
 
-            let actual_length = time_max - time;
+		let start_time = time;
 
-            let rnd = Math.round(1e9 * Math.random());
-            let file_path;
-            let fps = options.fps || 60;
+		let time_max = Math.min(time + length + 1000, lastObjectTime);
 
-            let i = 0;
+		let actual_length = time_max - time;
 
-            let time_scale = 1;
+		let rnd = Math.round(1e9 * Math.random());
+		let file_path;
+		let fps = options.fps || 60;
 
-            if(enabled_mods.includes('DT') || enabled_mods.includes('NC'))
-                time_scale *= mods_raw.filter(mod => mod.acronym == "DT" || mod.acronym == "NC")[0].settings?.speed_change ?? 1.5;
+		let i = 0;
 
-            if(enabled_mods.includes('HT') || enabled_mods.includes('DC'))
-                time_scale *= mods_raw.filter(mod => mod.acronym == "HT" || mod.acronym == "DC")[0].settings?.speed_change ?? 0.75;
+		let time_scale = 1;
 
-			if(options.speed != 1)
-				time_scale = options.speed;
+		if(enabled_mods.includes('DT') || enabled_mods.includes('NC'))
+			time_scale *= mods_raw.filter(mod => mod.acronym == "DT" || mod.acronym == "NC")[0].settings?.speed_change ?? 1.5;
 
-            if(!('type' in options))
-                options.type = 'gif';
+		if(enabled_mods.includes('HT') || enabled_mods.includes('DC'))
+			time_scale *= mods_raw.filter(mod => mod.acronym == "HT" || mod.acronym == "DC")[0].settings?.speed_change ?? 0.75;
 
-            if(options.type == 'gif')
-                fps = 50;
+		if(options.speed != 1)
+			time_scale = options.speed;
 
-            let time_frame = 1000 / fps * time_scale;
+		if(!('type' in options))
+			options.type = 'gif';
 
-            let bitrate = 1200;
+		if(options.type == 'gif')
+			fps = 50;
 
-            file_path = path.resolve(config.frame_path != null ? config.frame_path : os.tmpdir(), 'frames', `${rnd}`);
+		let time_frame = 1000 / fps * time_scale;
 
-            await fs.promises.mkdir(file_path, { recursive: true });
+		let bitrate = 1200;
 
-			let threads = require('os').cpus().length;
+		file_path = path.resolve(config.frame_path != null ? config.frame_path : os.tmpdir(), 'frames', `${rnd}`);
 
-			let modded_length = time_scale > 0 ? Math.min(actual_length * time_scale, lastObjectTime) : actual_length;
+		await fs.promises.mkdir(file_path, { recursive: true });
 
-			let amount_frames = Math.floor(modded_length / time_frame);
+		let threads = require('os').cpus().length;
 
-            let frames_size = amount_frames * size[0] * size[1] * 4;
+		let modded_length = time_scale > 0 ? Math.min(actual_length * time_scale, lastObjectTime) : actual_length;
 
-			let pipeFrameLoop = (ffmpegProcess, cb) => {
-				if(frames_rendered.includes(current_frame)){
-					let frame_path = path.resolve(file_path, `${current_frame}.rgba`);
-					fs.promises.readFile(frame_path).then(buf => {
-						ffmpegProcess.stdin.write(buf, err => {
-							if(err){
-								cb(null);
-								return;
-							}
+		let amount_frames = Math.floor(modded_length / time_frame);
 
-							fs.promises.rm(frame_path, { recursive: true }).catch(helper.error);
+		let frames_size = amount_frames * size[0] * size[1] * 4;
 
-							frames_piped.push(current_frame);
-							frames_rendered.slice(frames_rendered.indexOf(current_frame), 1);
-
-							if(frames_piped.length == amount_frames){
-								ffmpegProcess.stdin.end();
-								cb(null);
-								return;
-							}
-
-							current_frame++;
-							pipeFrameLoop(ffmpegProcess, cb);
-						});
-					}).catch(err => {
-						resolveRender("Error encoding video").catch(console.error);
-						helper.error(err);
-
-						return;
-					});
-				}else{
-					setTimeout(() => {
-						pipeFrameLoop(ffmpegProcess, cb);
-					}, 100);
-				}
-			}
-
-            disk.check(file_path, (err, info) => {
-                if(err){
-                    helper.error(err);
-                    cb(err);
-                    return false;
-                }
-
-                if(info.available * 0.9 < frames_size){
-					resolveRender("Not enough disk space").catch(console.error);
-
-                    return false;
-                }
-
-                let ffmpeg_args = [
-                    '-f', 'rawvideo', '-r', fps, '-s', size.join('x'), '-pix_fmt', 'rgba',
-					'-c:v', 'rawvideo', '-thread_queue_size', 1024,
-                    '-i', 'pipe:0'
-                ];
-
-                let mediaPromise = downloadMedia(options, beatmap, beatmap_path, size, file_path).catch(() => {});
-				let audioProcessingPromise = renderHitsounds(mediaPromise, beatmap, start_time, actual_length, modded_length, time_scale, file_path, options.argon).catch(() => {});
-
-                if(options.type == 'mp4')
-                    bitrate = Math.max(850, Math.min(bitrate, (0.95 * MAX_SIZE) * 8 / (actual_length / 1000) / 1024));
-
-                let workers = [];
-
-                for(let i = 0; i < threads; i++){
-                    workers.push(
-                        fork(path.resolve(__dirname, 'render_worker.js'))
-                    );
-                }
-
-                let done = 0;
-
-                if(config.debug)
-                	console.time('render beatmap');
-
-				if(options.type == 'gif'){
-					if(config.debug)
-						console.time('encode video');
-
-					ffmpeg_args.push(`${file_path}/video.gif`);
-
-					const encodingProcessStart = Date.now();
-
-					let ffmpegProcess = spawn(ffmpeg, ffmpeg_args, { shell: true });
-
-					ffmpegProcess.on('close', async code => {
-						if(code > 0){
-							resolveRender("Error encoding video")
-							.then(() => {
-								fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
-							}).catch(console.error);
-
-							return false;
-						}
-
-						if(config.debug)
-							console.timeEnd('encode video');
-
-						renderStatus[1] = `✓ encoding video (${((Date.now() - encodingProcessStart) / 1000).toFixed(3)}s)`;
-
-                        resolveRender({files: [{
-                            attachment: `${file_path}/video.${options.type}`,
-                            name: `video.${options.type}`
-                        }]}).then(() => {
-                            fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
-                        })
-                        .catch(console.error)
-                        .finally(() => {
-                            fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
-                        });
-					});
-
-					pipeFrameLoop(ffmpegProcess, err => {
+		let pipeFrameLoop = (ffmpegProcess, cb) => {
+			if(frames_rendered.includes(current_frame)){
+				let frame_path = path.resolve(file_path, `${current_frame}.rgba`);
+				fs.promises.readFile(frame_path).then(buf => {
+					ffmpegProcess.stdin.write(buf, err => {
 						if(err){
-							resolveRender("Error encoding video")
-							.then(() => {
-								fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
-							}).catch(console.error);
-
-							return false;
+							cb(null);
+							return;
 						}
+
+						fs.promises.rm(frame_path, { recursive: true }).catch(helper.error);
+
+						frames_piped.push(current_frame);
+						frames_rendered.slice(frames_rendered.indexOf(current_frame), 1);
+
+						if(frames_piped.length == amount_frames){
+							ffmpegProcess.stdin.end();
+							cb(null);
+							return;
+						}
+
+						current_frame++;
+						pipeFrameLoop(ffmpegProcess, cb);
 					});
-				}else{
-					Promise.all([mediaPromise, audioProcessingPromise]).then(response => {
-						let media = response[0];
-						let audio = response[1];
+				}).catch(err => {
+					resolveRender("Error encoding video").catch(console.error);
+					helper.error(err);
 
-						if(media.background_path)
-							ffmpeg_args.unshift('-loop', '1', '-r', fps, '-i', `"${media.background_path}"`);
-						else
-							ffmpeg_args.unshift('-f', 'lavfi', '-r', fps, '-i', `color=c=black:s=${size.join("x")}`);
+					return;
+				});
+			}else{
+				setTimeout(() => {
+					pipeFrameLoop(ffmpegProcess, cb);
+				}, 100);
+			}
+		}
 
-						ffmpeg_args.push('-i', audio);
+		const info = await diskCheck(file_path);
 
-						bitrate -= 128;
-					}).catch(e => {
-						helper.error(e);
-						ffmpeg_args.unshift('-f', 'lavfi', '-r', fps, '-i', `color=c=black:s=${size.join("x")}`);
-						helper.log("rendering without audio");
-					}).finally(() => {
-						if(config.debug)
-							console.time('encode video');
+		if(info.available * 0.9 < frames_size){
+			resolveRender("Not enough disk space").catch(console.error);
 
-						ffmpeg_args.push(
-							'-filter_complex', `"overlay=(W-w)/2:shortest=1"`,
-							'-pix_fmt', 'yuv420p', '-r', fps, '-c:v', 'libx264', /*'-b:v', `${bitrate}k`*/ '-crf', 18,
-							'-c:a', 'aac', '-b:a', '164k', '-t', actual_length / 1000, '-preset', 'veryfast',
-							'-movflags', 'faststart', '-g', fps, '-force_key_frames', '00:00:00.000', `${file_path}/video.mp4`
-						);
+			return false;
+		}
 
-						const encodingProcessStart = Date.now();
+		let ffmpeg_args = [
+			'-f', 'rawvideo', '-r', fps, '-s', size.join('x'), '-pix_fmt', 'rgba',
+			'-c:v', 'rawvideo', '-thread_queue_size', 1024,
+			'-i', 'pipe:0'
+		];
 
-						let ffmpegProcess = spawn(ffmpeg, ffmpeg_args, { shell: true });
+		let mediaPromise = downloadMedia(options, beatmap, beatmap_path, size, file_path).catch(() => {});
+		let audioProcessingPromise = renderHitsounds(mediaPromise, beatmap, start_time, actual_length, modded_length, time_scale, file_path, options.argon).catch(() => {});
 
-						ffmpegProcess.on('close', async code => {
-							if(code > 0){
-								resolveRender("Error encoding video")
-								.then(() => {
-									fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
-								}).catch(console.error);
+		if(options.type == 'mp4')
+			bitrate = Math.max(850, Math.min(bitrate, (0.95 * MAX_SIZE) * 8 / (actual_length / 1000) / 1024));
 
-								return false;
-							}
+		let workers = [];
 
-							if(config.debug)
-								console.timeEnd('encode video');
+		for(let i = 0; i < threads; i++){
+			workers.push(
+				fork(path.resolve(__dirname, 'render_worker.js'))
+			);
+		}
 
-							renderStatus[2] = `✓ encoding video (${((Date.now() - encodingProcessStart) / 1000).toFixed(3)}s)`;
+		let done = 0;
 
-                             const stat = await fs.promises.stat(`${file_path}/video.${options.type}`);
+		if(config.debug)
+			console.time('render beatmap');
 
-                            console.log('size', stat.size / 1024, 'KiB');
-                            console.log('max size', MAX_SIZE / 1024, 'KiB');
+		if(options.type == 'gif'){
+			if(config.debug)
+				console.time('encode video');
 
-                            if(stat.size < MAX_SIZE && msg.channel.type == "text" || options.webui){
-                                resolveRender({files: [{
-                                    attachment: `${file_path}/video.${options.type}`,
-                                    name: `video.${options.type}`
-                                }]}).then(() => {
-                                    fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
-                                })
-                                .catch(console.error)
-                                .finally(() => {
-                                    fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
-                                });
-                            }else if(stat.size < MAX_SIZE_DM ){
-                                resolveRender({files: [{
-                                    attachment: `${file_path}/video.${options.type}`,
-                                    name: `video.${options.type}`
-                                }]}).then(() => {
-                                    fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
-                                })
-                                .catch(console.error)
-                                .finally(() => {
-                                    fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
-                                });
-                            }else{
-                                try{
-                                    console.log('uploading to pek.li:', config.pekli_host + '/api/upload');
+			ffmpeg_args.push(`${file_path}/video.gif`);
 
-                                    const response = await execFilePromise('curl',
-                                        [
-                                            '-s', '-X', 'POST', config.pekli_host + '/api/upload',
-                                            '-H',`"Content-Type: multipart/form-data"`,
-                                            '-H', `"authorization: ${config.credentials.pekli_token}"`,
-											'-H', `"Override-Domain: pek.li"`,
-                                            '-F', `"file=@${file_path}/video.${options.type};type=video/mp4"`
-                                        ], {shell: true});
+			const encodingProcessStart = Date.now();
 
-                                    const json = JSON.parse(response.stdout);
+			let ffmpegProcess = spawn(ffmpeg, ffmpeg_args, { shell: true });
 
-                                    resolveRender(json.files[0]).then(() => {
-                                        fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
-                                    }).catch(console.error)
-                                    .finally(() => {
-                                        fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
-                                    });
-                                }catch(err){
-                                    console.error(err);
-                                    fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
-                                }
-                            }
-						});
+			ffmpegProcess.on('close', async code => {
+				if(code > 0){
+					resolveRender("Error encoding video")
+					.then(() => {
+						fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
+					}).catch(console.error);
 
-						ffmpegProcess.stderr.on('data', data => {
-							const line = data.toString();
-
-							if(!line.startsWith('frame='))
-								return;
-
-							const frame = parseInt(line.substring(6).trim());
-
-							renderStatus[2] = `– encoding video (${Math.round(frame/amount_frames*100)}%)`;
-						});
-
-						pipeFrameLoop(ffmpegProcess, err => {
-							if(err){
-								resolveRender("Error encoding video")
-								.then(() => {
-									fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
-								}).catch(console.error);
-
-								return false;
-							}
-						});
-					});
+					return false;
 				}
 
-				const framesProcessStart = Date.now();
+				if(config.debug)
+					console.timeEnd('encode video');
 
-                workers.forEach((worker, index) => {
-                    worker.send({
-                        beatmap,
-                        start_time: time + index * time_frame,
-                        end_time: time + index * time_frame + modded_length,
-                        time_frame: time_frame * threads,
-                        file_path,
-                        options,
-                        threads,
-                        current_frame: index,
-                        size
-                    });
+				renderStatus[1] = `✓ encoding video (${((Date.now() - encodingProcessStart) / 1000).toFixed(3)}s)`;
 
-					worker.on('message', frame => {
-						frames_rendered.push(frame);
+				resolveRender({files: [{
+					attachment: `${file_path}/video.${options.type}`,
+					name: `video.${options.type}`
+				}]}).then(() => {
+					fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
+				})
+				.catch(console.error)
+				.finally(() => {
+					fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
+				});
+			});
 
-						renderStatus[1] = `– rendering frames (${Math.round(frames_rendered.length/amount_frames*100)}%)`;
-					});
+			pipeFrameLoop(ffmpegProcess, err => {
+				if(err){
+					resolveRender("Error encoding video")
+					.then(() => {
+						fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
+					}).catch(console.error);
 
-                    worker.on('close', code => {
-						if(code > 0){
-							cb("Error rendering beatmap");
-							return false;
+					return false;
+				}
+			});
+		}else{
+			Promise.all([mediaPromise, audioProcessingPromise]).then(response => {
+				let media = response[0];
+				let audio = response[1];
+
+				if(media.background_path)
+					ffmpeg_args.unshift('-loop', '1', '-r', fps, '-i', `"${media.background_path}"`);
+				else
+					ffmpeg_args.unshift('-f', 'lavfi', '-r', fps, '-i', `color=c=black:s=${size.join("x")}`);
+
+				ffmpeg_args.push('-i', audio);
+
+				bitrate -= 128;
+			}).catch(e => {
+				helper.error(e);
+				ffmpeg_args.unshift('-f', 'lavfi', '-r', fps, '-i', `color=c=black:s=${size.join("x")}`);
+				helper.log("rendering without audio");
+			}).finally(() => {
+				if(config.debug)
+					console.time('encode video');
+
+				ffmpeg_args.push(
+					'-filter_complex', `"overlay=(W-w)/2:shortest=1"`,
+					'-pix_fmt', 'yuv420p', '-r', fps, '-c:v', 'libx264', /*'-b:v', `${bitrate}k`*/ '-crf', 18,
+					'-c:a', 'aac', '-b:a', '164k', '-t', actual_length / 1000, '-preset', 'veryfast',
+					'-movflags', 'faststart', '-g', fps, '-force_key_frames', '00:00:00.000', `${file_path}/video.mp4`
+				);
+
+				const encodingProcessStart = Date.now();
+
+				let ffmpegProcess = spawn(ffmpeg, ffmpeg_args, { shell: true });
+
+				ffmpegProcess.on('close', async code => {
+					if(code > 0){
+						resolveRender("Error encoding video")
+						.then(() => {
+							fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
+						}).catch(console.error);
+
+						return false;
+					}
+
+					if(config.debug)
+						console.timeEnd('encode video');
+
+					renderStatus[2] = `✓ encoding video (${((Date.now() - encodingProcessStart) / 1000).toFixed(3)}s)`;
+
+						const stat = await fs.promises.stat(`${file_path}/video.${options.type}`);
+
+					console.log('size', stat.size / 1024, 'KiB');
+					console.log('max size', MAX_SIZE / 1024, 'KiB');
+
+					if(stat.size < MAX_SIZE && msg.channel.type == "text" || options.webui){
+						resolveRender({files: [{
+							attachment: `${file_path}/video.${options.type}`,
+							name: `video.${options.type}`
+						}]}).then(() => {
+							fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
+						})
+						.catch(console.error)
+						.finally(() => {
+							fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
+						});
+					}else if(stat.size < MAX_SIZE_DM ){
+						resolveRender({files: [{
+							attachment: `${file_path}/video.${options.type}`,
+							name: `video.${options.type}`
+						}]}).then(() => {
+							fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
+						})
+						.catch(console.error)
+						.finally(() => {
+							fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
+						});
+					}else{
+						try{
+							console.log('uploading to pek.li:', config.pekli_host + '/api/upload');
+
+							const response = await execFilePromise('curl',
+								[
+									'-s', '-X', 'POST', config.pekli_host + '/api/upload',
+									'-H',`"Content-Type: multipart/form-data"`,
+									'-H', `"authorization: ${config.credentials.pekli_token}"`,
+									'-H', `"Override-Domain: pek.li"`,
+									'-F', `"file=@${file_path}/video.${options.type};type=video/mp4"`
+								], {shell: true});
+
+							const json = JSON.parse(response.stdout);
+
+							resolveRender(json.files[0]).then(() => {
+								fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
+							}).catch(console.error)
+							.finally(() => {
+								fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
+							});
+						}catch(err){
+							console.error(err);
+							fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
 						}
+					}
+				});
 
-                        done++;
+				ffmpegProcess.stderr.on('data', data => {
+					const line = data.toString();
 
-                        if(done == threads){
-							renderStatus[1] = `✓ rendering frames (${((Date.now() - framesProcessStart) / 1000).toFixed(3)}s)`;
+					if(!line.startsWith('frame='))
+						return;
 
-							if(config.debug)
-								console.timeEnd('render beatmap');
-                        }
-                    });
-                });
-            });
-        });
+					const frame = parseInt(line.substring(6).trim());
+
+					renderStatus[2] = `– encoding video (${Math.round(frame/amount_frames*100)}%)`;
+				});
+
+				pipeFrameLoop(ffmpegProcess, err => {
+					if(err){
+						resolveRender("Error encoding video")
+						.then(() => {
+							fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
+						}).catch(console.error);
+
+						return false;
+					}
+				});
+			});
+		}
+
+		const framesProcessStart = Date.now();
+
+		workers.forEach((worker, index) => {
+			worker.send({
+				beatmap,
+				start_time: time + index * time_frame,
+				end_time: time + index * time_frame + modded_length,
+				time_frame: time_frame * threads,
+				file_path,
+				options,
+				threads,
+				current_frame: index,
+				size
+			});
+
+			worker.on('message', frame => {
+				frames_rendered.push(frame);
+
+				renderStatus[1] = `– rendering frames (${Math.round(frames_rendered.length/amount_frames*100)}%)`;
+			});
+
+			worker.on('close', code => {
+				if(code > 0){
+					cb("Error rendering beatmap");
+					return false;
+				}
+
+				done++;
+
+				if(done == threads){
+					renderStatus[1] = `✓ rendering frames (${((Date.now() - framesProcessStart) / 1000).toFixed(3)}s)`;
+
+					if(config.debug)
+						console.timeEnd('render beatmap');
+				}
+			});
+		});
     }
 };
