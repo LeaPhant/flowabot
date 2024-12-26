@@ -2147,7 +2147,7 @@ module.exports = {
 	            beatmap_id = parseInt(beatmap_url.split("/beatmaps/").pop());
 			else if(beatmap_url.includes("/discussion/"))
 				beatmap_id = parseInt(beatmap_url.split("/discussion/").pop().split("/")[0]);
-	        else if(parseInt(beatmap_url) == beatmap_url && _id_only)
+	        else if(parseInt(beatmap_url) == beatmap_url && id_only)
 	            beatmap_id = parseInt(beatmap_url);
 
 			helper.downloadBeatmap(beatmap_id).finally(() => {
