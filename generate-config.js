@@ -5,10 +5,12 @@
     const path = require('path');
     const chalk = require('chalk');
 
+	const { AppTokenAuthProvider } = require('@twurple/auth');
+	const { ApiClient } = require('@twurple/api');	
     const Discord = require('discord.js');
     const axios = require('axios');
 
-    let config = {}, default_value, value, valid_key;
+    let config = {}, default_value, default_value2, value, value2, valid_key;
 
     if(fs.existsSync('./config.json'))
         config = require('./config.json');
@@ -250,9 +252,13 @@
     config.credentials.client_secret = value == 'none' ? "" : value;
 
     default_value = 'none';
+	default_value2 = 'none';
 
     if(config.credentials.twitch_client_id)
         default_value = config.credentials.twitch_client_id;
+
+	if(config.credentials.twitch_client_secret)
+        default_value2 = config.credentials.twitch_client_secret;
 
     do{
         console.log('');
@@ -262,24 +268,38 @@
         if(!value)
             value = default_value;
 
+		console.log('');
+        console.log(`(Optional) A Twitch Client Secret is needed for the Twitch commands to work. You can get one here: ${chalk.blueBright('https://dev.twitch.tv/console/apps')}.`);
+        value2 = readline.question(`Twitch Client Secret [${chalk.green(default_value2)}]: `);
+
+		if(!value2)
+            value2 = default_value2;
+
         valid_key = true;
 
-        if(value != 'none'){
+        if(value != 'none' && value2 != 'none'){
             try{
-                await axios.get('https://api.twitch.tv/helix/streams', { headers: { 'Client-ID': value } });
+				const authProvider = new AppTokenAuthProvider(
+					value, 
+					value2
+				);
+				
+				const apiClient = new ApiClient({ authProvider });
+
+				await apiClient.streams.getStreams();
             }catch(e){
                 valid_key = false;
             }
 
             if(valid_key)
-                console.log(chalk.greenBright("Valid Twitch Client ID!"));
+                console.log(chalk.greenBright("Valid Twitch Client ID/Secret!"));
             else
-                console.log(chalk.redBright("Invalid Twitch Client ID!"));
+                console.log(chalk.redBright("Invalid Twitch Client ID/Secret!"));
         }
-    }while(!valid_key && value != 'none');
+    }while(!valid_key && value != 'none' && value2 != 'none');
 
     config.credentials.twitch_client_id = value == 'none' ? "" : value;
-
+	config.credentials.twitch_client_secret = value2 == 'none' ? "" : value2;
 
     default_value = 'none';
 
