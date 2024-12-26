@@ -10,8 +10,9 @@ const crypto = require('crypto');
 const unzip = require('unzipper');
 const disk = require('diskusage');
 
-const { execFile, fork, spawn } = require('child_process');
+const { exec, execFile, fork, spawn } = require('child_process');
 
+const execPromise = util.promisify(exec);
 const execFilePromise = util.promisify(execFile);
 const diskCheck = util.promisify(disk.check);
 
@@ -799,7 +800,7 @@ module.exports = {
 						.finally(() => {
 							fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
 						});
-					}else if(stat.size < MAX_SIZE_DM ){
+					}else if(stat.size < MAX_SIZE_DM){
 						resolveRender({files: [{
 							attachment: `${file_path}/video.${options.type}`,
 							name: `video.${options.type}`
@@ -811,26 +812,22 @@ module.exports = {
 							fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
 						});
 					}else{
-						try{
-							console.log('uploading to pek.li:', config.pekli_host + '/api/upload');
-
-							const response = await execFilePromise('curl',
-								[
-									'-s', '-X', 'POST', config.pekli_host + '/api/upload',
-									'-H',`"Content-Type: multipart/form-data"`,
-									'-H', `"authorization: ${config.credentials.pekli_token}"`,
-									'-H', `"Override-Domain: pek.li"`,
-									'-F', `"file=@${file_path}/video.${options.type};type=video/mp4"`
-								], {shell: true});
-
-							const json = JSON.parse(response.stdout);
-
-							resolveRender(json.files[0]).then(() => {
-								fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
-							}).catch(console.error)
-							.finally(() => {
+						if (!config.upload_command) {
+							resolveRender("File too large and no upload command specified.").finally(() => {
 								fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
 							});
+							return;
+						}
+
+						try{
+							const upload_command = config.upload_command.replace('{path}', `${file_path}/video.${options.type}`);
+
+							if (config.debug)
+								console.log('running upload command: ', config.upload_command);
+
+							const response = await execPromise(upload_command);
+
+							await resolveRender(response.stdout);
 						}catch(err){
 							console.error(err);
 							fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
