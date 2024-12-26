@@ -176,7 +176,7 @@ module.exports = {
             });
 
             Promise.resolve(beatmap_promise).then(() => {
-                if(!(msg.channel.id in last_beatmap)){
+                if(!beatmap_id && !(msg.channel.id in last_beatmap)){
                     reject(helper.commandHelp('render'));
                     return false;
                 }else if(!beatmap_id && !custom_url){
