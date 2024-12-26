@@ -60,7 +60,7 @@ module.exports = {
 
 			const lastStreamed = Math.floor(creationDate.getTime() / 1000);
 
-			embed.description = `Last streamed <t:${lastStreamed}:R>`;
+			embed.description = `Last streamed <t:${lastStreamed}:R>.`;
 			return { embed };
 		}
 
