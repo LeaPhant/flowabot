@@ -306,6 +306,8 @@
 		}
 	}while(!valid_key && value != 'none')
 
+	config.upload_command = value == 'none' ? "" : value;
+
     default_value = 'none';
 	default_value2 = 'none';
 
