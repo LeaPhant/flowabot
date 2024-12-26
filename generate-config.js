@@ -224,32 +224,57 @@
     config.credentials.osu_api_key = value == 'none' ? "" : value;
 
     default_value = 'none';
+	default_value2 = 'none';
 
     if(config.credentials.client_id)
         default_value = config.credentials.client_id;
 
-    console.log('');
-    console.log(`(Optional) An osu! client id is needed for the osu! commands to work. You can get one here: ${chalk.blueBright('https://osu.ppy.sh/home/account/edit#oauth')}, at the bottom of the page`);
-    value = readline.question(`oauth2 client id [${chalk.green(default_value)}]: `);
+	if(config.credentials.client_secret)
+        default_value2 = config.credentials.client_secret;
 
-    if(!value)
-        value = default_value;
+	do {
+		console.log('');
+		console.log(`(Optional) An osu! client id is needed for the osu! commands to work. You can get one here: ${chalk.blueBright('https://osu.ppy.sh/home/account/edit#oauth')}, at the bottom of the page`);
+		value = readline.question(`oauth2 client id [${chalk.green(default_value)}]: `);
+
+		if(!value)
+			value = default_value;
+
+		console.log('');
+		console.log(`(Optional) An osu! client secret is needed for the osu! commands to work. You can get one here: ${chalk.blueBright('https://osu.ppy.sh/home/account/edit#oauth')}, at the bottom of the page`);
+		value2 = readline.question(`oauth2 client secret [${chalk.green(default_value2)}]: `);
+
+		if(!value2)
+			value2 = default_value2;
+
+		valid_key = true;
+
+		if(value != 'none' && value2 != 'none'){
+            try{
+				const authProvider = new AppTokenAuthProvider(
+					value, 
+					value2
+				);
+
+				await axios.post('https://osu.ppy.sh/oauth/token', {
+					client_id: value,
+					client_secret: value2,
+					grant_type: 'client_credentials',
+					scope: 'public'
+				});
+            }catch(e){
+                valid_key = false;
+            }
+
+            if(valid_key)
+                console.log(chalk.greenBright("Valid osu! oauth2 client id/secret!"));
+            else
+                console.log(chalk.redBright("Invalid osu! oauth2 client id/secret!"));
+        }
+	}while(!valid_key && value != 'none' && value2 != 'none')    
 
     config.credentials.client_id = value == 'none' ? "" : value;
-
-    default_value = 'none';
-
-        if(config.credentials.client_secret)
-        default_value = config.credentials.client_secret;
-
-    console.log('');
-    console.log(`(Optional) An osu! client secret is needed for the osu! commands to work. You can get one here: ${chalk.blueBright('https://osu.ppy.sh/home/account/edit#oauth')}, at the bottom of the page`);
-    value = readline.question(`oauth2 client secret [${chalk.green(default_value)}]: `);
-
-    if(!value)
-        value = default_value;
-
-    config.credentials.client_secret = value == 'none' ? "" : value;
+	config.credentials.client_secret = value2 == 'none' ? "" : value2;
 
     default_value = 'none';
 	default_value2 = 'none';
