@@ -3,7 +3,11 @@
     const fs = require('fs');
     const os = require('os');
     const path = require('path');
+	const util = require('util');
     const chalk = require('chalk');
+
+	const { exec } = require('child_process');
+	const execPromise = util.promisify(exec);
 
 	const { AppTokenAuthProvider } = require('@twurple/auth');
 	const { ApiClient } = require('@twurple/api');	
@@ -271,10 +275,36 @@
             else
                 console.log(chalk.redBright("Invalid osu! oauth2 client id/secret!"));
         }
-	}while(!valid_key && value != 'none' && value2 != 'none')    
+	}while(!valid_key && value != 'none' && value2 != 'none')
 
     config.credentials.client_id = value == 'none' ? "" : value;
 	config.credentials.client_secret = value2 == 'none' ? "" : value2;
+
+	default_value = 'none';
+
+	do{
+		let response;
+
+		console.log('');
+		console.log(`(Optional) An upload command for renders exceeding Discord's size limit, substitute {path} for the file path to upload, e.g. curl -X POST -F "file=@{path}" https://example.com/upload. The output of the command will get posted as the command response.`);
+		value = readline.question(`Command: [${chalk.green(default_value)}]: `);
+
+		try {
+			response = await execPromise(value.replace('{path}', path.resolve(__dirname, 'README.md')));
+
+			if (response?.error?.code > 0)
+				throw response.stdout;
+		}catch(e){
+			valid_key = false;
+		}
+
+		if(valid_key) {
+			console.log(chalk.greenBright("Upload command success!"));
+			console.log(`Output: ${response.stdout}`);
+		}else{
+			console.log(chalk.redBright("Upload command failed!"));
+		}
+	}while(!valid_key && value != 'none')
 
     default_value = 'none';
 	default_value2 = 'none';
