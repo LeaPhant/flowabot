@@ -19,6 +19,8 @@
     "license": "MIT",
     "dependencies": {
         "@dmzoneill/urban-dictionary": "^3.0.3",
+        "@twurple/api": "^7.2.1",
+        "@twurple/auth": "^7.2.1",
         "axios": "^0.21.1",
         "booba": "^0.0.16",
         "bparser-js": "^1.0.2",

@@ -1,19 +1,18 @@
-const helper = require('../helper.js');
-const axios = require('axios');
 const config = require('../config.json');
 
-const { DateTime, Duration } = require('luxon');
+const { Duration } = require('luxon');
+const { AppTokenAuthProvider } = require('@twurple/auth');
+const { ApiClient } = require('@twurple/api');
 
-const twitchKraken = axios.create({
-    baseURL: 'https://api.twitch.tv/kraken',
-    headers: {
-        'Accept': 'application/vnd.twitchtv.v5+json',
-        'Client-ID': config.credentials.twitch_client_id
-    }
-});
+const authProvider = new AppTokenAuthProvider(
+	config.credentials.twitch_client_id, 
+	config.credentials.twitch_client_secret
+);
+
+const apiClient = new ApiClient({ authProvider });
 
 module.exports = {
-    command: 'viewers',
+    command: ['uptime', 'downtime', 'viewers'],
     description: "See how many people are watching a Twitch channel.",
     argsRequired: 1,
     usage: '<twitch username>',
@@ -21,75 +20,84 @@ module.exports = {
         run: "viewers distortion2",
         result: "Returns how many viewers distortion2 currently has (if they're live)."
     },
-    configRequired: ['credentials.twitch_client_id'],
-    call: obj => {
-        return new Promise((resolve, reject) => {
-            let { argv } = obj;
+    configRequired: ['credentials.twitch_client_id', 'credentials.twitch_client_secret'],
+    call: async obj => {
+		let { argv } = obj;
 
-            let channel_name = argv[1];
+		let channel_name = argv[1];
 
-            twitchKraken.get(`/users`, {
-                params: {
-                    'login': channel_name,
-                },
-            }).then(response => {
-                let users = response.data.users;
+		const user = await apiClient.users.getUserByName(channel_name);
 
-                if(users.length == 0){
-                    reject('User not found');
-                    return;
-                }
+		if (!user) {
+			throw "Twitch User not found.";
+		}
 
-                let user_id = users[0]._id;
+		const { displayName: name } = user;
+		const channelUrl = `https://twitch.tv/${user.name}`;
 
-                twitchKraken.get(`/streams/${user_id}`).then(response => {
-                    let stream = response.data.stream;
+		const embed = {
+			color: 6570404,
+			author: {
+				icon_url: user.profilePictureUrl,
+				url: channelUrl,
+				name
+			},
+			url: channelUrl
+		};
 
-                    if(stream != null){
-                        let channel = stream.channel;
+		const stream = await apiClient.streams.getStreamByUserName(user);
 
-                        let display_name = channel.display_name;
-                        let viewers = stream.viewers.toLocaleString();
-                        let game = stream.game;
-                        let status = channel.status;
-                        let quality = Math.round(stream.video_height) + "p" + Math.round(stream.average_fps);
+		if (!stream) {
+			const { data: videos } = await apiClient.videos.getVideosByUser(user, { type: 'archive' });
 
-                        const uptimeMs = DateTime.now().toMillis() - DateTime.fromISO(stream.created_at).toMillis();
-                        const duration = Duration.fromMillis(uptimeMs);
+			if (videos.length == 0) {
+				embed.description = "Currently offline.";
+				return { embed };
+			}
 
-                        const footerText = `Live for ${uptimeMs > 60 * 60 * 1000 
-                            ? duration.toFormat("h'h' m'm'") : duration.toFormat("m'm'")}`;
+			const [lastStream] = videos;
+			const { creationDate } = lastStream;
 
-                        resolve({
-                            embed: {
-                                color: 6570404,
-                                author: {
-                                    icon_url: "https://cdn.discordapp.com/attachments/572429763700981780/572429816851202059/GlitchBadge_Purple_64px.png",
-                                    url: channel.url,
-                                    name: display_name
-                                },
-                                title: status,
-                                url: channel.url,
-                                description: `**Game**: ${game}\n**Viewers**: ${viewers}\n**Quality**: ${quality}`,
-                                thumbnail: {
-                                    url: channel.logo
-                                },
-                                footer: {
-                                    text: footerText
-                                }
-                            }
-                        });
-                    }else{
-                        reject(`${channel_name} is currently not live`);
-                    }
-                }).catch(err => {
-                    helper.error(err);
-                    reject('User not found');
-                });
-            }).catch(err => {
-                helper.error(err);
-                reject('User not found');
-            });
-        });
+			const lastStreamed = Math.floor(creationDate.getTime() / 1000);
+
+			embed.description = `Last streamed <t:${lastStreamed}:R>`;
+			return { embed };
+		}
+
+		embed.title = stream.title;
+
+		embed.fields = [];
+
+		if (stream.gameName) {
+			embed.fields.push({
+				name: 'Game',
+				value: stream.gameName,
+				inline: true
+			});
+		}
+
+		embed.fields.push({
+			name: 'Viewers',
+			value: stream.viewers.toLocaleString(),
+			inline: true
+		});
+
+		const uptime = Date.now() - stream.startDate.getTime();
+		const duration = Duration.fromMillis(uptime);
+
+		const uptimeText = 
+			  uptime > 60 * 60 * 1000 
+			? duration.toFormat("h'h' m'm'") 
+			: duration.toFormat("m'm'");
+
+		console.log(JSON.stringify(stream));
+
+		embed.fields.push({
+			name: 'Uptime',
+			value: uptimeText,
+			inline: true
+		});
+
+		return { embed };
     }
 };
