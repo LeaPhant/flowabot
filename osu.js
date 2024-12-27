@@ -722,6 +722,8 @@ async function getScore(recent_raw, cb){
     let best_score;
 
     recent = Object.assign({
+        score_id: recent_raw.id,
+        replay: recent_raw.has_replay,
         user_id: recent_raw.user_id,
         beatmap_id: recent_raw.beatmap.id,
         rank: recent_raw.passed ? recent_raw.rank: "F",
@@ -800,14 +802,14 @@ async function getScore(recent_raw, cb){
             user_pp: Number(user.statistics.pp)
         }, recent);
 
-        if(best_score){
-            if(compareScores(best_score, recent_raw)){
-                replay = Number(best_score.replay ? 1 : 0);
-				recent.score_id = best_score.id;
-            }else{
-                recent.unsubmitted = true;
-			}
-        }
+        // if(best_score){
+        //     if(compareScores(best_score, recent_raw)){
+        //         replay = Number(best_score.replay ? 1 : 0);
+		// 		recent.score_id = best_score.id;
+        //     }else{
+        //         recent.unsubmitted = true;
+		// 	}
+        // }
 
         let beatmap = recent_raw.beatmap;
         //let beatmapset = recent_raw.beatmapset;
@@ -921,7 +923,7 @@ async function getScore(recent_raw, cb){
                     recent.strains_bar = true;
             }
 
-            if(replay && await helper.fileExists(beatmap_path)){
+            if(recent.replay && await helper.fileExists(beatmap_path)){
                 let ur_promise = new Promise((resolve, reject) => {
                     if(config.debug)
                         helper.log('getting ur');
