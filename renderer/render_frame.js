@@ -295,7 +295,7 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 			filterComplex += `[${i + indexStart}]`;
 		});
 
-		filterComplex += `amix=inputs=${hitSoundsChunk.length}:dropout_transition=${actual_length},volume=${hitSoundsChunk.length},dynaudnorm`;
+		filterComplex += `amix=inputs=${hitSoundsChunk.length}:dropout_transition=${actual_length}:normalize=0`;
 
 		ffmpegArgsChunk.push(`"${filterComplex}"`, '-ac', '2', path.resolve(file_path, `hitsounds${i}.wav`));
 		mergeHitSoundArgs.push('-guess_layout_max', '0', '-i', path.resolve(file_path, `hitsounds${i}.wav`));
