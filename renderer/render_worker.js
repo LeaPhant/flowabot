@@ -250,6 +250,8 @@ process.on('message', async obj => {
         // Draw follow points
 
 		for (const fp of followpointsOnScreen) {
+			if (options.analyze) break;
+			
 			const { fadeInStart, fadeInEnd, fadeOutStart, fadeOutEnd, startPosition, endPosition, rotation } = fp;
 
 			let progress = Math.min(1, (time - fadeInStart) / (fadeInEnd - fadeInStart));
