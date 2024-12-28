@@ -322,6 +322,11 @@ class BeatmapProcessor {
 					break;
 			}
 		}
+
+		if (options.choke) {
+			const firstMiss = Beatmap.ScoringFrames.find(s => s.result == 'miss' || s.result == 'sliderbreak');
+			time = (firstMiss?.offset ?? 5000) - 5000; 
+		}
 	
 		let firstHitobjectIndex = Beatmap.hitObjects.findIndex(x => x.endTime > time - 1000) ?? 0;
 		let lastHitobjectIndex = Beatmap.hitObjects.findIndex(x => x.startTime > (time + (length + 1000) * Beatmap.SpeedMultiplier)) - 1;

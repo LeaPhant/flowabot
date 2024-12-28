@@ -74,6 +74,7 @@ module.exports = {
             let lagtrain = false;
             let argon = false;
 			let full = false;
+			let choke = false;
 
             argv.map(arg => arg.toLowerCase());
 
@@ -137,6 +138,9 @@ module.exports = {
                     argon = true;
 				}else if(arg == 'full'){
 					full = true;
+					length = 10;
+				} else if(arg == 'choke'){
+					choke = true;
 					length = 10;
                 }else if(arg.endsWith('s')){
                     length = parseFloat(arg);
@@ -236,7 +240,7 @@ module.exports = {
                             frame.get_frames(download_path, time, length * 1000, mods, size, {
                                 combo,
                                 type: video_type, cs, ar, od, analyze, lagtrain, argon, hidden, custom_url, traceable, flashlight, black: false, osr, score_id, audio, fps, speed,
-                                fill: video_type == 'mp4', noshadow: true, percent, border: false, objects, msg, nointerpolate, webui, full
+                                fill: video_type == 'mp4', noshadow: true, percent, border: false, objects, msg, nointerpolate, webui, full, choke
                             });
 						}else{
 							frame.get_frame(download_path, time, mods, [800, 600], {
