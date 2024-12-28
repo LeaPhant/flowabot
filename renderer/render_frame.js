@@ -532,7 +532,7 @@ module.exports = {
 
 			worker.on('close', code => {
 				if(code > 0){
-					resolveRender("Error processing beatmap").catch(console.error);
+					resolveRender("Error processing beatmap or replay").catch(console.error);
 
 					return false;
 				}
@@ -550,7 +550,7 @@ module.exports = {
 				beatmap = await processBeatmap(beatmap_path, options, mods_raw, time, length);
 				renderStatus[0] = `✓ processing beatmap (${((Date.now() - beatmapProcessStart) / 1000).toFixed(3)}s)`;
 			} catch(e) {
-				resolveRender("Error processing beatmap").catch(console.error);
+				resolveRender("Error processing beatmap or replay").catch(console.error);
 				return false;
 			}
 			
