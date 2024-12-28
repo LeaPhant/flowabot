@@ -336,6 +336,14 @@ class BeatmapProcessor {
 				lastHitobjectIndex++;
 		}
 
+		if (options.full) {
+			firstHitobjectIndex = 0;
+			lastHitobjectIndex = Beatmap.hitObjects.length - 1;
+
+			time = Beatmap.hitObjects[firstHitobjectIndex].startTime;
+			length = Beatmap.hitObjects[lastHitobjectIndex].endTime - time
+		}
+
 		Beatmap.firstHitobjectIndex = firstHitobjectIndex;
 		Beatmap.lastHitobjectIndex = lastHitobjectIndex;
 

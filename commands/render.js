@@ -73,6 +73,7 @@ module.exports = {
 			let nointerpolate = false;
             let lagtrain = false;
             let argon = false;
+			let full = false;
 
             argv.map(arg => arg.toLowerCase());
 
@@ -134,6 +135,9 @@ module.exports = {
                     lagtrain = true;
                 }else if(arg == 'argon'){
                     argon = true;
+				}else if(arg == 'full'){
+					full = true;
+					length = 10;
                 }else if(arg.endsWith('s')){
                     length = parseFloat(arg);
                 }else if(arg.endsWith('x')){
@@ -226,13 +230,13 @@ module.exports = {
 						if(previewTime)
 							time = previewTime;
 
-						if(length > 0 || objects){
+						if(length > 0 || objects || full){
                             resolve(null);
 
                             frame.get_frames(download_path, time, length * 1000, mods, size, {
                                 combo,
                                 type: video_type, cs, ar, od, analyze, lagtrain, argon, hidden, custom_url, traceable, flashlight, black: false, osr, score_id, audio, fps, speed,
-                                fill: video_type == 'mp4', noshadow: true, percent, border: false, objects, msg, nointerpolate, webui
+                                fill: video_type == 'mp4', noshadow: true, percent, border: false, objects, msg, nointerpolate, webui, full
                             });
 						}else{
 							frame.get_frame(download_path, time, mods, [800, 600], {
