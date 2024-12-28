@@ -325,7 +325,7 @@ class BeatmapProcessor {
 
 		if (options.choke) {
 			const firstMiss = Beatmap.ScoringFrames.find(s => s.result == 'miss' || s.result == 'sliderbreak');
-			time = (firstMiss?.offset ?? 5000) - 5000; 
+			time = (firstMiss?.offset ?? 3500) - 3500; 
 		}
 	
 		let firstHitobjectIndex = Beatmap.hitObjects.findIndex(x => x.endTime > time - 1000) ?? 0;
