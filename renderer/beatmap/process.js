@@ -16,7 +16,7 @@ const applyMods = require('./mods/mods');
 const applyCounter = require('./pp');
 const applyFollowpoints = require('./followpoints');
 
-const exists = path => fs.access(path).then(() => true, () => false);
+const exists = async path => fs.access(path).then(() => true, () => false);
 
 const OBJECT_RADIUS = 64;
 const ROUNDING_ALLOWANCE = float(1.00041);
@@ -55,7 +55,7 @@ class BeatmapProcessor {
 		if (this.options.score_id) {
 			const replay_path = path.resolve(config.replay_path, `${this.options.score_id}.osr`);
 
-			if (exists(replay_path)) {
+			if (await exists(replay_path)) {
 				Replay = await parseReplay(await fs.readFile(replay_path));
 			}
 		}
