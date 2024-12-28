@@ -262,8 +262,9 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 		}
 	});
 	// process in chunks
-	let chunkLength = 2500;
-	let chunkCount = Math.ceil(modded_length / chunkLength);
+	const chunkCount = require('os').cpus().length;
+	const chunkLength = Math.floor(modded_length / chunkCount);
+
 	let hitSoundPromises = [];
 
 	let mergeHitSoundArgs = [];
@@ -285,17 +286,14 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 		let indexStart = Object.keys(hitSoundIndexes).length;
 
 		hitSoundsChunk.forEach((hitSound, i) => {
-			let fadeOutStart = actual_length - 500;
-			let fadeOut = hitSound.offset >= fadeOutStart ? (1 - (hitSound.offset - (actual_length - 500)) / 500) : 1;
-
-			filterComplex += `[${hitSoundIndexes[hitSound.sound]}]adelay=${hitSound.offset}|${hitSound.offset},volume=${hitSound.volume * 0.7 * fadeOut}[${i + indexStart}];`
+			filterComplex += `[${hitSoundIndexes[hitSound.sound]}]adelay=${hitSound.offset}|${hitSound.offset},volume=${(hitSound.volume * 0.7).toFixed(1)}[${i + indexStart}];`
 		});
 
 		hitSoundsChunk.forEach((hitSound, i) => {
 			filterComplex += `[${i + indexStart}]`;
 		});
 
-		filterComplex += `amix=inputs=${hitSoundsChunk.length}:dropout_transition=${actual_length}:normalize=0`;
+		filterComplex += `amix=inputs=${hitSoundsChunk.length}:normalize=0`;
 
 		ffmpegArgsChunk.push(`"${filterComplex}"`, '-ac', '2', path.resolve(file_path, `hitsounds${i}.wav`));
 		mergeHitSoundArgs.push('-guess_layout_max', '0', '-i', path.resolve(file_path, `hitsounds${i}.wav`));
@@ -310,7 +308,7 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 		}
 
 		Promise.all(hitSoundPromises).then(async () => {
-			mergeHitSoundArgs.push('-filter_complex', `amix=inputs=${chunksToMerge}:dropout_transition=${actual_length},volume=${chunksToMerge},dynaudnorm`, path.resolve(file_path, `hitsounds.wav`));
+			mergeHitSoundArgs.push('-filter_complex', `amix=inputs=${chunksToMerge}:dropout_transition=${actual_length}:normalize=0`, path.resolve(file_path, `hitsounds.wav`));
 
 			await execFilePromise(ffmpeg, mergeHitSoundArgs, { shell: true });
 
@@ -322,7 +320,7 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 
 			mergeArgs.push(
 				'-guess_layout_max', '0', '-i', path.resolve(file_path, `hitsounds.wav`),
-				'-filter_complex', `amix=inputs=${mixInputs}:duration=first:dropout_transition=${actual_length},volume=2,dynaudnorm`, path.resolve(file_path, 'merged.wav')
+				'-filter_complex', `amix=inputs=${mixInputs}:duration=first:dropout_transition=${actual_length}:normalize=0`, path.resolve(file_path, 'merged.wav')
 			);
 
 			await execFilePromise(ffmpeg, mergeArgs, { shell: true });
