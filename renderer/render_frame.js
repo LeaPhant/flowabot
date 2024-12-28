@@ -826,10 +826,13 @@ module.exports = {
 								console.log('running upload command: ', config.upload_command);
 
 							const response = await execPromise(upload_command);
+							const url = new URL(response.stdout);
 
-							await resolveRender(response.stdout);
+							await resolveRender(url.href);
 						}catch(err){
+							await resolveRender("File too large and failed to upload to specified upload command.")
 							console.error(err);
+						}finally{
 							fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
 						}
 					}
