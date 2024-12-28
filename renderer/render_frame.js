@@ -30,7 +30,6 @@ let enabled_mods = [""];
 
 const resources = path.resolve(__dirname, "res");
 
-
 async function copyDir(src,dest) {
     const entries = await fs.promises.readdir(src, {withFileTypes: true});
     await fs.promises.mkdir(dest);
@@ -137,8 +136,8 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 
 	try{
 		await execFilePromise(ffmpeg, [
-			'-ss', start_time / 1000, '-i', `"${media.audio_path}"`, '-t', actual_length * Math.max(1, time_scale) / 1000,
-			'-filter:a', `"afade=t=out:st=${Math.max(0, actual_length * time_scale / 1000 - 0.5 / time_scale)}:d=0.5,atempo=${time_scale},volume=0.7"`,
+			'-ss', start_time / 1000, '-i', `"${media.audio_path}"`, '-to', start_time / 1000 + actual_length / 1000,
+			'-filter:a', `"afade=t=out:st=${Math.max(0, actual_length / 1000 - 0.5 / time_scale)}:d=0.5,atempo=${time_scale},volume=0.7"`,
 			path.resolve(file_path, 'audio.wav')
 		], { shell: true });
 
@@ -150,7 +149,7 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 
 	let hitSoundPaths = await processHitsounds(media.beatmap_path, argon);
 
-	let hitObjects = beatmap.hitObjects.filter(a => a.startTime >= start_time && a.startTime < start_time + actual_length * time_scale);
+	let hitObjects = beatmap.hitObjects.filter(a => a.startTime >= start_time && a.startTime < start_time + actual_length);
 	let hitSounds = [];
 
 	const scoringFrames = beatmap.ScoringFrames.filter(a => a.offset >= start_time && a.offset < start_time + actual_length);
@@ -308,7 +307,7 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 		}
 
 		Promise.all(hitSoundPromises).then(async () => {
-			mergeHitSoundArgs.push('-filter_complex', `amix=inputs=${chunksToMerge}:dropout_transition=${actual_length}:normalize=0`, path.resolve(file_path, `hitsounds.wav`));
+			mergeHitSoundArgs.push('-filter_complex', `amix=inputs=${chunksToMerge}:normalize=0`, path.resolve(file_path, `hitsounds.wav`));
 
 			await execFilePromise(ffmpeg, mergeHitSoundArgs, { shell: true });
 
@@ -320,7 +319,7 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 
 			mergeArgs.push(
 				'-guess_layout_max', '0', '-i', path.resolve(file_path, `hitsounds.wav`),
-				'-filter_complex', `amix=inputs=${mixInputs}:duration=first:dropout_transition=${actual_length}:normalize=0`, path.resolve(file_path, 'merged.wav')
+				'-filter_complex', `amix=inputs=${mixInputs}:duration=first:dropout_transition=${modded_length}:normalize=0`, path.resolve(file_path, 'merged.wav')
 			);
 
 			await execFilePromise(ffmpeg, mergeArgs, { shell: true });
@@ -585,13 +584,7 @@ module.exports = {
 
 		let i = 0;
 
-		let time_scale = 1;
-
-		if(enabled_mods.includes('DT') || enabled_mods.includes('NC'))
-			time_scale *= mods_raw.filter(mod => mod.acronym == "DT" || mod.acronym == "NC")[0].settings?.speed_change ?? 1.5;
-
-		if(enabled_mods.includes('HT') || enabled_mods.includes('DC'))
-			time_scale *= mods_raw.filter(mod => mod.acronym == "HT" || mod.acronym == "DC")[0].settings?.speed_change ?? 0.75;
+		let time_scale = beatmap.SpeedMultiplier;
 
 		if(options.speed != 1)
 			time_scale = options.speed;
@@ -612,9 +605,8 @@ module.exports = {
 
 		let threads = require('os').cpus().length;
 
-		let modded_length = time_scale > 0 ? Math.min(actual_length * time_scale, lastObjectTime) : actual_length;
-
-		let amount_frames = Math.floor(modded_length / time_frame);
+		let modded_length = Math.min(actual_length / time_scale, lastObjectTime / time_scale);
+		let amount_frames = Math.floor(actual_length / time_frame);
 
 		let frames_size = amount_frames * size[0] * size[1] * 4;
 
@@ -759,7 +751,7 @@ module.exports = {
 				ffmpeg_args.push(
 					'-filter_complex', `"overlay=(W-w)/2:shortest=1"`,
 					'-pix_fmt', 'yuv420p', '-r', fps, '-c:v', 'libx264', /*'-b:v', `${bitrate}k`*/ '-crf', 18,
-					'-c:a', 'aac', '-b:a', '164k', '-t', actual_length / 1000, '-preset', 'veryfast',
+					'-c:a', 'aac', '-b:a', '164k', '-t', modded_length / 1000, '-preset', 'veryfast',
 					'-movflags', 'faststart', '-g', fps, '-force_key_frames', '00:00:00.000', `${file_path}/video.mp4`
 				);
 
@@ -866,7 +858,7 @@ module.exports = {
 			worker.send({
 				beatmap,
 				start_time: time + index * time_frame,
-				end_time: time + index * time_frame + modded_length,
+				end_time: time + index * time_frame + actual_length,
 				time_frame: time_frame * threads,
 				file_path,
 				options,
