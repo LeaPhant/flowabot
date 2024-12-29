@@ -200,6 +200,10 @@ fs.readdir(handlers_path).then(items => {
 });
 
 function onMessage(msg){
+	// remove bridged escape characters
+	if(msg.webhookID != null)
+		msg.content = msg.content.replace(/\\(?!\\)/g, '');
+
     let argv = msg.content.split(' ');
 
     argv[0] = argv[0].substr(config.prefix.length);
