@@ -2575,8 +2575,9 @@ module.exports = {
 
         //let _strain_step = STRAIN_STEP * speed_multiplier;
 
-        //let strain_offset = Math.floor(map.objects[0].time / _strain_step) * _strain_step - _strain_step
-        let strain_offset = rosu_strains.sectionLength
+		let _strain_step = rosu_strains.sectionLength;
+        let strain_offset = Math.floor(map.objects[0].time / _strain_step) * _strain_step - _strain_step
+        //let strain_offset = rosu_strains.sectionLength;
         //console.log(strain_offset)
 
         let max_strain_time = strain_offset;
@@ -2762,7 +2763,7 @@ module.exports = {
 
             const outputChart = await graphCanvas.renderToBuffer(configuration);
 
-            const output_frame = await getFrame(osu_file_path, max_strain_time_real - map.objects[0].time % 400, mods_array, [427, 320], {ar: ar, cs: cs})
+            const output_frame = await getFrame(osu_file_path, max_strain_time_real - map.objects[0].time % 400, mods_array, [427, 320], {ar: ar, cs: cs, noreplay: true})
             
             const graphImage = new Jimp(600, 400, '#263238E6');
             

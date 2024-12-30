@@ -1076,7 +1076,7 @@ process.on('message', async obj => {
         }
 
         // Draw replay cursor
-        if(beatmap.Replay){
+        if(beatmap.Replay && !options.noreplay){
             let replay_point = getCursorAt(time, beatmap.ReplayInterpolated);
 
             let smokeActive = false;
