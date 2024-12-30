@@ -192,9 +192,6 @@ class SliderProcessor {
 
 		const SliderDots = [];
 
-		if (Slider.SliderDots.length < 2)
-            return;
-
 		let pos_current = Slider.SliderDots[0];
         let next_index = 1;
         let pos_next = Slider.SliderDots[next_index];
@@ -235,6 +232,11 @@ class SliderProcessor {
             Slider.actualEndPosition = turnSliderDots[Math.floor(turnSliderDots.length - 1 - 36 / sliderDotDuration)];
         }
 
+		if (SliderDots.length < 2) {
+			Slider.SliderDots = [...Slider.points];
+            return;
+		}
+
         Slider.SliderDots = SliderDots;
 	}
 
@@ -242,7 +244,7 @@ class SliderProcessor {
 		const { Beatmap, Slider } = this;
 
 		Slider.endPosition = Slider.SliderDots[Slider.SliderDots.length - 1];
-
+		
 		// How far away you can stay away from the slider end without missing it
 		let lazyEndOffset = Math.floor(Beatmap.ActualFollowpointRadius);
 
