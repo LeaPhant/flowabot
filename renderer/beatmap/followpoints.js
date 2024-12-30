@@ -54,9 +54,11 @@ class FollowpointProcessor {
 				rotation
 			};
 
-			fp.fadeInStart = fadeInTime;
+			// actual impl: fadeInTime
+			fp.fadeInStart = Math.max(fadeInTime, start.startTime - Beatmap.TimePreempt);
 			fp.fadeInEnd = fp.fadeInStart + Beatmap.TimeFadein;
 			fp.fadeOutStart = Math.min(fp.fadeInEnd, end.startTime - Beatmap.HitWindow50);
+			// actual impl: fp.fadeOutStart + (fadeOutTime - fadeInTime)
 			fp.fadeOutEnd = Math.min(fp.fadeOutStart + (fadeOutTime - fadeInTime), end.startTime);
 
 			followpoints.push(fp);
