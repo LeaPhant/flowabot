@@ -140,7 +140,7 @@ class BeatmapProcessor {
 			Beatmap.CircleSize = options.cs;
 	
 		if (!isNaN(options.ar))
-			Beatmap.ApproachRateRealtime = options.ar;
+			Beatmap.ApproachRate = options.ar;
 	
 		if (!isNaN(options.od))
 			Beatmap.OverallDifficulty = options.od;
