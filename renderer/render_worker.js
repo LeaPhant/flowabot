@@ -247,8 +247,8 @@ process.on('message', async obj => {
         ctx.lineWidth = 4 * scale_multiplier;
         ctx.shadowColor = 'transparent';
 		ctx.fillStyle = 'white';
-        // Draw follow points
 
+        // Draw follow points
 		for (const fp of followpointsOnScreen) {
 			if (options.analyze) break;
 			
@@ -405,12 +405,13 @@ process.on('message', async obj => {
 					const snakingStart = hitObject.startTime - beatmap.TimePreempt;
                     const snakingFinish = snakingStart + beatmap.TimePreempt / 3;
 
-                    let snakingProgress = Math.max(0, Math.min(1, (time - snakingStart) / (snakingFinish - snakingStart)));
+					let snakingProgress = 1;
+					let render_dots = hitObject.SliderDots;
 
-                    let render_dots = [];
-
-                    for(let x = 0; x < Math.floor(hitObject.SliderDots.length * snakingProgress); x++)
-                        render_dots.push(hitObject.SliderDots[x]);
+					if (time < snakingFinish) {
+						snakingProgress = Math.max(0, Math.min(1, (time - snakingStart) / (snakingFinish - snakingStart)));
+						render_dots = render_dots.slice(0, Math.floor(render_dots.length * snakingProgress));
+					}
 
                     // Use stroke with rounded ends to "fake" a slider path
                     ctx.beginPath();
