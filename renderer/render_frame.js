@@ -550,6 +550,7 @@ module.exports = {
 				beatmap = await processBeatmap(beatmap_path, options, mods_raw, time, length);
 				renderStatus[0] = `✓ processing beatmap (${((Date.now() - beatmapProcessStart) / 1000).toFixed(3)}s)`;
 			} catch(e) {
+				console.error(e);
 				resolveRender("Error processing beatmap or replay").catch(console.error);
 				return false;
 			}
