@@ -1,7 +1,8 @@
 const { 
 	vectorMultiply, vectorDivide, vectorAdd, vectorSubtract, 
 	vectorDistance, vectorDistanceSquared, 
-	vectorEquals
+	vectorEquals,
+	clamp
 } = require('./util');
 
 const CATMULL_DETAIL = 50;
@@ -298,6 +299,8 @@ class SliderProcessor {
 
         if (Slider.repeatCount % 2 == 0)
 			legacyLastTickProgress = 1 - legacyLastTickProgress;
+
+		legacyLastTickProgress = clamp(legacyLastTickProgress, 0, 1);
 
 		Slider.actualEndTime = legacyLastTickTime;
 		Slider.actualEndPosition = SliderDots[Math.floor(legacyLastTickProgress * (SliderDots.length - 1))];
