@@ -12,7 +12,7 @@ const { parseReplay, applyReplay } = require('./replay');
 const applySliders = require('./slider');
 const applyHitsounds = require('./hitsounds');
 const applyStacking = require('./stacking');
-const applyMods = require('./mods/mods');
+const { applyMods, ApplicableMods } = require('./mods/mods');
 const applyCounter = require('./pp');
 const applyFollowpoints = require('./followpoints');
 
@@ -197,8 +197,8 @@ class BeatmapProcessor {
 		}
 	}
 
-	async applyMods () {
-		applyMods(this.Beatmap);
+	async applyMods (EnabledMods) {
+		applyMods(this.Beatmap, EnabledMods);
 	}
 
 	async applyComboColors () {
@@ -376,8 +376,9 @@ class BeatmapProcessor {
 
 		await this.applySettings();
 		await this.applyComboColors();
+		await this.applyMods(ApplicableMods.ReflectionMod);
 		await this.applySliders();
-		await this.applyMods();
+		await this.applyMods(ApplicableMods.RandomMod);
 		await this.applyStacking();
 		await this.applyHitsounds();
 		await this.applyReplay();
