@@ -692,7 +692,7 @@ process.on('message', async obj => {
                         ctx.beginPath();
 
                         position = playfieldPosition(...pos_current);
-                        ctx.arc(...position, scale_multiplier * (beatmap.FollowpointRadius), 0, 2 * Math.PI, false);
+                        ctx.arc(...position, scale_multiplier * (beatmap.ActualFollowpointRadius), 0, 2 * Math.PI, false);
                         ctx.stroke();
                     }
 
