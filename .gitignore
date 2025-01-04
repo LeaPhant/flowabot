@@ -79,3 +79,5 @@ maps/
 renderer/webui/output
 replays
 .vscode
+
+vscode-profile*
