@@ -688,7 +688,8 @@ process.on('message', async obj => {
 
                         // Draw follow circle visible around the follow point
 
-                        ctx.fillStyle = "rgba(255,255,255,0.8)";
+						ctx.lineWidth = 3 * scale_multiplier;
+                        ctx.strokeStyle = "rgba(255,255,255,0.5)";
                         ctx.beginPath();
 
                         position = playfieldPosition(...pos_current);
