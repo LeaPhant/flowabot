@@ -373,7 +373,7 @@ class SliderProcessor {
 		// cap the slider length to the in-game value (dirty fix)
 		// this is needed because slider paths don't always match the 
 		// specified points exactly but rather approach them at a constant speed
-		Slider.SliderDots = Slider.SliderDots.slice(0, Slider.pixelLength);
+		Slider.SliderDots = Slider.SliderDots.slice(0, Slider.pixelLength + 1);
 
 		this.applyActualEnd();
 		this.generateTicks();
