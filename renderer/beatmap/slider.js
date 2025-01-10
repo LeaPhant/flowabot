@@ -231,14 +231,14 @@ class SliderProcessor {
 		const { Slider } = this;
 
 		const points = get3PointCurve(Slider.points);
-		Slider.SliderDots.push(...interpolatePoints(points));
+		Slider.SliderDots = interpolatePoints(points);
 	}
 
 	applyCatmull () {
 		const { Slider } = this;
 
 		const catmullPoints = getCatmullCurve(Slider.points);
-		Slider.SliderDots.push(...interpolatePoints(catmullPoints));
+		Slider.SliderDots = interpolatePoints(catmullPoints);
 	}
 
 	applyBezier () {
@@ -266,7 +266,7 @@ class SliderProcessor {
 			sliderParts.push(sliderPart);
 		}
 
-		const dots = [];
+		let dots = [];
 
 		// iterate through slider parts and generate curves with equal distance
 		for (const part of sliderParts) {
@@ -274,15 +274,16 @@ class SliderProcessor {
 			if (part.length == 2) {
 				const linearPoints = [part[0], part[1]];
 
-				dots.push(...interpolatePoints(linearPoints));
+                dots = dots.concat(interpolatePoints(linearPoints));
 				continue;
 			}
 
 			const bezierPoints = getBezierCurve(part);
-			dots.push(...interpolatePoints(bezierPoints));
+
+            dots = dots.concat(interpolatePoints(bezierPoints));
 		}
 
-		Slider.SliderDots.push(...dots);
+		Slider.SliderDots = dots;
 	}
 
 	applyActualEnd () {
@@ -305,9 +306,9 @@ class SliderProcessor {
 		Slider.actualEndTime = legacyLastTickTime;
 		Slider.actualEndPosition = SliderDots[Math.floor(legacyLastTickProgress * (SliderDots.length - 1))];
 
-		/*if (SliderDots.length < 2) {
+		if (SliderDots.length < 2) {
 			Slider.SliderDots = [...Slider.points];
-		}*/
+		}
 	}
 
 	generateTicks () {
