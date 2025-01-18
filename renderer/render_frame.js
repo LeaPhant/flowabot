@@ -23,8 +23,7 @@ const helper = require('../helper.js');
 
 const ffmpeg = config.ffmpeg_path || require('ffmpeg-static');
 
-const MAX_SIZE = 25 * 1024 * 1024;
-const MAX_SIZE_DM = 8 * 1024 * 1024;
+const MAX_SIZE = 10 * 1024 * 1024;
 
 let enabled_mods = [""];
 
@@ -780,18 +779,7 @@ module.exports = {
 					console.log('size', stat.size / 1024, 'KiB');
 					console.log('max size', MAX_SIZE / 1024, 'KiB');
 
-					if(stat.size < MAX_SIZE && msg.channel.type == "text" || options.webui){
-						resolveRender({files: [{
-							attachment: `${file_path}/video.${options.type}`,
-							name: `video.${options.type}`
-						}]}).then(() => {
-							fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
-						})
-						.catch(console.error)
-						.finally(() => {
-							fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
-						});
-					}else if(stat.size < MAX_SIZE_DM){
+					if(stat.size < MAX_SIZE || options.webui){
 						resolveRender({files: [{
 							attachment: `${file_path}/video.${options.type}`,
 							name: `video.${options.type}`
