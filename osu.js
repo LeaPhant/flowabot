@@ -551,6 +551,13 @@ function getModSettingsString(mods) {
                     string += `**${mod.acronym}** ~ Adjust pitch: \`${mod.settings.adjust_pitch}\`\n`;
                 break;
             case "SD":
+                if (!mod.settings)
+                    break;
+                if (mod.settings.hasOwnProperty("fail_on_slider_tail"))
+                    string += `**${mod.acronym}** ~ Fail when missing a slider tail: \`${mod.settings.fail_on_slider_tail}\`\n`;
+                if (mod.settings.hasOwnProperty("restart"))
+                    string += `**${mod.acronym}** ~ Restart on fail: \`${mod.settings.restart}\`\n`;
+                break;
             case "PF":
                 if (!mod.settings)
                     break;
