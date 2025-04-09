@@ -832,8 +832,6 @@ async function getScore(recent_raw, cb){
             })
         }
 
-        let diff_settings = calculateCsArOdHp(beatmap.cs, beatmap.ar, beatmap.accuracy, beatmap.drain, recent.mods);
-
         let speed = 1;
 
         if (recent.mods.map(x => x.acronym).includes("DT") || recent.mods.map(x => x.acronym).includes("NC")) {
@@ -883,6 +881,11 @@ async function getScore(recent_raw, cb){
             const rosu_map = new rosu.Beatmap(beatmap_content)
 			const play = new rosu.Performance(play_params).calculate(rosu_map);
 			const fc_play = new rosu.Performance(fc_play_params).calculate(rosu_map);
+			const attributes = new rosu.BeatmapAttributesBuilder({
+				map: rosu_map,
+				mods: recent_raw.mods,
+				clockRate: speed,
+			}).build();
 
 			rosu_map.free();
 
@@ -899,10 +902,10 @@ async function getScore(recent_raw, cb){
                 creator: beatmapset.creator,
                 creator_id: beatmapset.user_id,
                 approved_date: beatmapset.ranked_date,
-                cs: diff_settings.cs,
-                ar: play.difficulty.ar,
-                od: play.difficulty.od,
-                hp: diff_settings.hp,
+                cs: attributes.cs,
+                ar: attributes.ar,
+                od: attributes.od,
+                hp: attributes.hp,
                 duration: beatmap.total_length,
                 fail_percent: fail_percent
             }, recent);
@@ -2011,9 +2014,7 @@ module.exports = {
 						beatmap.drain = mod.settings.drain_rate ?? beatmap.drain
 					}
 				})
-			}
-
-            let diff_settings = calculateCsArOdHp(beatmap.cs, beatmap.ar, beatmap.accuracy, beatmap.drain, options.mods);
+			};
 
             let speed = 1;
 
@@ -2040,6 +2041,11 @@ module.exports = {
 				mods: options.mods,
 				clockRate: speed,
 			}).calculate(rosu_map);
+			let attributes = new rosu.BeatmapAttributesBuilder({
+				map: rosu_map,
+				mods: options.mods,
+				clockRate: speed,
+			}).build();
 
             let accuracies = [90, 95, 97, 98, 99, 99.5, 100];
 
@@ -2103,7 +2109,7 @@ module.exports = {
                     lines[1] += '**';
             });
 
-            lines[3] = `CS**${+diff_settings.cs.toFixed(2)}** AR**${+diff.ar.toFixed(2)}** OD**${+diff.od.toFixed(2)}** HP**${+diff_settings.hp.toFixed(2)}** - `;
+            lines[3] = `CS**${+attributes.cs.toFixed(2)}** AR**${+attributes.ar.toFixed(2)}** OD**${+attributes.od.toFixed(2)}** HP**${+attributes.hp.toFixed(2)}** - `;
 
             lines[3] += `**${+bpm.toFixed(1)}** BPM ~ `;
             lines[3] += `**${+diff.stars.toFixed(2)}**★`;
