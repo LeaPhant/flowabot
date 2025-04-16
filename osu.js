@@ -1954,14 +1954,14 @@ module.exports = {
 	        api.get(`/users/${user_id}/scores/best`, { params: { limit: 100, mode: "osu" } })
         ];
 
-		if (options.index > 100)
+		if (options.index > 100 || options.rb || options.ob)
 			requests.push(api.get(`/users/${user_id}/scores/best`, { params: { limit: 200, offset: 100, mode: "osu" } }));
         
         const results = await Promise.all(requests);
 
         let user_best = results[0].data;
 
-		if(options.index > 100)
+		if(options.index > 100 || options.rb || options.ob)
 			user_best = user_best.concat(results[1].data);
 
         if(user_best.length < 1){
