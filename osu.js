@@ -756,6 +756,7 @@ async function getScore(recent_raw, cb){
 
     let requests = [
         api.get(`/users/${recent_raw.user_id}/scores/best`, { params: { limit: 100 } }),
+        api.get(`/users/${recent_raw.user_id}/scores/best`, { params: { limit: 100, offset: 100 } }),
         //api.get(`/beatmaps/${recent_raw.beatmap.id}/scores`, { params: { mode: 'osu' } }),
         //api.get(`/beatmaps/${recent_raw.beatmap.id}/scores/users/${recent_raw.user_id}`, { params: { mods: recent_raw.mods } }),
         api.get(`/users/${recent_raw.user_id}/osu`),
@@ -773,11 +774,11 @@ async function getScore(recent_raw, cb){
 
     Promise.all(requests).then(results => {
 
-        let user_best = results[0].data;
+        let user_best = results[0].data.concat(results[1].data);
         //let leaderboard = results[1].data;
         //let best_score = results[2].data;
-        let user = results[1].data;
-        let beatmapset = results[2].data
+        let user = results[2].data;
+        let beatmapset = results[3].data
 
         let pb = 0;
         let lb = 0;
@@ -1952,10 +1953,16 @@ module.exports = {
 		let requests = [
 	        api.get(`/users/${user_id}/scores/best`, { params: { limit: 100, mode: "osu" } })
         ];
+
+		if (options.index > 100)
+			requests.push(api.get(`/users/${user_id}/scores/best`, { params: { limit: 200, offset: 100, mode: "osu" } }));
         
         const results = await Promise.all(requests);
 
         let user_best = results[0].data;
+
+		if(options.index > 100)
+			user_best = user_best.concat(results[1].data);
 
         if(user_best.length < 1){
             cb(`No top plays found for ${options.user}. 🤨`);

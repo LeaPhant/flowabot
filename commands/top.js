@@ -44,7 +44,7 @@ module.exports = {
             let match = argv[0].match(/\d+/);
             let _index = match > 0 ? match[0] : 1;
 
-            if(_index >= 1 && _index <= 100)
+            if(_index >= 1 && _index <= 200)
                 index = _index;
 
             if(!top_user){
