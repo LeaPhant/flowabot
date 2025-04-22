@@ -10,7 +10,7 @@ const fileExists = async path => !!(await fs.promises.stat(path).catch(e => fals
 
 const config = require('./config.json');
 
-const sep = ' ✦ ';
+const sep = '  ✦  ';
 const cmd_escape = "```";
 
 let commands;
