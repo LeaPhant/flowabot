@@ -2543,8 +2543,9 @@ module.exports = {
 	        ctx.quadraticCurveTo(points[i].x, points[i].y, xc, yc);
         }
 
+        if (progress == 1) 
+            ctx.lineTo(BAR_WIDTH, points[points.length - 1].y)
         
-        ctx.lineTo(BAR_WIDTH, points[points.length - 1].y)
         ctx.stroke();
 
         if (progress == 1)
