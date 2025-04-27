@@ -2461,7 +2461,7 @@ module.exports = {
 
         const BANNER_FACTOR = BAR_WIDTH / BANNER_WIDTH; 
 
-        const GRAPH_HEIGHT = 30;
+        const GRAPH_HEIGHT = 35;
         const GRAPH_COLOR = beatmapset_id == 481703 ? '74,165,173' : '252,123,166';
 
 		let map_strains = await module.exports.get_strains(osu_file_path, mods_string);
@@ -2480,8 +2480,8 @@ module.exports = {
         const gradient = ctx.createLinearGradient(0, BAR_HEIGHT, 0, 0);
 
         gradient.addColorStop(0, "rgba(0,0,0,0.6)");
-        gradient.addColorStop(0.35, "rgba(0,0,0,0.1)");
-        gradient.addColorStop(0.5, "rgba(0,0,0,0)");
+        gradient.addColorStop(0.35, "rgba(0,0,0,0.3)");
+        gradient.addColorStop(0.7, "rgba(0,0,0,0)");
 
         ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, BAR_WIDTH, BAR_HEIGHT);
@@ -2506,8 +2506,8 @@ module.exports = {
 
         const graphGradient = ctx.createLinearGradient(0, BAR_HEIGHT, 0, BAR_HEIGHT - GRAPH_HEIGHT);
 
-        graphGradient.addColorStop(0, `rgba(${GRAPH_COLOR},0.5)`);
-        graphGradient.addColorStop(0.9, `rgba(${GRAPH_COLOR},1)`);
+        graphGradient.addColorStop(0, `rgba(${GRAPH_COLOR},0)`);
+        graphGradient.addColorStop(0.8, `rgba(${GRAPH_COLOR},0.7)`);
 
         if (progress < 1) { 
             ctx.globalAlpha = 0.7;
@@ -2516,7 +2516,7 @@ module.exports = {
 		ctx.fillStyle = graphGradient;
         ctx.beginPath();
 		ctx.moveTo(0, BAR_HEIGHT + 10);
-		ctx.lineTo(0, BAR_HEIGHT - 10);
+		ctx.lineTo(0, points[0].y);
 
 		for(let i = 1; i < points.length - 2; i++){
 	        const xc = (points[i].x + points[i + 1].x) / 2;
@@ -2524,16 +2524,33 @@ module.exports = {
 	        ctx.quadraticCurveTo(points[i].x, points[i].y, xc, yc);
 	    }
 
-		ctx.lineTo(BAR_WIDTH, BAR_HEIGHT - 10);
+		ctx.lineTo(BAR_WIDTH, points[points.length - 1].y);
 		ctx.lineTo(BAR_WIDTH, BAR_HEIGHT + 10);
 		ctx.closePath();
 		ctx.fill();
+
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = `rgb(${GRAPH_COLOR})`;
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+
+        ctx.beginPath();
+        ctx.moveTo(0, points[0].y)
+
+        for(let i = 1; i < Math.floor((points.length - 2) * progress); i++){
+            const xc = (points[i].x + points[i + 1].x) / 2;
+	        const yc = (points[i].y + points[i + 1].y) / 2;
+	        ctx.quadraticCurveTo(points[i].x, points[i].y, xc, yc);
+        }
+
+        
+        ctx.lineTo(BAR_WIDTH, points[points.length - 1].y)
+        ctx.stroke();
 
         if (progress == 1)
             return bar.toBuffer();
 
         ctx.beginPath();
-		ctx.globalAlpha = 1;
 		ctx.moveTo(0, BAR_HEIGHT + 10);
 		ctx.lineTo(0, BAR_HEIGHT - 10);
 
