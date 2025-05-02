@@ -14,14 +14,25 @@ class CounterProcessor {
 	async calculate () {
 		const { Beatmap, osuContents, mods_raw } = this;
 
-		const isSetOnLazer = Beatmap.Replay?.isSetOnLazer || false;
+		let isSetOnLazer = Beatmap.Replay?.isSetOnLazer || false;
 		let isUsingSliderHeadAccuracy = !(Beatmap.Mods.get('CL')?.no_slider_head_accuracy ?? false);
-        if (Beatmap.options.stable) isUsingSliderHeadAccuracy = false;
-        if (Beatmap.options.lazer) isUsingSliderHeadAccuracy = true;
+		if (Beatmap.options.stable) {
+			isUsingSliderHeadAccuracy = false;
+			isSetOnLazer = false;
+		}
+		if (Beatmap.options.lazer) {
+			isUsingSliderHeadAccuracy = true;
+			isSetOnLazer = true;
+		}
+
+		let rosu_mods = mods_raw;
+		if (Beatmap.options.lazer) {
+			rosu_mods = mods_raw.filter(mod => mod.acronym !== "CL");
+		}
 
 		const rosu_map = new rosu.Beatmap(osuContents);
 		const rosu_diff = new rosu.Difficulty({
-			mods: mods_raw,
+			mods: rosu_mods,
 			clockRate: Beatmap.SpeedMultiplier,
 			lazer: isSetOnLazer,
 		});
