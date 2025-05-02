@@ -303,7 +303,9 @@ class ReplayProcessor {
 	applyJudgements () {
 		const { Beatmap, cursor } = this;
 
-		const classicNotelock = Beatmap.Mods.get('CL')?.classic_note_lock ?? false;
+		let classicNotelock = Beatmap.Mods.get('CL')?.classic_note_lock ?? false;
+        if (Beatmap.options.stable) classicNotelock = true;
+        if (Beatmap.options.lazer) classicNotelock = false;
 
 		cursor.reset();
 
@@ -378,7 +380,9 @@ class ReplayProcessor {
 	generateScoringFrames () {
 		const { Beatmap, cursor } = this;
 
-		const sliderHeadAccuracy = Beatmap.Mods.get('CL')?.no_slider_head_accuracy ?? true;
+		let sliderHeadAccuracy = Beatmap.Mods.get('CL')?.no_slider_head_accuracy ?? true;
+        if (Beatmap.options.stable) sliderHeadAccuracy = false;
+        if (Beatmap.options.lazer) sliderHeadAccuracy = true;
 
 		const ScoringFrames = [];
 		const allhits = [];

@@ -93,7 +93,9 @@ class BeatmapProcessor {
 
 	async applySettings () {
 		const { Beatmap, options } = this;
-		const { Mods } = Beatmap;		
+		const { Mods } = Beatmap;
+
+        Beatmap.options = options;
 
 		if (Mods.has('HR')) {
 			Beatmap.CircleSize = Math.min(10, Beatmap.CircleSize * 1.3);

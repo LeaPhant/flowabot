@@ -15,7 +15,9 @@ class CounterProcessor {
 		const { Beatmap, osuContents, mods_raw } = this;
 
 		const isSetOnLazer = Beatmap.Replay?.isSetOnLazer || false;
-		const isUsingSliderHeadAccuracy = !(Beatmap.Mods.get('CL')?.no_slider_head_accuracy ?? false);
+		let isUsingSliderHeadAccuracy = !(Beatmap.Mods.get('CL')?.no_slider_head_accuracy ?? false);
+        if (Beatmap.options.stable) isUsingSliderHeadAccuracy = false;
+        if (Beatmap.options.lazer) isUsingSliderHeadAccuracy = true;
 
 		const rosu_map = new rosu.Beatmap(osuContents);
 		const rosu_diff = new rosu.Difficulty({
