@@ -51,7 +51,7 @@ module.exports = {
                     dupes++;
                 }
 
-                resolve(`${user.username} is scammed out of ${diff == 0 ? '<1' : diff.toFixed(2)} bonus pp (${dupes < 50 ? '<50': '~' + dupes} duplicate scores in top 1000)`)
+                resolve(`${user.username} is scammed out of ${diff == 0 ? '<1' : diff.toFixed(2)} bonus pp (${dupes < 50 ? '<50': '~' + dupes} duplicate maps in top 1000)`)
             });
         });
     }
