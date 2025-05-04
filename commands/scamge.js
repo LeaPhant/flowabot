@@ -32,8 +32,6 @@ module.exports = {
 
                 let pp = MAX_BONUS;
 
-                console.log(tops.length);
-
                 for (const [index, top] of tops.entries()) {
                     pp += top.pp * Math.pow(0.95, index);
                 }
@@ -46,8 +44,6 @@ module.exports = {
                 for (let i = 1000; i > 0; i--) {
                     const bonus = MAX_BONUS * (1 - Math.pow(0.995, i));
 
-                    console.log(bonus);
-
                     if (bonus <= threshold) {
                         break;
                     }
@@ -55,7 +51,7 @@ module.exports = {
                     dupes++;
                 }
 
-                resolve(`${user.username} is scammed out of ${diff.toFixed(2)} bonus pp (~${dupes} duplicate scores in top 1000)`)
+                resolve(`${user.username} is scammed out of ${diff == 0 ? '<1' : diff.toFixed(2)} bonus pp (${dupes < 50 ? '<50': '~' + dupes} duplicate scores in top 1000)`)
             });
         });
     }
