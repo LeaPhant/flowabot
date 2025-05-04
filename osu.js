@@ -1776,11 +1776,17 @@ module.exports = {
 	        api.get(`/users/${user_id}/scores/best`, { params: { limit: options.count, mode: "osu" } }),
 	        api.get(`/users/${user_id}/osu`)
         ];
+
+        if (options.count > 100)
+			requests.push(api.get(`/users/${user_id}/scores/best`, { params: { limit: 100, offset: 100, mode: "osu" } }));
         
         const results = await Promise.all(requests);
 
         let user_best = results[0].data;
         let user = results[1].data;
+
+        if(options.count > 100)
+			user_best = user_best.concat(results[2].data);
 
         if(user_best.length < 1){
             cb(`No top plays found for ${options.user}. 🤨`);
