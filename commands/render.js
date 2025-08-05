@@ -231,7 +231,7 @@ module.exports = {
                         if(config.debug)
                             helper.log('getting strains for mods', mods);
 
-                        time = (await osu.get_strains(download_path, mods.join(''), type)).max_strain_time_real - 2000;
+                        time = Math.max(0, (await osu.get_strains(download_path, mods.join(''), type)).max_strain_time_real - 2000 - (length * 1000 / 2));
                     }else if(type == 'preview'){
 						preview_promise = osu.get_preview_point(download_path);
 					}
