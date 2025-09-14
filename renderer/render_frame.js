@@ -148,6 +148,20 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 
 	let hitSoundPaths = await processHitsounds(media.beatmap_path, argon);
 
+    const findHitsound = hitSound => {
+        if (hitSound in hitSoundPaths) {
+            return hitSoundPaths[hitSound];
+        }
+
+        const indexRemoved = hitSound.replace(/\d+$/, '');
+
+        if (indexRemoved in hitSoundPaths) {
+            return hitSoundPaths[indexRemoved];
+        }
+
+        return false;
+    }
+
 	let hitObjects = beatmap.hitObjects.filter(a => a.startTime >= start_time && a.startTime < start_time + actual_length);
 	let hitSounds = [];
 
@@ -184,12 +198,12 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 			offset /= time_scale;
 
 			for(const hitSound of hitObject.HitSounds){
-
-				if(hitSound in hitSoundPaths){
+                const hitSoundPath = findHitsound(hitSound);
+				if(hitSoundPath){
 					hitSounds.push({
 						offset,
 						sound: hitSound,
-						path: hitSoundPaths[hitSound],
+						path: hitSoundPath,
 						volume: timingPoint.sampleVolume / 100
 					});
 				}
@@ -213,11 +227,12 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 					offset -= start_time;
 					offset /= time_scale;
 
-					if(hitSound in hitSoundPaths){
+                    const hitSoundPath = findHitsound(hitSound);
+					if(hitSoundPath){
 						hitSounds.push({
 							offset,
 							sound: hitSound,
-							path: hitSoundPaths[hitSound],
+							path: hitSoundPath,
 							volume: edgeTimingPoint.sampleVolume / 100
 						});
 					}
@@ -234,12 +249,13 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 					offset /= time_scale;
 
 					tick.HitSounds[i].forEach(hitSound => {
-						if(hitSound in hitSoundPaths){
+                        const hitSoundPath = findHitsound(hitSound);
+						if(hitSoundPath){
 							hitSounds.push({
 								type: 'slidertick',
 								offset,
 								sound: hitSound,
-								path: hitSoundPaths[hitSound],
+								path: hitSoundPath,
 								volume: tickTimingPoint.sampleVolume / 100
 							});
 						}
@@ -260,7 +276,8 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 		}
 	});
 	// process in chunks
-	const chunkCount = require('os').cpus().length;
+	const chunkCount = Math.min(Math.floor(modded_length / 1000), require('os').cpus().length);
+    console.log(chunkCount);
 	const chunkLength = Math.floor(modded_length / chunkCount);
 
 	let hitSoundPromises = [];
@@ -305,7 +322,8 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 			return;
 		}
 
-		Promise.all(hitSoundPromises).then(async () => {
+		Promise.all(hitSoundPromises).then(async (stdout,stderr) => {
+            console.log(stderr);
 			mergeHitSoundArgs.push('-filter_complex', `amix=inputs=${chunksToMerge}:normalize=0`, path.resolve(file_path, `hitsounds.wav`));
 
 			await execFilePromise(ffmpeg, mergeHitSoundArgs, { shell: true });
