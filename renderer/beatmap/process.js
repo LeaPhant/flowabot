@@ -192,6 +192,12 @@ class BeatmapProcessor {
 			hitObject.latestHit = hitObject.startTime + Beatmap.HitWindow50;
 			hitObject.StackHeight = 0;
 
+            if (hitObject.objectName == 'slider') {
+                hitObject.SliderDots = [];
+                hitObject.SliderTicks = [];
+                hitObject.actualEndPosition = hitObject.endPosition;
+            }
+
 			if (hitObject.objectName != 'circle')
 				continue;
 	
@@ -391,9 +397,26 @@ class BeatmapProcessor {
 
 		return this.Beatmap;
 	}
+
+    async calculateUR () {
+        this.Beatmap = await this.parseBeatmap();
+
+        await this.applySettings();
+        await this.applyMods(ApplicableMods.ReflectionMod);
+        await this.applyMods(ApplicableMods.RandomMod);
+		await this.applyStacking();
+        await this.applyReplay();
+
+        return this.Beatmap.ScoringFrames?.pop()?.ur;
+    }
 }
-const processBeatmap = async (beatmap_path, options, mods_raw, time, length) => {
-	return await new BeatmapProcessor(beatmap_path, options, mods_raw, time, length).process();
+const processBeatmap = async (beatmap_path, options, mods_raw, time, length, ur_only = false) => {
+	const beatmapProcessor = new BeatmapProcessor(beatmap_path, options, mods_raw, time, length);
+
+    if (ur_only)
+        return await beatmapProcessor.calculateUR();
+
+    return await beatmapProcessor.process();
 };
 
 module.exports = processBeatmap;

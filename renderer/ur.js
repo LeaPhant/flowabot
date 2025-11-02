@@ -5,7 +5,7 @@ const path = require('path');
 const os = require('os');
 const { fork } = require('child_process');
 const config = require('../config.json');
-const { calculate_ur } = require("./ur_processor");
+const processBeatmap = require("./beatmap/process");
 
 function calculateUr(options){
 	return new Promise(async (resolve, reject) => {
@@ -28,11 +28,9 @@ function calculateUr(options){
 			await fs.writeFile(path.resolve(config.replay_path, `${options.score_id}.osr`), replay_raw, { encoding: 'binary' });
 		}
 
-		const ur = await calculate_ur({
-			beatmap_path: path.resolve(config.osu_cache_path, `${options.beatmap_id}.osu`),
-			options,
-			enabled_mods: options.mods
-		})
+        options.full = true;
+
+        const ur = await processBeatmap(path.resolve(config.osu_cache_path, `${options.beatmap_id}.osu`), options, options.mods_enabled, 0, 0, true);
 		
 		resolve({ ur: ur });
 	});
