@@ -2479,9 +2479,16 @@ module.exports = {
 		let bar = createCanvas(BAR_WIDTH, BAR_HEIGHT);
 		let ctx = bar.getContext('2d');
 
-        const banner = await loadImage(`https://assets.ppy.sh/beatmaps/${beatmapset_id}/covers/cover.jpg`);
+        let banner;
 
-        ctx.drawImage(banner, 0, 0, BANNER_WIDTH, BANNER_HEIGHT, 0, BAR_HEIGHT / 2 - BANNER_FACTOR * BANNER_HEIGHT / 2, BAR_WIDTH, BANNER_FACTOR * BANNER_HEIGHT);
+        try {
+            banner = await loadImage(`https://assets.ppy.sh/beatmaps/257501/covers/cover.jpg`);
+
+            ctx.drawImage(banner, 0, 0, BANNER_WIDTH, BANNER_HEIGHT, 0, BAR_HEIGHT / 2 - BANNER_FACTOR * BANNER_HEIGHT / 2, BAR_WIDTH, BANNER_FACTOR * BANNER_HEIGHT);
+        } catch(e) {
+            console.warn(e);
+            // map probably has no background
+        }
 
         const gradient = ctx.createLinearGradient(0, BAR_HEIGHT, 0, 0);
 
@@ -2490,7 +2497,9 @@ module.exports = {
         gradient.addColorStop(0.7, "rgba(0,0,0,0)");
 
         ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, BAR_WIDTH, BAR_HEIGHT);
+        if (banner) {
+            ctx.fillRect(0, 0, BAR_WIDTH, BAR_HEIGHT);
+        }
 
 		let points = [];
 		let strain_chunks = [];
@@ -2515,11 +2524,12 @@ module.exports = {
         graphGradient.addColorStop(0, `rgba(${GRAPH_COLOR},0)`);
         graphGradient.addColorStop(0.8, `rgba(${GRAPH_COLOR},0.7)`);
 
+
         if (progress < 1) { 
             ctx.globalAlpha = 0.7;
         }
 
-		ctx.fillStyle = graphGradient;
+		ctx.fillStyle = banner ? graphGradient : `rgba(${GRAPH_COLOR},0.7)`;
         ctx.beginPath();
 		ctx.moveTo(0, BAR_HEIGHT + 10);
 		ctx.lineTo(0, points[0].y);
