@@ -2482,7 +2482,7 @@ module.exports = {
         let banner;
 
         try {
-            banner = await loadImage(`https://assets.ppy.sh/beatmaps/257501/covers/cover.jpg`);
+            banner = await loadImage(`https://assets.ppy.sh/beatmaps/${beatmapset_id}/covers/cover.jpg`);
 
             ctx.drawImage(banner, 0, 0, BANNER_WIDTH, BANNER_HEIGHT, 0, BAR_HEIGHT / 2 - BANNER_FACTOR * BANNER_HEIGHT / 2, BAR_WIDTH, BANNER_FACTOR * BANNER_HEIGHT);
         } catch(e) {
