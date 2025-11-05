@@ -336,7 +336,7 @@ class ReplayProcessor {
 					break;
 				}
 	
-				if(current == null || current.offset < hitObject.startTime - Beatmap.HitWindow50)
+				if(current == null || current.offset < hitObject.startTime - Beatmap.HitWindowMiss)
 					continue;
 	
 				if((current.K1 || current.M1) 
