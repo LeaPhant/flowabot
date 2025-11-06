@@ -241,7 +241,7 @@ module.exports = {
                 let matching_members = [];
 
                 members.forEach(member => {
-                    if(module.exports.simplifyUsername(member.user.username) == module.exports.simplifyUsername(arg))
+                    if(module.exports.simplifyUsername(member?.user?.username) == module.exports.simplifyUsername(arg))
                         matching_members.push(member.id);
                 });
 
