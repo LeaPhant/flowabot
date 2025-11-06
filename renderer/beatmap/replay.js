@@ -467,6 +467,7 @@ class ReplayProcessor {
                 const resetFrame = newScoringFrame(ScoringFrames);
                 resetFrame.rotation = 0;
                 resetFrame.rpm = 0;
+                resetFrame.result = undefined;
                 ScoringFrames.push(resetFrame);
 
                 const rotationRecords = [];
