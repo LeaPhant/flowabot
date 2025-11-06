@@ -502,7 +502,7 @@ module.exports = {
 
 		options.msg = null;
 
-		const renderStatus = [`Replay: \`${options.score_id ? 'Yes' : 'No'}\``, '– processing beatmap', '– rendering frames', '– encoding video'];
+		const renderStatus = [`Replay: \`${(options.score_id || options.osr) ? 'Yes' : 'No'}\``, '– processing beatmap', '– rendering frames', '– encoding video'];
 
 		let renderMessage;
         let ffmpegProcess;

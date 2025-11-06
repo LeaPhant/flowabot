@@ -41,7 +41,7 @@ module.exports = {
     ],
     configRequired: ['debug'],
     call: obj => {
-        return new Promise((resolve, reject) => {
+        return new Promise(async (resolve, reject) => {
             let { argv, msg, last_beatmap, webui } = obj;
 
             let beatmap_id, beatmap_url, beatmap_promise, mods = [], time = 0,
@@ -79,6 +79,14 @@ module.exports = {
             let stable = false;
 
             argv.map(arg => arg.toLowerCase());
+
+            if (msg.attachments.size > 0) {
+                const replayAttachment = msg.attachments.find(att => att.name.endsWith('.osr'));
+                if (replayAttachment) osr = replayAttachment.url;
+
+                const beatmapAttachment = msg.attachments.find(att => att.name.endsWith('.osu'));
+                if (beatmapAttachment) beatmap_url = beatmapAttachment.url;
+            }
 
             argv.slice(1).forEach(arg => {
                 if(arg.startsWith('+'))
@@ -179,93 +187,94 @@ module.exports = {
                 }else{
                     if(arg.startsWith('http://') || arg.startsWith('https://')){
                         beatmap_url = arg;
-                        beatmap_promise = osu.parse_beatmap_url(beatmap_url);
-                        beatmap_promise.then(response => {
-                            beatmap_id = response;
-                            if(!beatmap_id) custom_url = true;
-                        });
-
                     }
                 }
             });
 
-            Promise.resolve(beatmap_promise).then(() => {
-                if(!beatmap_id && !(msg.channel.id in last_beatmap)){
-                    reject(helper.commandHelp('render'));
-                    return false;
-                }else if(!beatmap_id && !custom_url){
-                    let _last_beatmap = last_beatmap[msg.channel.id];
+            beatmap_promise = osu.parse_beatmap_url(beatmap_url);
 
-                    beatmap_id = _last_beatmap.beatmap_id;
-                    download_promise = helper.downloadBeatmap(beatmap_id).catch(helper.error);
+            if (beatmap_promise) {
+                try {
+                    beatmap_id = await beatmap_promise;
+                    if(!beatmap_id) custom_url = true;
+                } catch(e) {
+                    if(config.debug)
+                        helper.error(e);
 
-                    if(last_beatmap[msg.channel.id].score_id && mods.length == 0)
-                        ({ score_id } = last_beatmap[msg.channel.id]);
+                    reject(e);
+                }
+            }
 
-                    if(mods.length == 0)
-                        mods = last_beatmap[msg.channel.id].mods;
+            if(!beatmap_id && !(msg.channel.id in last_beatmap)){
+                reject(helper.commandHelp('render'));
+                return false;
+            }else if(!beatmap_id && !custom_url){
+                let _last_beatmap = last_beatmap[msg.channel.id];
+
+                beatmap_id = _last_beatmap.beatmap_id;
+                download_promise = helper.downloadBeatmap(beatmap_id).catch(helper.error);
+
+                if(last_beatmap[msg.channel.id].score_id && mods.length == 0)
+                    ({ score_id } = last_beatmap[msg.channel.id]);
+
+                if(mods.length == 0)
+                    mods = last_beatmap[msg.channel.id].mods;
+            }
+
+            let download_path = path.resolve(config.osu_cache_path, `${beatmap_id}.osu`);
+
+            if(config.debug)
+                helper.log('render length', length);
+
+            if(length >= 10)
+                video_type = 'mp4';
+
+            if(config.debug)
+                helper.log('specified ar', ar);
+
+            if(custom_url){
+                download_path = path.resolve(os.tmpdir(), `${Math.floor(Math.random() * 1000000) + 1}.osu`);
+
+                download_promise = helper.downloadFile(download_path, beatmap_url);
+                download_promise.catch(reject);
+            }
+
+            let preview_promise;
+
+            Promise.resolve(download_promise).then(async () => {
+                if(type == 'strains' || type == 'aim' || type == 'speed'){
+                    if(config.debug)
+                        helper.log('getting strains for mods', mods);
+
+                    time = Math.max(0, (await osu.get_strains(download_path, mods.join(''), type)).max_strain_time_real - 2000 - (length * 1000 / 2));
+                }else if(type == 'preview'){
+                    preview_promise = osu.get_preview_point(download_path);
                 }
 
-                let download_path = path.resolve(config.osu_cache_path, `${beatmap_id}.osu`);
+                Promise.resolve(preview_promise).then(previewTime => {
+                    if(previewTime)
+                        time = previewTime;
 
-                if(config.debug)
-                    helper.log('render length', length);
+                    if(length > 0 || objects || full){
+                        resolve(null);
 
-                if(length >= 10)
-                    video_type = 'mp4';
+                        frame.get_frames(download_path, time, length * 1000, mods, size, {
+                            combo,
+                            type: video_type, cs, ar, od, analyze, lagtrain, argon, hidden, custom_url, traceable, flashlight, black: false, osr, score_id, audio, fps, speed,
+                            fill: video_type == 'mp4', noshadow: true, percent, border: false, objects, msg, nointerpolate, webui, full, choke, lazer, stable, author_id: msg.author.id
+                        });
+                    }else{
+                        frame.get_frame(download_path, time, mods, [800, 600], {
+                            combo,
+                            cs: cs, ar: ar, score_id, black: true, fill: true, analyze, hidden, percent: percent, lazer, stable
+                        }, (err, buf) => {
+                            if(err)
+                                reject(err);
 
-                if(config.debug)
-                    helper.log('specified ar', ar);
+                            resolve({files: [{ attachment: buf, name: 'frame.png' }]});
+                        });
+                    }
 
-                if(custom_url){
-                    download_path = path.resolve(os.tmpdir(), `${Math.floor(Math.random() * 1000000) + 1}.osu`);
-
-                    download_promise = helper.downloadFile(download_path, beatmap_url);
-                    download_promise.catch(reject);
-                }
-
-                let preview_promise;
-
-                Promise.resolve(download_promise).then(async () => {
-                    if(type == 'strains' || type == 'aim' || type == 'speed'){
-                        if(config.debug)
-                            helper.log('getting strains for mods', mods);
-
-                        time = Math.max(0, (await osu.get_strains(download_path, mods.join(''), type)).max_strain_time_real - 2000 - (length * 1000 / 2));
-                    }else if(type == 'preview'){
-						preview_promise = osu.get_preview_point(download_path);
-					}
-
-					Promise.resolve(preview_promise).then(previewTime => {
-						if(previewTime)
-							time = previewTime;
-
-						if(length > 0 || objects || full){
-                            resolve(null);
-
-                            frame.get_frames(download_path, time, length * 1000, mods, size, {
-                                combo,
-                                type: video_type, cs, ar, od, analyze, lagtrain, argon, hidden, custom_url, traceable, flashlight, black: false, osr, score_id, audio, fps, speed,
-                                fill: video_type == 'mp4', noshadow: true, percent, border: false, objects, msg, nointerpolate, webui, full, choke, lazer, stable, author_id: msg.author.id
-                            });
-						}else{
-							frame.get_frame(download_path, time, mods, [800, 600], {
-                                combo,
-								cs: cs, ar: ar, score_id, black: true, fill: true, analyze, hidden, percent: percent, lazer, stable
-							}, (err, buf) => {
-								if(err)
-									reject(err);
-
-								resolve({files: [{ attachment: buf, name: 'frame.png' }]});
-							});
-						}
-
-					}).catch(err => {
-						if(config.debug)
-							helper.error(err);
-
-						reject(err);
-					});
                 }).catch(err => {
                     if(config.debug)
                         helper.error(err);
