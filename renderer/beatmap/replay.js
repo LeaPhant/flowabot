@@ -383,6 +383,11 @@ class ReplayProcessor {
 					}
 				}
 
+                if (current.presses > 0) {
+                    cursor.prev();
+                    break;
+                }
+
                 if (classicNotelock && hitObject.objectName == 'slider' && current.offset < Math.min(hitObject.endTime, hitObject.startTime + Beatmap.HitWindow50)) {
                     continue;
                 } else if (hitObject.hitResult != null) {
