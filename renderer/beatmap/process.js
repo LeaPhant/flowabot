@@ -162,7 +162,7 @@ class BeatmapProcessor {
 		for (const key in hitWindows) {
 			let judgement = hitWindows[key];
 	
-			if (Mods.has('CL'))
+			//if (Mods.has('CL'))
 				judgement -= 0.5;
 	
 			//if (!options.od)
