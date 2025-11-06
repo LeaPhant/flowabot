@@ -58,6 +58,7 @@ const parseReplay = async (buf, decompress = true) => {
         
     const replay_frames = replay_data.split(",");
     const output_frames = [];
+    let prev_frame;
 
     let offset = 0;
 
@@ -72,13 +73,31 @@ const parseReplay = async (buf, decompress = true) => {
             timeSinceLastAction: Number(replay_frame[0]),
             x: Number(replay_frame[1]),
             y: Number(replay_frame[2]),
-            keys: parseKeysPressed(replay_frame[3])
+            keys: parseKeysPressed(replay_frame[3]),
+            presses: 0
         };
 
         let keys = parseKeysPressed(replay_frame[3]);
 
         output_frame = Object.assign(keys, output_frame);
 
+        if (prev_frame) {
+            if (
+                (output_frame.M1 || output_frame.K1) &&
+                 !(prev_frame.M1 || prev_frame.K1)
+            ) {
+                output_frame.presses++;
+            }
+
+            if (
+                (output_frame.M2 || output_frame.K2) &&
+                 !(prev_frame.M2 || prev_frame.K2)
+            ) {
+                output_frame.presses++;
+            }
+        }
+
+        prev_frame = output_frame;
         output_frames.push(output_frame);
 
         offset = output_frames[output_frames.length - 1].offset;
@@ -315,12 +334,10 @@ class ReplayProcessor {
 			if(hitObject.objectName == 'spinner')
 				continue; // process spinners later
 	
-			let previous, current = cursor.next();
-			let currentPresses = 0;
+			let current;
 			let earliestCursor = cursor.i ?? 0;
 	
 			do {
-				previous = current;
 				current = cursor.next();
 	
 				if (current != null && current.offset < nextEarliestHit)
@@ -336,21 +353,11 @@ class ReplayProcessor {
 					break;
 				}
 	
-				if(current == null || current.offset < hitObject.startTime - Beatmap.HitWindowMiss)
+				if (current == null || current.offset < hitObject.startTime - Beatmap.HitWindowMiss)
 					continue;
 	
-				if((current.K1 || current.M1) 
-				&& previous.K1 == false 
-				&& previous.M1 == false)
-					currentPresses++;
-	
-				if((current.K2 || current.M2) 
-				&& previous.K2 == false 
-				&& previous.M2 == false)
-					currentPresses++;
-	
-				while (currentPresses > 0) {
-					currentPresses--;
+				if (current.presses > 0) {
+					current.presses--;
 
 					let offsetRaw = current.offset - hitObject.startTime;
 					let offset = Math.abs(offsetRaw);
@@ -371,8 +378,11 @@ class ReplayProcessor {
 					}
 				}
 
-				if (hitObject.hitResult != null)
+                if (classicNotelock && hitObject.objectName == 'slider' && current.offset < hitObject.endTime) {
+                    continue;
+                } else if (hitObject.hitResult != null) {
 					break;
+                }
 			} while (current != null && current.offset < hitObject.latestHit);
 		}
 	}
