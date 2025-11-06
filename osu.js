@@ -1050,8 +1050,8 @@ async function updateTrackedUsers(){
                                     tracked_users[user].channels.forEach(channel_id => {
                                         let channel = discord_client.channels.cache.get(channel_id);
                                         if(channel)
-                                            channel.send(`${recent.username} got a new #${recent.pb} top play!`,
-												{
+                                            channel.send({
+                                                    content: `${recent.username} got a new #${recent.pb} top play!`,
 													embeds: [embed],
 													files: [{attachment: strains_bar, name: 'strains_bar.png'}]
 												}
@@ -1065,8 +1065,8 @@ async function updateTrackedUsers(){
                                 tracked_users[user].channels.forEach(channel_id => {
                                     let channel = discord_client.channels.cache.get(channel_id);
                                     if(channel)
-                                        channel.send(`${recent.username} got a new #${recent.pb} top play!`,
-											{
+                                        channel.send({
+                                                content: `${recent.username} got a new #${recent.pb} top play!`,
 												embeds: [embed],
 												files: [{attachment: strains_bar, name: 'strains_bar.png'}]
 											})

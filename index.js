@@ -249,10 +249,10 @@ function onMessage(msg){
                             delete response.content;
 						}
 
-						if(content)
-	                        message_promise = msg.channel.send(content, response);
-						else
-							message_promise = msg.channel.send(response);
+                        if (content)
+                            response.content = content;
+
+						message_promise = msg.channel.send(response);
 
 						message_promise.catch(err => {
 							msg.channel.send(`Couldn't run command: **${err}**`);
