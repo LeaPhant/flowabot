@@ -362,9 +362,9 @@ class ReplayProcessor {
 					continue;
 	
 				if (current.presses > 0) {
-					current.presses--;
+                    if (classicNotelock) current.presses--;
 
-					let offsetRaw = current.offset - hitObject.startTime;
+                    let offsetRaw = current.offset - hitObject.startTime;
 					let offset = Math.abs(offsetRaw);
 
 					if (withinCircle(current.x, current.y, ...hitObject.position, Beatmap.Radius)) {
@@ -383,7 +383,7 @@ class ReplayProcessor {
 					}
 				}
 
-                if (current.presses > 0) {
+                if (classicNotelock && current.presses > 0) {
                     cursor.prev();
                     break;
                 }
