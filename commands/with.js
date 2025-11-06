@@ -76,7 +76,7 @@ module.exports = {
                     options.acc = options.custom_acc;
                     options.fail_percent = 1;
                     helper.updateLastBeatmap(options, msg.channel.id, last_beatmap);
-                    resolve({embed: embed});
+                    resolve({embeds: [embed]});
                 }
             });
         });

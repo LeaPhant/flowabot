@@ -159,7 +159,7 @@ module.exports = {
                     ];
                 }
 
-                resolve({embed: embed});
+                resolve({embeds: [embed]});
             }).catch(err => {
                if(config.debug)
                    helper.error(err);

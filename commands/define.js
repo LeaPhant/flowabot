@@ -27,14 +27,14 @@ module.exports = {
                             }
                         }
                         resolve({
-                            embed: {
+                            embeds: [{
                                 description: result.data[0].phonetic,
                                 color: 12277111,
                                 author: {
                                     name: result.data[0].word
                                 },
                                 fields: fields
-                            }
+                            }]
                         });
                 })
                 .catch(function (error) {

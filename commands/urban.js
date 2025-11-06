@@ -20,7 +20,7 @@ module.exports = {
                 var example = results[0].example;
 
                 resolve({
-                    embed: {
+                    embeds: [{
                         description: definition.replace(/\[|\]/g, ''),
                         color: 12277111,
                         author: {
@@ -30,7 +30,7 @@ module.exports = {
                         fields: {name: 'Example', value: example.replace(/\[|\]/g, '')},
                         timestamp: new Date(results[0].written_on),
                         footer: {text: 'by ' + results[0].author}
-                    }
+                    }]
                 });
               }).catch((error) => {
                 reject(error.message);

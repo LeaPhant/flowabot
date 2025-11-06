@@ -61,7 +61,7 @@ module.exports = {
                 let flag_emoji = `:flag_${JSONObj.sys.country.toLowerCase()}:`
 
                 resolve({
-                    embed: {
+                    embeds: [{
                         color: 12277111,
                         author: {
                             name: `${author.username}#${author.discriminator}`,
@@ -92,7 +92,7 @@ module.exports = {
                             text: "Data provided by OpenWeatherMap",
                             icon_url: "http://f.gendo.moe/KlhvQJoD.png"       
                         } 
-                    }
+                    }]
                 })
             });
         });

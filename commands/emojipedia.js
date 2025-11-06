@@ -31,14 +31,14 @@ module.exports = {
                         let vendor_name = vendor.text();
                         let vendor_url = "https://emojipedia.org" + vendor.attr('href');
                         let img = $(this).find('img').attr('srcset').replace('/240/', '/60/').split(" ")[0];
-                        embeds.push({ embed:
-                            {
+                        embeds.push({ embeds:
+                            [{
                                 title: vendor_name,
                                 url: vendor_url,
                                 thumbnail: {
                                     url: img
                                 }
-                            }
+                            }]
                         });
                 });
 

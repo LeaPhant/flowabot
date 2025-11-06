@@ -1052,7 +1052,7 @@ async function updateTrackedUsers(){
                                         if(channel)
                                             channel.send(`${recent.username} got a new #${recent.pb} top play!`,
 												{
-													embed,
+													embeds: [embed],
 													files: [{attachment: strains_bar, name: 'strains_bar.png'}]
 												}
 											).then(() => {
@@ -1067,7 +1067,7 @@ async function updateTrackedUsers(){
                                     if(channel)
                                         channel.send(`${recent.username} got a new #${recent.pb} top play!`,
 											{
-												embed,
+												embeds: [embed],
 												files: [{attachment: strains_bar, name: 'strains_bar.png'}]
 											})
 										.then(() => {

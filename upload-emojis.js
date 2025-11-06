@@ -19,7 +19,7 @@ const config = require('./config.json');
 let guilds = [];
 
 client.on('ready', () => {
-    client.guilds.cache.array().forEach(guild => {
+    [...client.guilds.cache].forEach(guild => {
         if(guild.me.hasPermission('MANAGE_EMOJIS'))
             guilds.push(guild);
     });
@@ -28,7 +28,7 @@ client.on('ready', () => {
         throw "Bot has no servers to upload emotes to";
 
     guilds.forEach((guild, index) => {
-        let staticEmojis = guild.emojis.cache.filter(a => !a.animated && !a.deleted && !a.managed).array().length;
+        let staticEmojis = guild.emojis.cache.filter(a => !a.animated && !a.deleted && !a.managed).size;
         console.log(index, `${guild.name} - ${staticEmojis} / 50 or more emote slots`);
     });
 

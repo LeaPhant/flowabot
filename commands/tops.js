@@ -102,7 +102,7 @@ module.exports = {
                             embed.fields.push({ name, value })
                         }
 
-                        resolve({ embed });
+                        resolve({ embeds: [embed] });
                     }
                 })
             }

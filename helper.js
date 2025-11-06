@@ -121,7 +121,7 @@ module.exports = {
                     })
                 }
 
-                return {embed: embed};
+                return {embeds: [embed]};
             }
         }
 
@@ -235,7 +235,7 @@ module.exports = {
         });
 
          if(message.guild && user_ign){
-            let members = message.guild.members.cache.array();
+            let members = [...message.guild.members.cache];
 
             args.forEach(function(arg){
                 let matching_members = [];

@@ -34,7 +34,7 @@ module.exports = {
                     return false;
                 }
 
-                resolve({embed: embed});
+                resolve({embeds: [embed]});
             });
         });
     }

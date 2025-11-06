@@ -504,16 +504,16 @@ module.exports = {
 
 		let renderMessage;
 
-		msg.channel.send({embed: {description: renderStatus.join("\n")}}).then(msg => {
+		msg.channel.send({embeds: [{description: renderStatus.join("\n")}]}).then(msg => {
 			renderMessage = msg;
 		}).catch(helper.error);
 
 		const updateRenderStatus = async () => {
 			if (!renderMessage) return;
 			await renderMessage.edit({
-				embed: {
+				embeds: [{
 					description: renderStatus.join("\n")
-				}
+				}]
 			});
 		};
 

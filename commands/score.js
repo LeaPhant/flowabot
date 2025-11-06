@@ -80,17 +80,17 @@ module.exports = {
 
                         if(ur_promise){
                             resolve({
-                                embed: embed,
+                                embeds: [embed],
                                 files: [{attachment: strains_bar, name: 'strains_bar.png'}],
                                 edit_promise: new Promise((resolve, reject) => {
                                     ur_promise.then(recent => {
                                         embed = osu.format_embed(recent);
-                                        resolve({embed});
+                                        resolve({ embeds: [embed] });
                                     });
                                 })});
                         }else{
                             resolve({
-                                embed: embed,
+                                embeds: [embed],
                                 files: [{attachment: strains_bar, name: 'strains_bar.png'}]
                             });
                         }

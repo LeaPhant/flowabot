@@ -52,7 +52,7 @@ module.exports = {
 
 			if (videos.length == 0) {
 				embed.description = "Currently offline.";
-				return { embed };
+				return { embeds: [embed] };
 			}
 
 			const [lastStream] = videos;
@@ -61,7 +61,7 @@ module.exports = {
 			const lastStreamed = Math.floor(creationDate.getTime() / 1000);
 
 			embed.description = `Last streamed <t:${lastStreamed}:R>.`;
-			return { embed };
+			return { embeds:[embed] };
 		}
 
 		embed.title = stream.title;
@@ -98,6 +98,6 @@ module.exports = {
 			inline: true
 		});
 
-		return { embed };
+		return { embeds: [embed] };
     }
 };

@@ -92,7 +92,7 @@ module.exports = {
             }
 
             if(embed){
-                resolve({embed: embed});
+                resolve({embeds: [embed]});
                 return true;
             }
 
@@ -144,7 +144,7 @@ module.exports = {
                     if(track.album["#text"].length > 0)
                         embed.description = `⠀\nAlbum: **${track.album["#text"]}**`
 
-                    resolve({ embed: embed });
+                    resolve({ embeds: [embed] });
                 }
             }).catch(err => {
                 if(config.debug)
