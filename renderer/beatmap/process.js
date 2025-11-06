@@ -303,7 +303,7 @@ class BeatmapProcessor {
 			let firstNonSpinner = Beatmap.hitObjects.filter(x => x.objectName != 'spinner');
 	
 			if (firstNonSpinner.length == 0)
-				firstNonSpinner = Beatmap.hitObjects[0];
+				firstNonSpinner = [Beatmap.hitObjects[0]]
 	
 			time = Math.max(time, Math.max(0, firstNonSpinner[0].startTime - 1000));
 		}
