@@ -191,11 +191,9 @@ module.exports = {
                 }
             });
 
-            beatmap_promise = osu.parse_beatmap_url(beatmap_url);
-
-            if (beatmap_promise) {
+            if (beatmap_url) {
                 try {
-                    beatmap_id = await beatmap_promise;
+                    beatmap_id = await osu.parse_beatmap_url(beatmap_url);
                     if(!beatmap_id) custom_url = true;
                 } catch(e) {
                     if(config.debug)
