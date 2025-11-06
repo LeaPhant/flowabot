@@ -12,6 +12,8 @@ const disk = require('diskusage');
 
 const { exec, execFile, fork, spawn } = require('child_process');
 
+const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+
 const execPromise = util.promisify(exec);
 const execFilePromise = util.promisify(execFile);
 const diskCheck = util.promisify(disk.check);
@@ -500,12 +502,52 @@ module.exports = {
 
 		options.msg = null;
 
-		const renderStatus = ['– processing beatmap', '– rendering frames', '– encoding video'];
+		const renderStatus = [`Replay: \`${options.score_id ? 'Yes' : 'No'}\``, '– processing beatmap', '– rendering frames', '– encoding video'];
 
 		let renderMessage;
+        let ffmpegProcess;
 
-		msg.channel.send({embeds: [{description: renderStatus.join("\n")}]}).then(msg => {
+        let rnd = Math.round(1e9 * Math.random());
+        let file_path = path.resolve(config.frame_path != null ? config.frame_path : os.tmpdir(), 'frames', `${rnd}`);;
+
+        const cancelButton = new ButtonBuilder()
+        .setCustomId('cancel-render')
+        .setLabel('Cancel').setStyle(ButtonStyle.Danger);
+
+        const row = new ActionRowBuilder().addComponents(cancelButton);
+
+        let collector;
+
+		msg.channel.send({
+            embeds: [{
+                description: renderStatus.join("\n")
+            }],
+            components: [row]
+        }).then(msg => {
 			renderMessage = msg;
+
+            const filter = i => i.customId === 'cancel-render' && i.user.id === options.author_id;
+            collector = msg.createMessageComponentCollector({ filter });
+            collector.on('collect', () => {
+                if (ffmpegProcess) {
+                    try {
+                        ffmpegProcess.kill();
+                    } catch(e) {
+                        // failed to kill ffmpeg
+                    }
+                }
+                workers.forEach(worker => {
+                    try {
+                        worker.kill();
+                    } catch(e) {
+                         // failed to kill ffmpeg
+                    }
+                });
+                fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
+                renderMessage.delete().catch(helper.error);
+                resolveRender();
+                return;
+            });
 		}).catch(helper.error);
 
 		const updateRenderStatus = async () => {
@@ -513,7 +555,8 @@ module.exports = {
 			await renderMessage.edit({
 				embeds: [{
 					description: renderStatus.join("\n")
-				}]
+				}],
+                components: [row]
 			});
 		};
 
@@ -554,7 +597,7 @@ module.exports = {
 					return false;
 				}
 
-				renderStatus[0] = `✓ processing beatmap (${((Date.now() - beatmapProcessStart) / 1000).toFixed(3)}s)`;
+				renderStatus[1] = `✓ processing beatmap (${((Date.now() - beatmapProcessStart) / 1000).toFixed(3)}s)`;
 			});
 
 			beatmap = await new Promise(resolve => {
@@ -565,7 +608,7 @@ module.exports = {
 		} else {
 			try {
 				beatmap = await processBeatmap(beatmap_path, options, mods_raw, time, length);
-				renderStatus[0] = `✓ processing beatmap (${((Date.now() - beatmapProcessStart) / 1000).toFixed(3)}s)`;
+				renderStatus[1] = `✓ processing beatmap (${((Date.now() - beatmapProcessStart) / 1000).toFixed(3)}s)`;
 			} catch(e) {
 				console.error(e);
 				resolveRender("Error processing beatmap or replay").catch(console.error);
@@ -596,8 +639,6 @@ module.exports = {
 
 		let actual_length = time_max - time;
 
-		let rnd = Math.round(1e9 * Math.random());
-		let file_path;
 		let fps = options.fps || 60;
 
 		let i = 0;
@@ -617,7 +658,6 @@ module.exports = {
 
 		let bitrate = 1200;
 
-		file_path = path.resolve(config.frame_path != null ? config.frame_path : os.tmpdir(), 'frames', `${rnd}`);
 
 		await fs.promises.mkdir(file_path, { recursive: true });
 
@@ -706,7 +746,7 @@ module.exports = {
 
 			const encodingProcessStart = Date.now();
 
-			let ffmpegProcess = spawn(ffmpeg, ffmpeg_args, { shell: true });
+			ffmpegProcess = spawn(ffmpeg, ffmpeg_args, { shell: true });
 
 			ffmpegProcess.on('close', async code => {
 				if(code > 0){
@@ -721,7 +761,7 @@ module.exports = {
 				if(config.debug)
 					console.timeEnd('encode video');
 
-				renderStatus[1] = `✓ encoding video (${((Date.now() - encodingProcessStart) / 1000).toFixed(3)}s)`;
+				renderStatus[3] = `✓ encoding video (${((Date.now() - encodingProcessStart) / 1000).toFixed(3)}s)`;
 
 				resolveRender({files: [{
 					attachment: `${file_path}/video.${options.type}`,
@@ -775,7 +815,7 @@ module.exports = {
 
 				const encodingProcessStart = Date.now();
 
-				let ffmpegProcess = spawn(ffmpeg, ffmpeg_args, { shell: true });
+				ffmpegProcess = spawn(ffmpeg, ffmpeg_args, { shell: true });
 
 				ffmpegProcess.on('close', async code => {
 					if(code > 0){
@@ -790,7 +830,7 @@ module.exports = {
 					if(config.debug)
 						console.timeEnd('encode video');
 
-					renderStatus[2] = `✓ encoding video (${((Date.now() - encodingProcessStart) / 1000).toFixed(3)}s)`;
+					renderStatus[3] = `✓ encoding video (${((Date.now() - encodingProcessStart) / 1000).toFixed(3)}s)`;
 
 						const stat = await fs.promises.stat(`${file_path}/video.${options.type}`);
 
@@ -843,7 +883,7 @@ module.exports = {
 
 					const frame = parseInt(line.substring(6).trim());
 
-					renderStatus[2] = `– encoding video (${Math.round(frame/amount_frames*100)}%)`;
+					renderStatus[3] = `– encoding video (${Math.round(frame/amount_frames*100)}%)`;
 				});
 
 				pipeFrameLoop(ffmpegProcess, err => {
@@ -877,7 +917,7 @@ module.exports = {
 			worker.on('message', frame => {
 				frames_rendered.push(frame);
 
-				renderStatus[1] = `– rendering frames (${Math.round(frames_rendered.length/amount_frames*100)}%)`;
+				renderStatus[2] = `– rendering frames (${Math.round(frames_rendered.length/amount_frames*100)}%)`;
 			});
 
 			worker.on('close', code => {
@@ -889,7 +929,7 @@ module.exports = {
 				done++;
 
 				if(done == threads){
-					renderStatus[1] = `✓ rendering frames (${((Date.now() - framesProcessStart) / 1000).toFixed(3)}s)`;
+					renderStatus[2] = `✓ rendering frames (${((Date.now() - framesProcessStart) / 1000).toFixed(3)}s)`;
 
 					if(config.debug)
 						console.timeEnd('render beatmap');
