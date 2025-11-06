@@ -1,0 +1,18 @@
+{
+	"count300": 1,
+	"count100": 0,
+	"count50": 0,
+	"countMiss": 0,
+	"largeTickHits": 0,
+	"smallTickHits": 0,
+	"sliderEndHits": 0,
+	"largeTickMisses": 0,
+	"smallTickMisses": 1,
+	"sliderEndMisses": 1,
+	"combo": 0,
+	"maxCombo": 1,
+	"accuracy": 66.66,
+	"ur": 0,
+	"hitErrror": -34.00,
+	"score": 261106
+}
