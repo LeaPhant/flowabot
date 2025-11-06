@@ -16,6 +16,8 @@ const FLOAT_EPSILON = 1e-3;
 const AlmostEquals = (value1, value2, acceptableDifference = FLOAT_EPSILON) => Math.abs(value1 - value2) <= acceptableDifference;
 const clamp = (number, min, max) => Math.max(Math.min(number, max), min);
 
+const radToDeg = rad => rad * (180 / Math.PI);
+
 /*
 VECTOR OPERATIONS
 */
@@ -271,7 +273,7 @@ class Random {
 module.exports = {
 	MathF, float, int,
 	INT32_MAX_VALUE, INT32_MIN_VALUE,
-	AlmostEquals, clamp,
+	AlmostEquals, clamp, radToDeg,
 	vectorF,
 	vectorLength, vectorFLength,
 	vectorDistance, vectorFDistance,

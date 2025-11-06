@@ -829,6 +829,22 @@ process.on('message', async obj => {
             if(currentFrame == null)
                 currentFrame = beatmap.ScoringFrames[beatmap.ScoringFrames.length - 1];
 
+            const currentSpinner = beatmap.hitObjects.find(a => time >= a.startTime && time < a.endTime && a.objectName == 'spinner');
+
+            if (currentSpinner) {
+                const rpmPosition = playfieldPosition(PLAYFIELD_WIDTH / 2, PLAYFIELD_HEIGHT - 30);
+
+                let fontSize = 22;
+                ctx.globalAlpha = 1;
+                ctx.fillStyle = "white";
+                ctx.textBaseline = "middle";
+                ctx.textAlign = "center";
+                ctx.font = `${fontSize}px monospace`;
+                const rpm = currentFrame.rpm ? Math.round(currentFrame.rpm) : 0;
+                const pad = " ".repeat(4 - rpm.toString().length);
+                ctx.fillText(`RPM${pad}${rpm}`, ...rpmPosition);
+            }
+
             const scoringFrames = [];
 
             if(options.flashlight){

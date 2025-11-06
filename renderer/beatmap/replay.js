@@ -1,7 +1,8 @@
 const osr = require('node-osr');
-const { PLAYFIELD_WIDTH, PLAYFIELD_HEIGHT, vectorDistance } = require('./util');
+const { PLAYFIELD_WIDTH, PLAYFIELD_HEIGHT, MathF, vectorDistance, radToDeg } = require('./util');
 
 const MAX_RADIAN = 360 * (Math.PI / 180);
+const RPM_SPAN = 595; // time span for average rpm in ms
  
 /*
 REPLAY PARSING
@@ -81,6 +82,10 @@ const parseReplay = async (buf, decompress = true) => {
 
         output_frame = Object.assign(keys, output_frame);
 
+        if (output_frame.M1 || output_frame.M2 || output_frame.K1 || output_frame.K2) {
+            output_frame.holding = true;
+        }
+
         if (prev_frame) {
             if (
                 (output_frame.M1 || output_frame.K1) &&
@@ -118,7 +123,7 @@ const newScoringFrame = scoringFrames => {
         count300: 0, count100: 0, count50: 0, countMiss: 0, 
         largeTickHits: 0, smallTickHits: 0, sliderEndHits: 0,
         largeTickMisses: 0, smallTickMisses: 0, sliderEndMisses: 0,
-        combo: 0, previousCombo: 0, maxCombo: 0, accuracy: 100
+        combo: 0, previousCombo: 0, maxCombo: 0, accuracy: 100, rotation: 0, rpm: 0
     };
 
     if(scoringFrames.length > 0)
@@ -378,7 +383,7 @@ class ReplayProcessor {
 					}
 				}
 
-                if (classicNotelock && hitObject.objectName == 'slider' && current.offset < hitObject.endTime) {
+                if (classicNotelock && hitObject.objectName == 'slider' && current.offset < Math.min(hitObject.endTime, hitObject.startTime + Beatmap.HitWindow50)) {
                     continue;
                 } else if (hitObject.hitResult != null) {
 					break;
@@ -449,6 +454,51 @@ class ReplayProcessor {
 			}
 
 			if (hitObject.objectName == 'spinner') {
+                let prev = cursor.at(hitObject.startTime);
+                let current = cursor.next();
+                let prevAngle;
+
+                // reset current rotation to 0
+                const resetFrame = newScoringFrame(ScoringFrames);
+                resetFrame.rotation = 0;
+                resetFrame.rpm = 0;
+                ScoringFrames.push(resetFrame);
+
+                const rotationRecords = [];
+
+                while (current.offset < hitObject.endTime) {
+                    const scoringFrame = newScoringFrame(ScoringFrames);
+                    scoringFrame.offset = current.offset;
+
+                    const angle = radToDeg(MathF.atan2(current.x - PLAYFIELD_WIDTH / 2, current.y - PLAYFIELD_HEIGHT / 2));
+                    let delta = prevAngle && current.holding ? angle - prevAngle : 0;
+
+                    if (delta > 180) delta -= 360;
+                    if (delta < -180) delta += 360;
+                    
+                    scoringFrame.rotation += delta;
+
+                    rotationRecords.push({
+                        offset: current.offset,
+                        rotation: scoringFrame.rotation
+                    });
+
+                    while (rotationRecords.length > 0 && (current.offset - rotationRecords[0].offset) > RPM_SPAN) {
+                        rotationRecords.splice(0, 1);
+                    }
+
+                    const rotationInSpan = Math.abs(rotationRecords[rotationRecords.length - 1].rotation) - Math.abs(rotationRecords[0].rotation);
+                    scoringFrame.rpm = rotationInSpan / (current.offset - rotationRecords[0].offset) * 1000 * 60 / 360;
+                    scoringFrame.rpm *= Beatmap.SpeedMultiplier;
+
+                    ScoringFrames.push(scoringFrame);
+
+                    prevAngle = angle;
+
+                    prev = current;
+                    current = cursor.next();
+                }
+
 				const scoringFrame = newScoringFrame(ScoringFrames);
 
 				scoringFrame.result = 300;
@@ -521,11 +571,9 @@ class ReplayProcessor {
 
 						scoringFrame.position = repeatPosition;
 
-						const currentHolding = replayFrame.K1 || replayFrame.K2 || replayFrame.M1 || replayFrame.M2;
-
 						const isLateStart = sliderHeadAccuracy && hitObject.hitOffset <= Beatmap.HitWindow50 && hitObject.hitOffset > repeatOffset;
 
-						if (isLateStart || currentHolding && withinCircle(replayFrame.x, replayFrame.y, ...repeatPosition, Beatmap.ActualFollowpointRadius)) {
+						if (isLateStart || replayFrame.holding && withinCircle(replayFrame.x, replayFrame.y, ...repeatPosition, Beatmap.ActualFollowpointRadius)) {
 							scoringFrame.result = 30;
 							scoringFrame.combo++;
 							scoringFrame.largeTickHits++;
@@ -560,11 +608,9 @@ class ReplayProcessor {
 
 						const replayFrame = cursor.at(offset);
 
-						const currentHolding = replayFrame.K1 || replayFrame.K2 || replayFrame.M1 || replayFrame.M2;
-
 						const isLateStart = sliderHeadAccuracy && hitObject.hitOffset <= Beatmap.HitWindow50 && hitObject.hitOffset > repeatOffset;
 
-						if (isLateStart || currentHolding && withinCircle(replayFrame.x, replayFrame.y, ...tick.position, Beatmap.ActualFollowpointRadius)) {
+						if (isLateStart || replayFrame.holding && withinCircle(replayFrame.x, replayFrame.y, ...tick.position, Beatmap.ActualFollowpointRadius)) {
 							scoringFrame.result = 10;
 							scoringFrame.combo++;
 							scoringFrame.largeTickHits++;
@@ -595,13 +641,11 @@ class ReplayProcessor {
 
 						const endPosition = i % 2 == 1 ? hitObject.position : hitObject.actualEndPosition;
 
-						const currentHolding = replayFrame.K1 || replayFrame.K2 || replayFrame.M1 || replayFrame.M2;
-
 						const isLateStart = sliderHeadAccuracy 
 						&& hitObject.hitOffset <= Beatmap.HitWindow50 
 						&& hitObject.hitOffset > (hitObject.actualEndTime - hitObject.startTime);
 
-						if (isLateStart || currentHolding && withinCircle(replayFrame.x, replayFrame.y, ...endPosition, Beatmap.ActualFollowpointRadius)) {
+						if (isLateStart || replayFrame.holding && withinCircle(replayFrame.x, replayFrame.y, ...endPosition, Beatmap.ActualFollowpointRadius)) {
 							const scoringFrame = newScoringFrame(ScoringFrames);
 							scoringFrame.offset = hitObject.endTime;
 							scoringFrame.position = endPosition;
