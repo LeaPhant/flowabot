@@ -235,58 +235,50 @@ module.exports = {
             if(custom_url){
                 download_path = path.resolve(os.tmpdir(), `${Math.floor(Math.random() * 1000000) + 1}.osu`);
 
-                download_promise = helper.downloadFile(download_path, beatmap_url);
-                download_promise.catch(reject);
+                try {
+                    await helper.downloadFile(download_path, beatmap_url);
+                } catch(e) {
+                    reject(e);
+                }
             }
 
-            let preview_promise;
+            let previewTime;
 
-            Promise.resolve(download_promise).then(async () => {
-                if(type == 'strains' || type == 'aim' || type == 'speed'){
-                    if(config.debug)
-                        helper.log('getting strains for mods', mods);
-
-                    time = Math.max(0, (await osu.get_strains(download_path, mods.join(''), type)).max_strain_time_real - 2000 - (length * 1000 / 2));
-                }else if(type == 'preview'){
-                    preview_promise = osu.get_preview_point(download_path);
-                }
-
-                Promise.resolve(preview_promise).then(previewTime => {
-                    if(previewTime)
-                        time = previewTime;
-
-                    if(length > 0 || objects || full){
-                        resolve(null);
-
-                        frame.get_frames(download_path, time, length * 1000, mods, size, {
-                            combo,
-                            type: video_type, cs, ar, od, analyze, lagtrain, argon, hidden, custom_url, traceable, flashlight, black: false, osr, score_id, audio, fps, speed,
-                            fill: video_type == 'mp4', noshadow: true, percent, border: false, objects, msg, nointerpolate, webui, full, choke, lazer, stable, author_id: msg.author.id
-                        });
-                    }else{
-                        frame.get_frame(download_path, time, mods, [800, 600], {
-                            combo,
-                            cs: cs, ar: ar, score_id, black: true, fill: true, analyze, hidden, percent: percent, lazer, stable
-                        }, (err, buf) => {
-                            if(err)
-                                reject(err);
-
-                            resolve({files: [{ attachment: buf, name: 'frame.png' }]});
-                        });
-                    }
-
-                }).catch(err => {
-                    if(config.debug)
-                        helper.error(err);
-
-                    reject(err);
-                });
-            }).catch(err => {
+            if (type == 'strains' || type == 'aim' || type == 'speed' ){
                 if(config.debug)
-                    helper.error(err);
+                    helper.log('getting strains for mods', mods);
 
-                reject(err);
-            });
+                time = Math.max(0, (await osu.get_strains(download_path, mods.join(''), type)).max_strain_time_real - 2000 - (length * 1000 / 2));
+            } else if(type == 'preview') {
+                try {
+                    previewTime = await osu.get_preview_point(download_path);
+                } catch(e) {
+                    reject(e);
+                }
+            }
+
+            if(previewTime)
+                time = previewTime;
+
+            if(length > 0 || objects || full){
+                resolve(null);
+
+                frame.get_frames(download_path, time, length * 1000, mods, size, {
+                    combo,
+                    type: video_type, cs, ar, od, analyze, lagtrain, argon, hidden, custom_url, traceable, flashlight, black: false, osr, score_id, audio, fps, speed,
+                    fill: video_type == 'mp4', noshadow: true, percent, border: false, objects, msg, nointerpolate, webui, full, choke, lazer, stable, author_id: msg.author.id
+                });
+            }else{
+                frame.get_frame(download_path, time, mods, [800, 600], {
+                    combo,
+                    cs: cs, ar: ar, score_id, black: true, fill: true, analyze, hidden, percent: percent, lazer, stable
+                }, (err, buf) => {
+                    if(err)
+                        reject(err);
+
+                    resolve({files: [{ attachment: buf, name: 'frame.png' }]});
+                });
+            }
         });
     }
 };
