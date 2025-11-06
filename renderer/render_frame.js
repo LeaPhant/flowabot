@@ -517,6 +517,7 @@ module.exports = {
         const row = new ActionRowBuilder().addComponents(cancelButton);
 
         let collector;
+        let cancelled = false;
 
 		msg.channel.send({
             embeds: [{
@@ -528,7 +529,7 @@ module.exports = {
 
             const filter = i => i.customId === 'cancel-render' && i.user.id === options.author_id;
             collector = msg.createMessageComponentCollector({ filter });
-            collector.on('collect', () => {
+            collector.on('collect', i => {
                 if (ffmpegProcess) {
                     try {
                         ffmpegProcess.kill();
@@ -543,9 +544,16 @@ module.exports = {
                          // failed to kill ffmpeg
                     }
                 });
-                fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
-                renderMessage.delete().catch(helper.error);
-                resolveRender();
+                setTimeout(() => {
+                    fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
+                }, 10000);
+                i.update({
+                    embeds: [{
+                        description: 'Render was cancelled.'
+                    }],
+                    components: []
+                }).catch(helper.error);
+                clearInterval(updateInterval);
                 return;
             });
 		}).catch(helper.error);
@@ -812,6 +820,8 @@ module.exports = {
 					'-c:a', 'aac', '-b:a', '164k', '-t', modded_length / 1000, '-preset', 'veryfast',
 					'-movflags', 'faststart', '-g', fps, '-force_key_frames', '00:00:00.000', `${file_path}/video.mp4`
 				);
+
+                if (cancelled) return;
 
 				const encodingProcessStart = Date.now();
 
