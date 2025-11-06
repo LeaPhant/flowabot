@@ -530,6 +530,7 @@ module.exports = {
             const filter = i => i.customId === 'cancel-render' && i.user.id === options.author_id;
             collector = msg.createMessageComponentCollector({ filter });
             collector.on('collect', i => {
+                cancelled = true;
                 if (ffmpegProcess) {
                     try {
                         ffmpegProcess.kill();
@@ -560,12 +561,12 @@ module.exports = {
 
 		const updateRenderStatus = async () => {
 			if (!renderMessage) return;
-			await renderMessage.edit({
+			renderMessage.edit({
 				embeds: [{
 					description: renderStatus.join("\n")
 				}],
                 components: [row]
-			});
+			}).catch(helper.error);
 		};
 
 		const updateInterval = setInterval(() => { updateRenderStatus().catch(console.error) }, 3000);
@@ -576,8 +577,15 @@ module.exports = {
 			updateRenderStatus();
 			clearInterval(updateInterval);
 
-			await msg.channel.send(opts);
-			if (renderMessage) await renderMessage.delete();
+			msg.channel.send(opts).then(outputMessage => {
+                if (cancelled) {
+                    outputMessage.delete().catch(helper.error);
+                }
+            });
+
+			if (renderMessage && !cancelled) {
+                renderMessage.delete().catch(helper.error);
+            }
 		};
 
 		const beatmapProcessStart = Date.now();
@@ -622,10 +630,11 @@ module.exports = {
 				resolveRender("Error processing beatmap or replay").catch(console.error);
 				return false;
 			}
-			
 		}
 
 		console.timeEnd('process beatmap');
+        
+        renderStatus[0] = `Map: \`${beatmap.Artist} - ${beatmap.Title} [${beatmap.Version}]\`\n` + renderStatus[0];
 
 		time = beatmap.renderTime;
 		length = beatmap.renderLength;
