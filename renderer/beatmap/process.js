@@ -3,6 +3,7 @@ const path = require('path');
 
 const osuBeatmapParser = require('osu-parser');
 const axios = require('axios');
+const booba = require('booba');
 
 const helper = require('../../helper');
 const config = require('../../config.json');
@@ -56,10 +57,15 @@ class BeatmapProcessor {
 				const response = await axios.get(this.options.osr, { timeout: 5000, responseType: 'arraybuffer' });
 
 				Replay = await parseReplay(response.data);
-				
-				if (Replay.score_info) {
-					this.mods_raw = Replay.score_info.mods;
-				}
+
+                if (Replay?.mods != null) {
+                    const mods = new booba.Mods(Replay.mods).toString(false).split(",").map(x => { return { acronym: x }});
+                    this.mods_raw = mods;
+                }
+
+                if (Replay?.score_info) {
+                    this.mods_raw = Replay.score_info.mods;
+                }
 			} catch(e) {
 				console.error(e);
 
@@ -67,7 +73,8 @@ class BeatmapProcessor {
 			}
 		}
 
-        if (Replay?.beatmapMD5 && (!this.beatmap_path || await helper.fileMd5(this.beatmap_path) != Replay.beatmapMD5)) {
+        if (Replay?.beatmapMD5 && 
+            (!this.beatmap_path || await helper.fileMd5(this.beatmap_path) != Replay.beatmapMD5)) {
             this.beatmap_path = await helper.downloadBeatmapByMd5(Replay.beatmapMD5)
         }
 
@@ -92,6 +99,8 @@ class BeatmapProcessor {
 		for (const mod of this.mods_raw) {
 			Mods.set(mod.acronym, mod.settings ?? {});
 		}
+
+        console.log("MODS", this.mods_raw);
 
 		return Beatmap;
 	}
