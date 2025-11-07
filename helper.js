@@ -4,6 +4,7 @@ localStorage = new LocalStorage('./scratch');
 const { DateTime } = require('luxon');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const { execFileSync } = require('child_process');
 const axios = require('axios');
 const fileExists = async path => !!(await fs.promises.stat(path).catch(e => false));
@@ -172,11 +173,32 @@ module.exports = {
             || (await fileExists(beatmap_path) && await module.exports.validateBeatmap(beatmap_path) == false)){
                 await module.exports.downloadFile(beatmap_path, `https://osu.ppy.sh/osu/${beatmap_id}`);
             }
+
+            return beatmap_path;
         }catch(err){
             module.exports.error(err);
 
             throw "Couldn't download beatmap";
         }
+    },
+
+    fileMd5: async path => {
+        try {
+            const buf = await fs.promises.readFile(path);
+            return crypto.createHash('md5').update(buf).digest('hex');
+        } catch(e) {
+            return "";
+        }
+    },
+
+    downloadBeatmapByMd5: async function(beatmap_md5) {
+        const beatmap = await axios.get('https://osu.ppy.sh/api/get_beatmaps', { params: { k: config.credentials?.osu_api_key, h: beatmap_md5 }});
+
+        if (!beatmap.data || beatmap.data.length < 1) return;
+
+        const { beatmap_id } = beatmap.data[0];
+
+        return await this.downloadBeatmap(beatmap_id);
     },
 
     emote: (emoteName, guild, client) => {

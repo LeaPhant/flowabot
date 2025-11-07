@@ -53,11 +53,11 @@ const parseReplay = async (buf, decompress = true) => {
 			// @ts-ignore
 			Replay.score_info = data.score_info;
 		}
-		
-        replay_data = data.replay_data;
+
+        Object.assign(Replay, data);
 	}
         
-    const replay_frames = replay_data.split(",");
+    const replay_frames = Replay.replay_data.split(",");
     const output_frames = [];
     let prev_frame;
 

@@ -4,6 +4,7 @@ const path = require('path');
 const osuBeatmapParser = require('osu-parser');
 const axios = require('axios');
 
+const helper = require('../../helper');
 const config = require('../../config.json');
 
 const { difficultyRange, float } = require('./util');
@@ -39,20 +40,9 @@ class BeatmapProcessor {
 	}
 
 	async parseBeatmap () {
-		this.osuContents = await fs.readFile(this.beatmap_path, 'utf8');
+        let Replay;
 
-		const Beatmap = osuBeatmapParser.parseContent(this.osuContents);
-
-		Beatmap.CircleSize = Number(Beatmap.CircleSize ?? 5);
-		Beatmap.OverallDifficulty =  Number(Beatmap.OverallDifficulty ?? 5);
-		// Very old maps use the OD as the AR 
-		Beatmap.ApproachRate = Number(Beatmap.ApproachRate ?? Beatmap.OverallDifficulty ?? 5);
-
-		console.time("download/parse replay");
-
-		let Replay;
-
-		if (this.options.score_id) {
+        if (this.options.score_id) {
 			const replay_path = path.resolve(config.replay_path, `${this.options.score_id}.osr`);
 
 			if (await exists(replay_path)) {
@@ -76,6 +66,21 @@ class BeatmapProcessor {
 				throw "Couldn't download replay";
 			}
 		}
+
+        if (Replay?.beatmapMD5 && (!this.beatmap_path || await helper.fileMd5(this.beatmap_path) != Replay.beatmapMD5)) {
+            this.beatmap_path = await helper.downloadBeatmapByMd5(Replay.beatmapMD5)
+        }
+
+		this.osuContents = await fs.readFile(this.beatmap_path, 'utf8');
+
+		const Beatmap = osuBeatmapParser.parseContent(this.osuContents);
+
+		Beatmap.CircleSize = Number(Beatmap.CircleSize ?? 5);
+		Beatmap.OverallDifficulty =  Number(Beatmap.OverallDifficulty ?? 5);
+		// Very old maps use the OD as the AR 
+		Beatmap.ApproachRate = Number(Beatmap.ApproachRate ?? Beatmap.OverallDifficulty ?? 5);
+
+		console.time("download/parse replay");
 
 		Beatmap.Replay = Replay;
 
