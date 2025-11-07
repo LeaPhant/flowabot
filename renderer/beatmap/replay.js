@@ -228,7 +228,7 @@ class ReplayProcessor {
                 let rps = 7;
                 let radius = 60;
 
-                let rotations = hitObject.duration / 1000 * rps;
+                let rotations = (hitObject.endTime - hitObject.startTime) / 1000 * rps;
 
                 for(let x = 0; x < rotations; x++){
                     let rotationLength = Math.min(1, rotations - x);
