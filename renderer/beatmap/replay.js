@@ -472,7 +472,7 @@ class ReplayProcessor {
 
                 const rotationRecords = [];
 
-                while (current.offset < hitObject.endTime) {
+                while (current?.offset < hitObject.endTime) {
                     const scoringFrame = newScoringFrame(ScoringFrames);
                     scoringFrame.offset = current.offset;
 
