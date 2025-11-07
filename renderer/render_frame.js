@@ -566,7 +566,7 @@ module.exports = {
 					description: renderStatus.join("\n")
 				}],
                 components: [row]
-			}).catch(helper.error);
+			}).catch(() => {});
 		};
 
 		const updateInterval = setInterval(() => { updateRenderStatus().catch(console.error) }, 3000);
@@ -579,12 +579,12 @@ module.exports = {
 
 			msg.channel.send(opts).then(outputMessage => {
                 if (cancelled) {
-                    outputMessage.delete().catch(helper.error);
+                    outputMessage.delete().catch(() => {});
                 }
             });
 
 			if (renderMessage && !cancelled) {
-                renderMessage.delete().catch(helper.error);
+                renderMessage.delete().catch(() => {});
             }
 		};
 
