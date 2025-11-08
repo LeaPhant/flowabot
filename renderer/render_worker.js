@@ -957,16 +957,11 @@ process.on('message', async obj => {
                 ctx.font = `${26 * scale_multiplier}px monospace`;
 
                 let urText = 'UR';
-                let { ur } = currentFrame;
+                let { ur, cvur } = currentFrame;
 
-                if(beatmap.Replay && (beatmap.Replay.Mods.includes('DT') || beatmap.Replay.Mods.includes('NC') || beatmap.Replay.Mods.includes("HT"))){
+                if(beatmap.SpeedMultiplier != 1){
                     urText = 'cvUR';
-
-                    if(beatmap.Replay.Mods.includes('DT') || beatmap.Replay.Mods.includes('NC'))
-                        ur /= 1.5;
-
-                    if(beatmap.Replay.Mods.includes('HT'))
-                        ur /= 0.75;
+                    ur = cvur;
                 }
 
                 ctx.fillText(`${ur.toFixed(2)} ${urText}`, ...urPosition);

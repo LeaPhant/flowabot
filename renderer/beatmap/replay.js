@@ -119,7 +119,7 @@ REPLAY SCORING
 */
 const newScoringFrame = scoringFrames => {
     let scoringFrame = {
-        ur: 0, offset: 0, 
+        ur: 0, cvur: 0, offset: 0, 
         count300: 0, count100: 0, count50: 0, countMiss: 0, 
         largeTickHits: 0, smallTickHits: 0, sliderEndHits: 0,
         largeTickMisses: 0, smallTickMisses: 0, sliderEndMisses: 0,
@@ -432,6 +432,7 @@ class ReplayProcessor {
 
 					allhits.push(hitObject.hitOffset);
 					scoringFrame.ur = variance(allhits) * 10;
+                    scoringFrame.cvur = scoringFrame.ur / Beatmap.SpeedMultiplier;
 				}
 
 				if (scoringFrame.combo > scoringFrame.maxCombo)
@@ -546,6 +547,7 @@ class ReplayProcessor {
 			
 						allhits.push(hitObject.hitOffset);
 						scoringFrame.ur = variance(allhits) * 10;
+                        scoringFrame.cvur = scoringFrame.ur / Beatmap.SpeedMultiplier;
 
 						if(scoringFrame.combo > scoringFrame.maxCombo)
 							scoringFrame.maxCombo = scoringFrame.combo;

@@ -949,16 +949,12 @@ async function getScore(recent_raw, cb){
                             mods: recent.mods.map(x => x.acronym)
                         }).then(response => {
                             recent.ur = response.ur;
+                            recent.cvur = response.cvur;
 
                             if(recent.countmiss == (response.miss || 0) 
                             && recent.count100 == (response['100'] || 0)
                             && recent.count50 == (response['50'] || 0))
                                 recent.countsb = response.sliderbreak;
-
-                            if(recent.mods.map(x => x.acronym).includes("DT") || recent.mods.map(x => x.acronym).includes("NC"))
-                                recent.cvur = response.ur / 1.5;
-                            else if(recent.mods.map(x => x.acronym).includes("HT"))
-                                recent.cvur = response.ur * 1.5;
 
                             resolve(recent);
                         });
@@ -1515,7 +1511,7 @@ module.exports = {
         if(recent.ur > 0){
             if(recent.count100 > 0 || recent.count50 > 0 || recent.countmiss > 0) lines[1] += helper.sep;
             lines[1] += `${+recent.ur.toFixed(2)} UR`;
-            if(recent.cvur)
+            if(recent.cvur != recent.ur)
                 lines[1] += ` (${+recent.cvur.toFixed(2)}cv)`;
         }else if(recent.ur < 0){
             if(recent.count100 > 0 || recent.count50 > 0 || recent.countmiss > 0) lines[1] += helper.sep;
