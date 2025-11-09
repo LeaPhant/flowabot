@@ -75,7 +75,15 @@ class BeatmapProcessor {
 
         if (Replay?.beatmapMD5 && 
             (!this.beatmap_path || await helper.fileMd5(this.beatmap_path) != Replay.beatmapMD5)) {
-            this.beatmap_path = await helper.downloadBeatmapByMd5(Replay.beatmapMD5)
+            
+            try {
+                const newBeatmapPath = await helper.downloadBeatmapByMd5(Replay.beatmapMD5);
+
+                if (newBeatmapPath)
+                    this.beatmap_path = newBeatmapPath;
+            } catch(e) {
+                //
+            }
         }
 
 		this.osuContents = await fs.readFile(this.beatmap_path, 'utf8');
