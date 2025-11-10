@@ -941,7 +941,31 @@ process.on('message', async obj => {
                 ctx.textAlign = "right";
                 ctx.textBaseline = "top";
                 ctx.font = `${26 * scale_multiplier}px monospace`;
-                ctx.fillText(`${currentFrame.accuracy.toFixed(2)}%`, ...accuracyPosition);
+
+                const accText = `${currentFrame.accuracy.toFixed(2)}%`;
+                ctx.fillText(accText, ...accuracyPosition);
+
+                const accTextSize = ctx.measureText(accText);
+                const pieRadius = 12 * scale_multiplier;
+                const piePosition = [
+                    accuracyPosition[0] - accTextSize.width - pieRadius - 5,
+                    accuracyPosition[1] + (accTextSize.actualBoundingBoxDescent - accTextSize.actualBoundingBoxAscent) / 2
+                ];
+
+                ctx.strokeStyle = "white";
+                ctx.lineWidth = 2 * scale_multiplier;
+                
+                ctx.beginPath();
+                ctx.arc(...piePosition, pieRadius, 0, Math.PI * 2);
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(...piePosition);
+
+                const completion = time / (beatmap.totalTime * 1000) * 2 * Math.PI - Math.PI / 2;
+
+                ctx.arc(...piePosition, pieRadius, -Math.PI/2, completion);
+                ctx.fill();
 
                 const hitCountPosition = [canvas.width - 15, 45 + 26 * scale_multiplier];
 
@@ -991,6 +1015,8 @@ process.on('message', async obj => {
                 ctx.fillStyle = 'rgb(255,255,255,0.8)';
 
                 ctx.fillText('W.I.P. – scoring not accurate yet', 15, canvas.height - 10);
+
+                ctx.textAlign = "right";
             }
 
             for(const scoringFrame of scoringFrames){
