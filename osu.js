@@ -903,6 +903,7 @@ async function getScore(recent_raw, cb){
                 creator: beatmapset.creator,
                 creator_id: beatmapset.user_id,
                 approved_date: beatmapset.ranked_date,
+                updated_date: beatmapset.last_updated,
                 cs: attributes.cs,
                 ar: attributes.ar,
                 od: attributes.od,
@@ -1436,7 +1437,7 @@ module.exports = {
                 ranked_text = 'Loved';
                 break;
             default:
-                ranked_date = recent.approved_date;
+                ranked_date = recent.updated_date;
         }
 
         embed.footer = {
