@@ -478,7 +478,7 @@ class ReplayProcessor {
                     scoringFrame.offset = current.offset;
 
                     const angle = radToDeg(MathF.atan2(current.x - PLAYFIELD_WIDTH / 2, current.y - PLAYFIELD_HEIGHT / 2));
-                    let delta = prevAngle && current.holding ? angle - prevAngle : 0;
+                    let delta = prevAngle && current?.holding ? angle - prevAngle : 0;
 
                     if (delta > 180) delta -= 360;
                     if (delta < -180) delta += 360;
@@ -581,7 +581,7 @@ class ReplayProcessor {
 
 						const isLateStart = sliderHeadAccuracy && hitObject.hitOffset <= Beatmap.HitWindow50 && hitObject.hitOffset > repeatOffset;
 
-						if (isLateStart || replayFrame.holding && withinCircle(replayFrame.x, replayFrame.y, ...repeatPosition, Beatmap.ActualFollowpointRadius)) {
+						if (isLateStart || replayFrame?.holding && withinCircle(replayFrame.x, replayFrame.y, ...repeatPosition, Beatmap.ActualFollowpointRadius)) {
 							scoringFrame.result = 30;
 							scoringFrame.combo++;
 							scoringFrame.largeTickHits++;
@@ -618,7 +618,7 @@ class ReplayProcessor {
 
 						const isLateStart = sliderHeadAccuracy && hitObject.hitOffset <= Beatmap.HitWindow50 && hitObject.hitOffset > repeatOffset;
 
-						if (isLateStart || replayFrame.holding && withinCircle(replayFrame.x, replayFrame.y, ...tick.position, Beatmap.ActualFollowpointRadius)) {
+						if (isLateStart || replayFrame?.holding && withinCircle(replayFrame.x, replayFrame.y, ...tick.position, Beatmap.ActualFollowpointRadius)) {
 							scoringFrame.result = 10;
 							scoringFrame.combo++;
 							scoringFrame.largeTickHits++;
@@ -653,7 +653,7 @@ class ReplayProcessor {
 						&& hitObject.hitOffset <= Beatmap.HitWindow50 
 						&& hitObject.hitOffset > (hitObject.actualEndTime - hitObject.startTime);
 
-						if (isLateStart || replayFrame.holding && withinCircle(replayFrame.x, replayFrame.y, ...endPosition, Beatmap.ActualFollowpointRadius)) {
+						if (isLateStart || replayFrame?.holding && withinCircle(replayFrame.x, replayFrame.y, ...endPosition, Beatmap.ActualFollowpointRadius)) {
 							const scoringFrame = newScoringFrame(ScoringFrames);
 							scoringFrame.offset = hitObject.endTime;
 							scoringFrame.position = endPosition;
