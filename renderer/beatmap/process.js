@@ -8,7 +8,7 @@ const booba = require('booba');
 const helper = require('../../helper');
 const config = require('../../config.json');
 
-const { difficultyRange, float } = require('./util');
+const { difficultyRange, float, int } = require('./util');
 const { parseReplay, applyReplay } = require('./replay');
 
 const applySliders = require('./slider');
@@ -169,16 +169,16 @@ class BeatmapProcessor {
 		if (!isNaN(options.od))
 			Beatmap.OverallDifficulty = options.od;
 	
-		Beatmap.TimePreempt = difficultyRange(Beatmap.ApproachRate, 1800, 1200, 450);
-		Beatmap.TimeFadein = difficultyRange(Beatmap.ApproachRate, 1200, 800, 300);
+		Beatmap.TimePreempt = int(difficultyRange(Beatmap.ApproachRate, 1800, 1200, 450));
+		Beatmap.TimeFadein = int(difficultyRange(Beatmap.ApproachRate, 1200, 800, 300));
 	
 		if (Mods.has('HD') && options.hidden)
 			Beatmap.TimeFadein = Beatmap.TimePreempt * 0.4;
 	
 		const hitWindows = {
-			300: difficultyRange(Beatmap.OverallDifficulty, 80, 50, 20),
-			100: difficultyRange(Beatmap.OverallDifficulty, 140, 100, 60),
-			50: difficultyRange(Beatmap.OverallDifficulty, 200, 150, 100)
+			300: float(difficultyRange(Beatmap.OverallDifficulty, 80, 50, 20)),
+			100: float(difficultyRange(Beatmap.OverallDifficulty, 140, 100, 60)),
+			50: float(difficultyRange(Beatmap.OverallDifficulty, 200, 150, 100))
 		};
 	
 		for (const key in hitWindows) {
@@ -202,7 +202,7 @@ class BeatmapProcessor {
 		Beatmap.HitWindowMiss = 400;
 	
 		// CS
-		Beatmap.Scale = float(float(1 - float(0.7) * difficultyRange(Beatmap.CircleSize)) / 2 * ROUNDING_ALLOWANCE);
+		Beatmap.Scale = float(float(1 - float(0.7) * float(difficultyRange(Beatmap.CircleSize))) / 2 * ROUNDING_ALLOWANCE);
 		Beatmap.Radius = OBJECT_RADIUS * Beatmap.Scale;
 		Beatmap.FollowpointRadius = Beatmap.Radius * 2;
 		Beatmap.ActualFollowpointRadius = Beatmap.Radius * 2.4;

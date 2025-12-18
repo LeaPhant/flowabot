@@ -149,7 +149,7 @@ const difficultyRange = (difficulty, min, mid, max) => {
     else
         result = mid
 
-    return float(result);
+    return result;
 };
 
 const getTimingPoint = (timingPoints, offset, redLines = false) => {
