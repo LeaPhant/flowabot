@@ -56,7 +56,7 @@ function checkCommand(msg, command){
     if(!msg.content.startsWith(config.prefix))
         return false;
 
-	if(msg.author.bot && msg.webhookID == null)
+	if(msg.author.bot && msg.webhookId == null)
 		return false;
 
     let argv = msg.content.split(' ');
