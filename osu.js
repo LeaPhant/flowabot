@@ -2463,7 +2463,7 @@ module.exports = {
         const spotResults = {};
         const hitResults = [];
 
-        if (lastFrame.countMiss < 20) {
+        if (lastFrame.countMiss <= 12) {
             hitResults.push(...frames.filter(x => x.result == 'miss'));
             spotResults['miss'] = [];
         }
@@ -2607,10 +2607,10 @@ module.exports = {
             const spots = spotResults[resultType];
 
             for (const spot of spots) {
-                const point = points[Math.floor(spot * points.length)];
+                const point = points[Math.floor(Math.min(0.98, spot) * points.length)];
 
                 ctx.beginPath();
-                ctx.moveTo(point.x, BAR_HEIGHT - 5);
+                ctx.moveTo(point.x, BAR_HEIGHT);
                 ctx.lineTo(point.x, point.y - 12);
                 ctx.stroke();
 
