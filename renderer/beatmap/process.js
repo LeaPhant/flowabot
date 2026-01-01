@@ -429,9 +429,10 @@ class BeatmapProcessor {
 		await this.applyStacking();
         await this.applyReplay();
 
-        const lastFrame = this.Beatmap.ScoringFrames?.pop();
+        const frames = this.Beatmap.ScoringFrames;
+        const [lastFrame] = frames.slice(-1);
 
-        return { ur: lastFrame?.ur, cvur: lastFrame?.cvur };
+        return { frames, ur: lastFrame?.ur, cvur: lastFrame?.cvur };
     }
 }
 const processBeatmap = async (beatmap_path, options, mods_raw, time, length, ur_only = false) => {

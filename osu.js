@@ -929,18 +929,10 @@ async function getScore(recent_raw, cb){
             let strains_bar;
 
             if(await helper.fileExists(beatmap_path)){
-                strains_bar = await module.exports.get_strains_bar(beatmap_path, recent.mods.map(mod => mod.acronym).join(''), recent.fail_percent, recent.beatmapset_id);
+                let frames;
 
-                if(strains_bar)
-                    recent.strains_bar = true;
-            }
-
-            if(recent.replay && await helper.fileExists(beatmap_path)){
-                let ur_promise = new Promise((resolve, reject) => {
-                    if(config.debug)
-                        helper.log('getting ur');
-
-                    ur_calc.get_ur(
+                if (recent.replay) {
+                    const ur_response = await ur_calc.get_ur(
                         {
                             access_token: access_token,
                             player: recent_raw.user_id,
@@ -948,26 +940,20 @@ async function getScore(recent_raw, cb){
                             mods_enabled: recent_raw.mods,
                             score_id: recent.score_id,
                             mods: recent.mods.map(x => x.acronym)
-                        }).then(response => {
-                            recent.ur = response.ur;
-                            recent.cvur = response.cvur;
-
-                            if(recent.countmiss == (response.miss || 0) 
-                            && recent.count100 == (response['100'] || 0)
-                            && recent.count50 == (response['50'] || 0))
-                                recent.countsb = response.sliderbreak;
-
-                            resolve(recent);
                         });
-                });
 
-                recent.ur = -1;
-                if(recent.mods.map(mod => mod.acronym).includes("DT") || recent.mods.map(mod => mod.acronym).includes("HT"))
-                    recent.cvur = -1;
-                cb(null, recent, strains_bar, ur_promise);
-            }else{
-                cb(null, recent, strains_bar);
+                    recent.ur = ur_response.ur;
+                    recent.cvur = ur_response.cvur;
+                    frames = ur_response.frames;
+                }
+
+                strains_bar = await module.exports.get_strains_bar(beatmap_path, recent.mods.map(mod => mod.acronym).join(''), recent.fail_percent, recent.beatmapset_id, frames);
+
+                if(strains_bar)
+                    recent.strains_bar = true;
             }
+
+            cb(null, recent, strains_bar);
         }).catch(helper.error);
     }).catch(err => {
         cb("Couldn't reach osu!api. 💀");
@@ -2455,7 +2441,7 @@ module.exports = {
 
     calculate_strains: calculateStrains,
 
-	get_strains_bar: async function(osu_file_path, mods_string, progress = 100, beatmapset_id){
+	get_strains_bar: async function(osu_file_path, mods_string, progress = 100, beatmapset_id, frames){
         const BANNER_WIDTH = 900;
         const BANNER_HEIGHT = 250;
 
@@ -2471,6 +2457,32 @@ module.exports = {
 
 		if(!map_strains)
 			return false;
+
+        const [lastFrame] = frames.slice(-1);
+
+        const spotResults = {};
+        const hitResults = [];
+
+        if (lastFrame.countMiss < 20) {
+            hitResults.push(...frames.filter(x => x.result == 'miss'));
+            spotResults['miss'] = [];
+        }
+
+        if (lastFrame.count100 < 7) {
+            hitResults.push(...frames.filter(x => x.result == 100));
+            spotResults['100'] = [];
+
+            if (lastFrame.count50 < 7) {
+                hitResults.push(...frames.filter(x => x.result == 50));
+                spotResults['50'] = [];
+            }
+        }        
+
+        for (const frame of hitResults) {
+            const spot = frame.offset / lastFrame.offset;
+
+            spotResults[frame.result].push(spot);
+        }
 
 		let { strains, max_strain } = map_strains;
 		let bar = createCanvas(BAR_WIDTH, BAR_HEIGHT);
@@ -2489,9 +2501,9 @@ module.exports = {
 
         const gradient = ctx.createLinearGradient(0, BAR_HEIGHT, 0, 0);
 
-        gradient.addColorStop(0, "rgba(0,0,0,0.6)");
-        gradient.addColorStop(0.35, "rgba(0,0,0,0.3)");
-        gradient.addColorStop(0.7, "rgba(0,0,0,0)");
+        gradient.addColorStop(0, "rgba(0,0,0,0.7)");
+        gradient.addColorStop(0.45, "rgba(0,0,0,0.45)");
+        gradient.addColorStop(0.8, "rgba(0,0,0,0)");
 
         ctx.fillStyle = gradient;
         if (banner) {
@@ -2560,6 +2572,51 @@ module.exports = {
             ctx.lineTo(BAR_WIDTH, points[points.length - 1].y)
         
         ctx.stroke();
+
+        ctx.shadowColor = 'rgba(0,0,0,0.7)';
+        ctx.shadowOffsetX = 1;
+        ctx.shadowOffsetY = 1;
+        ctx.shadowBlur = 5;
+        ctx.lineWidth = 2;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        ctx.font = 'bold 18px sans-serif';
+
+        for (const resultType in spotResults) {
+            let color = 'white';
+            let text = '';
+
+            switch (resultType) {
+                case 'miss':
+                    color = '#ff3d3d';
+                    text = 'X';
+                    break;
+                case '100':
+                    color = '#46ff3d';
+                    text = '100';
+                    continue;
+                case '50':
+                    color = '#ffce3d';
+                    text = '50';
+                    continue;
+            }
+
+            ctx.fillStyle = color;
+            ctx.strokeStyle = color;
+
+            const spots = spotResults[resultType];
+
+            for (const spot of spots) {
+                const point = points[Math.floor(spot * points.length)];
+
+                ctx.beginPath();
+                ctx.moveTo(point.x, BAR_HEIGHT - 5);
+                ctx.lineTo(point.x, point.y - 12);
+                ctx.stroke();
+
+                ctx.fillText(text, point.x, point.y - 9)
+            }
+        }
 
         if (progress == 1)
             return bar.toBuffer();
