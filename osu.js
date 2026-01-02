@@ -2463,25 +2463,29 @@ module.exports = {
         const spotResults = {};
         const hitResults = [];
 
-        if (lastFrame.countMiss <= 12) {
-            hitResults.push(...frames.filter(x => x.result == 'miss'));
-            spotResults['miss'] = [];
-        }
+        if (frames) {
+            const [lastFrame] = frames.slice(-1);
 
-        if (lastFrame.count100 < 7) {
-            hitResults.push(...frames.filter(x => x.result == 100));
-            spotResults['100'] = [];
-
-            if (lastFrame.count50 < 7) {
-                hitResults.push(...frames.filter(x => x.result == 50));
-                spotResults['50'] = [];
+            if (lastFrame.countMiss <= 12) {
+                hitResults.push(...frames.filter(x => x.result == 'miss'));
+                spotResults['miss'] = [];
             }
-        }        
 
-        for (const frame of hitResults) {
-            const spot = frame.offset / lastFrame.offset;
+            if (lastFrame.count100 < 7) {
+                hitResults.push(...frames.filter(x => x.result == 100));
+                spotResults['100'] = [];
 
-            spotResults[frame.result].push(spot);
+                if (lastFrame.count50 < 7) {
+                    hitResults.push(...frames.filter(x => x.result == 50));
+                    spotResults['50'] = [];
+                }
+            }        
+
+            for (const frame of hitResults) {
+                const spot = frame.offset / lastFrame.offset;
+
+                spotResults[frame.result].push(spot);
+            }
         }
 
 		let { strains, max_strain } = map_strains;
