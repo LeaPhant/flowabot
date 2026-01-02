@@ -2458,8 +2458,6 @@ module.exports = {
 		if(!map_strains)
 			return false;
 
-        const [lastFrame] = frames.slice(-1);
-
         const spotResults = {};
         const hitResults = [];
 
