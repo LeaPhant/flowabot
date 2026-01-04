@@ -901,11 +901,33 @@ process.on('message', async obj => {
             const UR_BAR_300 = beatmap.HitWindow300 / beatmap.HitWindow50 * UR_BAR_WIDTH;
 
             if(currentFrame != null){
+                const hpPosition = [15, 20];
                 const comboPosition = [15, canvas.height - 35];
                 const accuracyPosition = [canvas.width - 15, 40];
 
-                ctx.fillStyle = "white";
+                const color = [255,255,255];
+
+                let currentHp = currentFrame.hp ?? 1;
+                const nextFrame = beatmap.ScoringFrames.length > currentFrameIndex ? beatmap.ScoringFrames[currentFrameIndex + 1] : null;
+
+                if (nextFrame) {
+                    const progress = clamp((time - currentFrame.offset) / (nextFrame.offset - currentFrame.offset), 0, 1);
+                    const diff = (nextFrame.hp ?? 1) - currentHp;
+                    currentHp += progress * diff;
+                }
+
+                if (currentHp < 0.6) {
+                    const newColor = clamp(Math.floor(color[1] * (currentHp / 0.6 - 0.2)), 0, 255);
+                    color[1] = newColor;
+                    color[2] = newColor;
+                }
+
+                ctx.fillStyle = `rgb(${color.join(',')})`;
+                ctx.globalAlpha = clamp((0.7 - currentHp) * 5, 0, 1);
+                ctx.fillRect(...hpPosition, 200 * (currentFrame.hp ?? 1), 10);
+
                 ctx.globalAlpha = 1;
+                ctx.fillStyle = "white";
                 ctx.textAlign = "left";
                 ctx.textBaseline = "bottom";
                 ctx.font = `${32 * scale_multiplier}px monospace`;
