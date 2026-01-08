@@ -922,9 +922,11 @@ process.on('message', async obj => {
                     color[2] = newColor;
                 }
 
-                ctx.fillStyle = `rgb(${color.join(',')})`;
-                ctx.globalAlpha = clamp((0.7 - currentHp) * 5, 0, 1);
-                ctx.fillRect(...hpPosition, 200 * (currentFrame.hp ?? 1), 10);
+                if (!isNaN(currentHp)) {
+                    ctx.fillStyle = `rgb(${color.join(',')})`;
+                    ctx.globalAlpha = clamp((0.7 - currentHp) * 5, 0, 1);
+                    ctx.fillRect(...hpPosition, 200 * (currentFrame.hp ?? 1), 10);
+                }
 
                 ctx.globalAlpha = 1;
                 ctx.fillStyle = "white";
