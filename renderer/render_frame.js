@@ -31,6 +31,10 @@ let enabled_mods = [""];
 
 const resources = path.resolve(__dirname, "res");
 
+const BEATMAP_MIRRORS = config.beatmap_mirrors ?? [
+    "https://mirror.nekoha.moe/api4/download/$SETID"
+];
+
 async function copyDir(src,dest) {
     const entries = await fs.promises.readdir(src, {withFileTypes: true});
     await fs.promises.mkdir(dest);
@@ -387,29 +391,30 @@ async function downloadMedia(options, beatmap, beatmap_path, size, download_path
         return output;
     }
 
-	let mapStream;
+	let mapOsz;
 
-	try{
-		try {
-			const osuDirectMap = await axios.get(`https://catboy.best/d/${beatmapset_id}n`, { timeout: 10000, responseType: 'stream' });
-			mapStream = osuDirectMap.data;
-		} catch (e) {
-			const nerinyanMap = await axios.get(`https://osu.direct/api/d/${beatmapset_id}`, { responseType: 'stream' });
-			mapStream = nerinyanMap.data;
-		}
-	}catch(e){
-		const beatconnectMap = await axios.get(`https://api.nerinyan.moe/d/${beatmapset_id}`, { responseType: 'stream' });
-		mapStream = beatconnectMap.data;
-	}
+    for (const mirror of BEATMAP_MIRRORS) {
+        try {
+            const oszResponse = await axios.get(
+                mirror.replaceAll('$SETID', beatmapset_id), 
+                { timeout: 10000, responseType: 'arraybuffer' }
+            );
+            mapOsz = oszResponse.data;
+            break;
+        } catch(e) {
+            continue;
+        }
+    }
 
 	const extraction_path = path.resolve(download_path, 'map');
 
-	const extraction = mapStream.pipe(unzip.Extract({ path: extraction_path }));
-
-	await new Promise((resolve, reject) => {
-		extraction.on('close', resolve);
-		extraction.on('error', reject);
-	});
+    const unzipper = await unzip.Open.buffer(mapOsz);
+    try {
+        await unzipper.extract({ path: extraction_path });
+    } catch(e) {
+        console.error(e);
+        return false;
+    }
 
 	output.beatmap_path = extraction_path;
 
