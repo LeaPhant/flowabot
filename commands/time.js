@@ -8,6 +8,9 @@ const Nominatim = axios.create({
     baseURL: 'https://nominatim.openstreetmap.org/',
     params: {
         format: 'json'
+    },
+    headers: {
+        'User-Agent': 'flowabot (https://github.com/LeaPhant/flowabot)'
     }
 });
 
