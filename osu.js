@@ -869,6 +869,10 @@ async function getScore(recent_raw, cb){
 			if (recent_raw.statistics.slider_tail_hit)
 				play_params.sliderEndHits = recent_raw.statistics.slider_tail_hit;
 
+            if (recent_raw.legacy_total_score) {
+                play_params.legacyTotalScore = recent_raw.legacy_total_score
+            }
+
             const fc_play_params = {
                 lazer: set_on_lazer,
                 mods: recent_raw.mods,
@@ -923,7 +927,7 @@ async function getScore(recent_raw, cb){
                 }),
             }, recent);
 
-            if(recent.pp == null)
+            if(recent.pp == null || process.env.ALWAYS_CALCULATE == "1")
                 recent.pp = play.pp;
 
             let strains_bar;
