@@ -723,6 +723,9 @@ process.on('message', async obj => {
                     }
                     */
 
+                    const spinnerProgress = clamp(1 - (time - hitObject.startTime) / (hitObject.endTime - hitObject.startTime), 0, 1);
+                    const spinnerSize = 210 * spinnerProgress + 30;
+
                     // Outer spinner circle
                     ctx.beginPath();
                     ctx.arc(...position, scale_multiplier * 240, 0, 2 * Math.PI, false);
@@ -731,6 +734,13 @@ process.on('message', async obj => {
                     // Inner spinner circle
                     ctx.beginPath();
                     ctx.arc(...position, scale_multiplier * 30, 0, 2 * Math.PI, false);
+                    ctx.stroke();
+
+                    ctx.lineWidth = 5 * scale_multiplier;
+
+                    // Draw shrinking circle
+                    ctx.beginPath();
+                    ctx.arc(...position, scale_multiplier * spinnerSize, 0, 2 * Math.PI, false);
                     ctx.stroke();
                 }
             }
