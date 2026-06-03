@@ -2259,7 +2259,7 @@ module.exports = {
             const chartOptions = Object.assign({}, CHART_OPTIONS);
 
             chartOptions.plugins.title.text = [`${map.artist} - ${map.title}`, `Version: ${map.version}, Mapped by ${map.creator}`];
-            chartOptions.scales.x.suggestedMax = bpms[bpms.length - 1].x;
+            chartOptions.scales.x.max = bpms[bpms.length - 1].x;
             
             const configuration = {
                 type: 'line',
@@ -2895,7 +2895,7 @@ module.exports = {
 
             chartOptions.plugins.title.text = [`${map.artist} - ${map.title}`, `Version: ${map.version}, Mapped by ${map.creator}`];
             chartOptions.scales.y.suggestedMax = Math.ceil(Math.max(...stars.map(a => a['y'])));
-            chartOptions.scales.x.suggestedMax = stars[stars.length - 1].x;
+            chartOptions.scales.x.max = stars[stars.length - 1].x;
 
             const configuration = {
                 type: 'line',
