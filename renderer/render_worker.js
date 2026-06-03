@@ -1,4 +1,4 @@
-const { createCanvas, Image } = require('canvas');
+const { createCanvas, Image, GlobalFonts } = require('@napi-rs/canvas');
 const path = require('path');
 const fs = require('fs').promises;
 const helper = require('../helper.js');
@@ -15,8 +15,12 @@ const FL_SIZES = [0.75, 0.6, 0.45]; // flashlight size relative to playfield hei
 const resources = path.resolve(__dirname, "res");
 
 let images = {
-    "arrow": path.resolve(resources, "images", "arrow.svg")
+    "arrow": path.resolve(resources, "images", "arrow.svg"),
+    "star": path.resolve(resources, "images", "star.svg")
 };
+
+GlobalFonts.registerFromPath(path.resolve(resources, 'fonts', 'NotoSans', 'NotoSans-Regular.ttf'), 'Noto Sans');
+GlobalFonts.registerFromPath(path.resolve(resources, 'fonts', 'JetBrainsMono', 'JetBrainsMono-Regular.ttf'), 'JetBrainsMono');
 
 const easeOutQuad = x => 1 - (1 - x) * (1 - x);
 
@@ -569,10 +573,11 @@ process.on('message', async obj => {
 
                         fontSize *= scale_multiplier * sizeFactor;
 
-                        // Draw combo number on circle
-                        ctx.font = `${fontSize}px sans-serif`;
+                        // Draw repeat arrowe
+                        ctx.font = `${fontSize}px Noto Sans`;
 
-                        ctx.fillText("➤", ...position);
+                        const arrowSize = sizeFactor * scale_multiplier * beatmap.Radius;
+                        ctx.drawImage(images['arrow'], position[0] - arrowSize / 2, position[1] - arrowSize / 2, arrowSize, arrowSize);
 
                         /* this doesn't render correctly for some reason???
                            using text for now I guess (TODO: FIX) */
@@ -634,7 +639,7 @@ process.on('message', async obj => {
                             fontSize *= scale_multiplier;
 
                             // Draw combo number on circle
-                            ctx.font = `${fontSize}px sans-serif`;
+                            ctx.font = `${fontSize}px Noto Sans`;
                             ctx.fillText(hitObject.ComboNumber, position[0], position[1]);
                         }
 
@@ -793,7 +798,7 @@ process.on('message', async obj => {
 
                     fontSize *= scale_multiplier * sizeFactor;
 
-                    ctx.font = `${fontSize}px sans-serif`;
+                    ctx.font = `${fontSize}px Noto Sans`;
                     ctx.fillText(hitObject.ComboNumber, ...position);
                 }
             }
@@ -849,7 +854,7 @@ process.on('message', async obj => {
                 ctx.fillStyle = "white";
                 ctx.textBaseline = "middle";
                 ctx.textAlign = "center";
-                ctx.font = `${fontSize}px monospace`;
+                ctx.font = `${fontSize}px JetBrainsMono`;
                 const rpm = currentFrame.rpm ? Math.round(currentFrame.rpm) : 0;
                 const pad = " ".repeat(4 - rpm.toString().length);
                 ctx.fillText(`RPM${pad}${rpm}`, ...rpmPosition);
@@ -942,7 +947,7 @@ process.on('message', async obj => {
                 ctx.fillStyle = "white";
                 ctx.textAlign = "left";
                 ctx.textBaseline = "bottom";
-                ctx.font = `${32 * scale_multiplier}px monospace`;
+                ctx.font = `${32 * scale_multiplier}px JetBrainsMono`;
                 ctx.fillText(`${currentFrame.combo}x`, ...comboPosition);
 
                 let { pp, stars } = currentFrame;
@@ -966,15 +971,18 @@ process.on('message', async obj => {
                 }
 
                 ctx.textBaseline = "top";
-                ctx.font = `${26 * scale_multiplier}px monospace`;
+                ctx.font = `${26 * scale_multiplier}px JetBrainsMono`;
                 ctx.fillText(`${parseFloat(pp).toFixed(2)}pp`, 15, 45);
 
-                ctx.font = `${21 * scale_multiplier}px monospace`;
-                ctx.fillText(`★${parseFloat(stars).toFixed(2)}`, 15, 47 + 26 * scale_multiplier);
+                ctx.font = `${21 * scale_multiplier}px JetBrainsMono`;
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = "high";
+                ctx.fillText(`  ${parseFloat(stars).toFixed(2)}`, 15, 47 + 26 * scale_multiplier);
+                ctx.drawImage(images['star'], 15, 47 + 26 * scale_multiplier, 21 * scale_multiplier, 21 * scale_multiplier);
 
                 ctx.textAlign = "right";
                 ctx.textBaseline = "top";
-                ctx.font = `${26 * scale_multiplier}px monospace`;
+                ctx.font = `${26 * scale_multiplier}px JetBrainsMono`;
 
                 const accText = `${currentFrame.accuracy.toFixed(2)}%`;
                 ctx.fillText(accText, ...accuracyPosition);
@@ -1003,7 +1011,7 @@ process.on('message', async obj => {
 
                 const hitCountPosition = [canvas.width - 15, 45 + 26 * scale_multiplier];
 
-                ctx.font = `${21 * scale_multiplier}px monospace`;
+                ctx.font = `${21 * scale_multiplier}px JetBrainsMono`;
                 ctx.fillText(`${currentFrame.count100}x100 ${currentFrame.count50}x50`, ...hitCountPosition);
 
                 hitCountPosition[1] += 2 + 21 * scale_multiplier;
@@ -1012,7 +1020,7 @@ process.on('message', async obj => {
                 const urPosition = [canvas.width - 15, canvas.height - 35];
 
                 ctx.textBaseline = "bottom";
-                ctx.font = `${26 * scale_multiplier}px monospace`;
+                ctx.font = `${26 * scale_multiplier}px JetBrainsMono`;
 
                 let urText = 'UR';
                 let { ur, cvur } = currentFrame;
@@ -1044,7 +1052,7 @@ process.on('message', async obj => {
 
                 ctx.textAlign = "left";
                 ctx.textBaseline = "bottom";
-                ctx.font = `${16 * scale_multiplier}px sans-serif`;
+                ctx.font = `${16 * scale_multiplier}px Noto Sans`;
 
                 ctx.fillStyle = 'rgb(255,255,255,0.8)';
 
@@ -1095,7 +1103,7 @@ process.on('message', async obj => {
                 ctx.globalAlpha = Math.min(1, 1.5 - (time - scoringFrame.offset) / 750);
                 ctx.textAlign = "center";
                 ctx.textBaseline = "middle";
-                ctx.font = `${30 * scale_multiplier}px sans-serif`;
+                ctx.font = `${30 * scale_multiplier}px Noto Sans`;
 
                 const position = scoringFrame.position.slice();
 
@@ -1360,7 +1368,7 @@ process.on('message', async obj => {
     }else{
         processFrame(time, options);
 
-        process.send(canvas.toBuffer().toString('base64'));
+        process.send(canvas.toBuffer('image/png').toString('base64'));
         process.exit(0);
     }
 });

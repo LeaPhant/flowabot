@@ -8,7 +8,6 @@ const Jimp = require('jimp');
 const crypto = require('crypto');
 
 const unzip = require('unzipper');
-const disk = require('diskusage');
 
 const { exec, execFile, fork, spawn } = require('child_process');
 
@@ -16,7 +15,11 @@ const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 
 const execPromise = util.promisify(exec);
 const execFilePromise = util.promisify(execFile);
-const diskCheck = util.promisify(disk.check);
+const diskCheck = util.promisify(fs.statfs);
+const freeSpace = async filePath => { 
+    const stat = await diskCheck(filePath);
+    return stat.bsize * stat.bfree 
+};
 
 const processBeatmap = require('./beatmap/process.js');
 
@@ -727,9 +730,7 @@ module.exports = {
 			}
 		}
 
-		const info = await diskCheck(file_path);
-
-		if(info.available * 0.9 < frames_size){
+		if(await freeSpace(file_path) * 0.9 < frames_size){
 			resolveRender("Not enough disk space").catch(console.error);
 
 			return false;

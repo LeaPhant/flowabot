@@ -10,15 +10,14 @@ const fs = require('fs').promises;
 
 const { DateTime, Duration } = require('luxon');
 
-const { createCanvas, loadImage } = require('canvas');
+const { createCanvas, loadImage } = require('@napi-rs/canvas');
 
 const ur_calc = require('./renderer/ur.js');
 const frame = require('./renderer/render_frame.js');
 const helper = require('./helper.js');
 
-const { ChartJSNodeCanvas } = require('chartjs-node-canvas');
-
-const graphCanvas = new ChartJSNodeCanvas({ width: 600, height: 400 });
+const { Chart } = require('chart.js/auto');
+const graphCanvas = createCanvas(600, 400);
 
 const Jimp = require('jimp');
 
@@ -75,45 +74,49 @@ const CHART_OPTIONS = {
             fill: false
         }
     },
-    title: {
-        display: true,
-        fontColor: '#ECEFF1DD',
-        fontSize: 14,
-        fontStyle: 'bold',
-        padding: 20
+    plugins: {
+        title: {
+            display: true,
+            color: '#ECEFF1DD',
+            font: { size: 14 },
+            padding: 20,
+            text: ""
+        },
+        legend: {
+            display: false
+        }
     },
     scales: {
-        yAxes: [{
+        y: {
+            min: 0,
             gridLines: {
                 display: true,
                 color: '#607D8BAA',
                 drawBorder: false,
                 zeroLineColor: '#607D8BAA',
-                drawTicks: false
+                drawTicks: false,
             },
             ticks: {
-                fontColor: '#FFFFFFAA',
-                fontStyle: 'bold',
+                color: '#FFFFFFAA',
                 padding: 10
-            }
-        }],
-        xAxes: [{
+            },
+        },
+        x: {
+            min: 0,
             gridLines: {
                 display: false
             },
             ticks: {
-                fontColor: '#FFFFFFAA',
-                fontStyle: 'bold',
+                color: '#FFFFFFAA',
                 maxTicksLimit: 12,
                 maxRotation: 0,
-                padding: 10
+                padding: 10,
+                callback: value => {
+                    return Duration.fromMillis(value).toFormat('m:ss')
+                }
             },
-            type: 'time',
-            time: { 
-                unit: 'second', 
-                displayFormats: { second: 'm:ss' } 
-            }
-        }]
+            type: 'linear',
+        }
     }
 };
 
@@ -2243,36 +2246,39 @@ module.exports = {
                 let bpm = +(MINUTE / timing_point.ms_per_beat * speed_multiplier).toFixed(2);
 
                 if(t == 0)
-                    bpms.push({ t: 0, y: bpm });
+                    bpms.push({ x: 0, y: bpm });
 
-                bpms.push({ t: timing_point.time, y: bpm });
+                bpms.push({ x: timing_point.time, y: bpm });
             }
 
             if(bpms.length == 0)
                 throw 'An error occured getting the Beatmap BPM values';
 
-            bpms.push({ t: map.objects[map.objects.length - 1].time, y: bpms[bpms.length - 1]['y'] });
+            bpms.push({ x: map.objects[map.objects.length - 1].time, y: bpms[bpms.length - 1]['y'] });
 
             const chartOptions = Object.assign({}, CHART_OPTIONS);
 
-            chartOptions.title.text = [`${map.artist} - ${map.title}`, `Version: ${map.version}, Mapped by ${map.creator}`];
-            chartOptions.scales.yAxes[0].ticks.precision = 0;
-
+            chartOptions.plugins.title.text = [`${map.artist} - ${map.title}`, `Version: ${map.version}, Mapped by ${map.creator}`];
+            chartOptions.scales.x.suggestedMax = bpms[bpms.length - 1].x;
+            
             const configuration = {
                 type: 'line',
                 data: {
                     datasets: [{
                         label: 'BPM',
-                        steppedLine: true,
-                        lineTension: 0,
-                        borderJoinStyle: 'round',
-                        data: bpms
+                        stepped: true,
+                        borderCapStyle: 'square',
+                        borderJoinStyle: 'miter',
+                        data: bpms,
+                        fill: false,
                     }]
                 },
                 options: chartOptions
             };
 
-            const outputChart = await graphCanvas.renderToBuffer(configuration);
+            const chart = new Chart(graphCanvas, configuration);
+            const outputChart = await graphCanvas.toBuffer('image/png');
+            chart.destroy();
 
             const graphImage = new Jimp(600, 400, '#263238E6');
             const _graph = await Jimp.read(outputChart);
@@ -2625,7 +2631,7 @@ module.exports = {
         }
 
         if (progress == 1)
-            return bar.toBuffer();
+            return bar.toBuffer('image/png');
 
         ctx.beginPath();
 		ctx.moveTo(0, BAR_HEIGHT + 10);
@@ -2646,7 +2652,7 @@ module.exports = {
 		ctx.closePath();
 		ctx.fill();
 
-		return bar.toBuffer();
+		return bar.toBuffer('image/png');
 	},
 
 	get_preview_point: function(osu_file_path){
@@ -2882,14 +2888,14 @@ module.exports = {
             for(let i = 0; i < chosen_strains.length; i += chunk_size){
                 let _strains = chosen_strains.slice(i, i + chunk_size);
 
-                stars.push({ t: i * STRAIN_STEP, y: Math.max(..._strains) });
+                stars.push({ x: i * STRAIN_STEP, y: Math.max(..._strains) });
             }
 
             const chartOptions = Object.assign({}, CHART_OPTIONS);
 
-            chartOptions.title.text = [`${map.artist} - ${map.title}`, `Version: ${map.version}, Mapped by ${map.creator}`];
-            chartOptions.scales.yAxes[0].ticks.suggestedMax = Math.ceil(Math.max(...stars.map(a => a['y'])));
-            chartOptions.scales.yAxes[0].ticks.beginAtZero = true;
+            chartOptions.plugins.title.text = [`${map.artist} - ${map.title}`, `Version: ${map.version}, Mapped by ${map.creator}`];
+            chartOptions.scales.y.suggestedMax = Math.ceil(Math.max(...stars.map(a => a['y'])));
+            chartOptions.scales.x.suggestedMax = stars[stars.length - 1].x;
 
             const configuration = {
                 type: 'line',
@@ -2898,7 +2904,7 @@ module.exports = {
                         label: 'Stars',
                         data: stars
                     }, { // draws horizontal line for total star rating
-                        data: [{ t: 0, y: strains.total}, { t: stars[stars.length - 1]['t'], y: strains.total }],
+                        data: [{ x: 0, y: strains.total}, { x: stars[stars.length - 1]['x'], y: strains.total }],
                         fill: false,
                         radius: 0,
                         borderColor: 'rgba(255,255,255,0.4)'
@@ -2907,7 +2913,9 @@ module.exports = {
                 options: chartOptions
             };
 
-            const outputChart = await graphCanvas.renderToBuffer(configuration);
+            const chart = new Chart(graphCanvas, configuration);
+            const outputChart = await graphCanvas.toBuffer('image/png');
+            chart.destroy();
 
             const output_frame = await getFrame(osu_file_path, max_strain_time_real - map.objects[0].time % 400, mods_array, [427, 320], {ar: ar, cs: cs, noreplay: true})
             
