@@ -10,7 +10,10 @@ const fs = require('fs').promises;
 
 const { DateTime, Duration } = require('luxon');
 
-const { createCanvas, loadImage } = require('@napi-rs/canvas');
+const { createCanvas, loadImage, GlobalFonts } = require('@napi-rs/canvas');
+
+GlobalFonts.registerFromPath(path.resolve(__dirname, 'renderer', 'res', 'fonts', 'BitstreamVeraSans', 'Vera.ttf'), 'Bitstream Vera Sans');
+GlobalFonts.registerFromPath(path.resolve(__dirname, 'renderer', 'res', 'fonts', 'BitstreamVeraSans', 'Vera-Bold.ttf'), 'Bitstream Vera Sans Bold');
 
 const ur_calc = require('./renderer/ur.js');
 const frame = require('./renderer/render_frame.js');
@@ -56,7 +59,6 @@ const DIFF_MODS = ["HR","EZ","DT","HT","FL","HD","TD"];
 const TIME_MODS = ["DT", "HT"];
 
 const CHART_OPTIONS = {
-    fontColor: '#FFFFFFCC',
     legend: {
         display: false
     },
@@ -83,7 +85,7 @@ const CHART_OPTIONS = {
         title: {
             display: true,
             color: '#ECEFF1DD',
-            font: { size: 14 },
+            font: { family: 'Bitstream Vera Sans', size: 14, weight: 'bold' },
             padding: 20,
             text: ""
         },
@@ -94,25 +96,17 @@ const CHART_OPTIONS = {
     scales: {
         y: {
             min: 0,
-            gridLines: {
-                display: true,
-                color: '#607D8BAA',
-                drawBorder: false,
-                zeroLineColor: '#607D8BAA',
-                drawTicks: false,
-            },
             ticks: {
                 color: '#FFFFFFAA',
+                font: { family: 'Bitstream Vera Sans' },
                 padding: 10
             },
         },
         x: {
             min: 0,
-            gridLines: {
-                display: false
-            },
             ticks: {
                 color: '#FFFFFFAA',
+                font: { family: 'Bitstream Vera Sans' },
                 maxTicksLimit: 12,
                 maxRotation: 0,
                 padding: 10,
