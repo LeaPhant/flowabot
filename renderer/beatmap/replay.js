@@ -214,23 +214,33 @@ class SliderTracker {
         this.beatmap = beatmap;
 
         this.frame = this.cursor.at(this.slider.startTime);
-        this.exitedFollowradius = !withinCircle(this.frame.x, this.frame.y, this.slider.position, this.beatmap.ActualFollowpointRadius);
+        this.exitedFollowradius = 
+            !withinCircle(this.frame.x, this.frame.y, this.slider.position, this.beatmap.ActualFollowpointRadius) 
+            || !this.frame.holding
     }
 
     until (from, time, repeat) {
         while (this.frame.offset < time) {
             this.frame = this.cursor.next();
+            
             let currentProgress = (this.frame.offset - from) / (this.slider.duration / this.slider.repeatCount);
             if (repeat) currentProgress = 1 - currentProgress;
             currentProgress = clamp(currentProgress, 0, 1);
+
             const dot = this.slider.SliderDots[Math.floor(currentProgress * (this.slider.SliderDots.length - 1))];
             if (!dot) continue;
 
             if (this.exitedFollowRadius) {
-                const withinSliderball = this.frame.holding && withinCircle(this.frame.x, this.frame.y, ...dot, this.beatmap.Radius);
+                const withinSliderball = 
+                    this.frame.holding 
+                    && withinCircle(this.frame.x, this.frame.y, ...dot, this.beatmap.Radius);
+
                 this.exitedFollowRadius = !withinSliderball;
             } else {
-                const withinFollowRadius = withinCircle(this.frame.x, this.frame.y, ...dot, this.beatmap.ActualFollowpointRadius);
+                const withinFollowRadius = 
+                    this.frame.holding 
+                    && withinCircle(this.frame.x, this.frame.y, ...dot, this.beatmap.ActualFollowpointRadius);
+
                 this.exitedFollowRadius = !withinFollowRadius;
             }
         }
