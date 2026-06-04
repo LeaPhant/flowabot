@@ -69,6 +69,11 @@ const CHART_OPTIONS = {
         }
     },
     elements: {
+        point: {
+            borderColor: 'rgba(255,255,255,0.1)',
+            backgroundColor: 'transparent',
+            radius: 2
+        },
         line: {
             borderColor: '#F06292',
             fill: false
