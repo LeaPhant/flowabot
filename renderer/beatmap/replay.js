@@ -582,52 +582,18 @@ class ReplayProcessor {
 					ScoringFrames.push(scoringFrame);
 				}
 
+                let replayFrame = cursor.at(hitObject.startTime);
+                let exitedFollowRadius = !withinCircle(replayFrame.x, replayFrame.y, hitObject.position, Beatmap.ActualFollowpointRadius);
+
 				for(let i = 0; i < hitObject.repeatCount; i++) {
-					const repeatOffset = hitObject.startTime + i * (hitObject.duration / hitObject.repeatCount);
+                    const repeatDuration = hitObject.duration / hitObject.repeatCount;
+					const repeatOffset = hitObject.startTime + i * (repeatDuration);
 					const sliderTicks = hitObject.SliderTicks.slice();
 
 					if (i % 2 == 1)
 						sliderTicks.reverse();
 
-					if (i > 0) {
-						const scoringFrame = newScoringFrame(ScoringFrames);
-						const replayFrame = cursor.at(repeatOffset);
-
-						scoringFrame.offset = repeatOffset;
-
-						const repeatPosition = i % 2 == 1 ? hitObject.endPosition : hitObject.position;
-
-						scoringFrame.position = repeatPosition;
-
-						const isLateStart = sliderHeadAccuracy && hitObject.hitOffset <= Beatmap.HitWindow50 && hitObject.hitOffset > repeatOffset;
-
-						if (isLateStart || replayFrame?.holding && withinCircle(replayFrame.x, replayFrame.y, ...repeatPosition, Beatmap.ActualFollowpointRadius)) {
-							scoringFrame.result = 30;
-							scoringFrame.combo++;
-							scoringFrame.largeTickHits++;
-                            scoringFrame.hpChange = HP_INCREASE['largeTickHit'];
-
-							if(scoringFrame.combo > scoringFrame.maxCombo)
-								scoringFrame.maxCombo = scoringFrame.combo;
-
-							ScoringFrames.push(scoringFrame);
-						} else {
-							// missed a slider repeat
-							if (sliderHeadAccuracy) {
-								scoringFrame.result = 'sliderbreak';
-							} else {
-								scoringFrame.result = 'large_tick_miss';
-								scoringFrame.largeTickMisses++;
-							}
-                            scoringFrame.hpChange = HP_INCREASE['largeTickMiss'];
-							scoringFrame.combo = 0;
-							hitObject.MissedSliderTick = true;
-
-							ScoringFrames.push(scoringFrame);
-						}
-					}
-
-					for (const tick of sliderTicks) {
+                    for (const tick of sliderTicks) {
 						const scoringFrame = newScoringFrame(ScoringFrames);
 						const tickOffset = i % 2 == 1 ? tick.reverseOffset : tick.offset;
 
@@ -636,11 +602,26 @@ class ReplayProcessor {
 						scoringFrame.offset = offset;
 						scoringFrame.position = tick.position;
 
-						const replayFrame = cursor.at(offset);
+                        while (replayFrame.offset < offset) {
+                            replayFrame = cursor.next();
+                            let currentProgress = (replayFrame.offset - repeatOffset) / repeatDuration;
+                            if (i % 2 == 1) currentProgress = 1 - currentProgress;
+                            currentProgress = clamp(currentProgress, 0, 1);
+                            const dot = hitObject.SliderDots[Math.floor(currentProgress * (hitObject.SliderDots.length - 1))];
+                            if (!dot) continue;
+
+                            if (exitedFollowRadius) {
+                                const withinSliderball = replayFrame.holding && withinCircle(replayFrame.x, replayFrame.y, ...dot, Beatmap.Radius);
+                                exitedFollowRadius = !withinSliderball;
+                            } else {
+                                const withinFollowRadius = replayFrame.holding && withinCircle(replayFrame.x, replayFrame.y, ...dot, Beatmap.ActualFollowpointRadius);
+                                exitedFollowRadius = !withinFollowRadius;
+                            }
+                        }
 
 						const isLateStart = sliderHeadAccuracy && hitObject.hitOffset <= Beatmap.HitWindow50 && hitObject.hitOffset > repeatOffset;
 
-						if (isLateStart || replayFrame?.holding && withinCircle(replayFrame.x, replayFrame.y, ...tick.position, Beatmap.ActualFollowpointRadius)) {
+						if (isLateStart || replayFrame?.holding && withinCircle(replayFrame.x, replayFrame.y, ...tick.position, Beatmap.ActualFollowpointRadius) && !exitedFollowRadius) {
 							scoringFrame.result = 10;
 							scoringFrame.combo++;
 							scoringFrame.largeTickHits++;
@@ -668,8 +649,77 @@ class ReplayProcessor {
 						ScoringFrames.push(scoringFrame);
 					}
 
+					if (i > 0) {
+						const scoringFrame = newScoringFrame(ScoringFrames);
+
+                        while (replayFrame.offset < repeatOffset) {
+                            replayFrame = cursor.next();
+                            let currentProgress = (replayFrame.offset - (repeatOffset - repeatDuration)) / repeatDuration;
+                            if (i % 2 == 1) currentProgress = 1 - currentProgress;
+                            currentProgress = clamp(currentProgress, 0, 1);
+                            const dot = hitObject.SliderDots[Math.floor(currentProgress * (hitObject.SliderDots.length - 1))];
+                            if (!dot) continue;
+
+                            if (exitedFollowRadius) {
+                                const withinSliderball = replayFrame.holding && withinCircle(replayFrame.x, replayFrame.y, ...dot, Beatmap.Radius);
+                                exitedFollowRadius = !withinSliderball;
+                            } else {
+                                const withinFollowRadius = replayFrame.holding && withinCircle(replayFrame.x, replayFrame.y, ...dot, Beatmap.ActualFollowpointRadius);
+                                exitedFollowRadius = !withinFollowRadius;
+                            }
+                        }
+
+						scoringFrame.offset = repeatOffset;
+
+						const repeatPosition = i % 2 == 1 ? hitObject.endPosition : hitObject.position;
+
+						scoringFrame.position = repeatPosition;
+
+						const isLateStart = sliderHeadAccuracy && hitObject.hitOffset <= Beatmap.HitWindow50 && hitObject.hitOffset > repeatOffset;
+
+						if (isLateStart || replayFrame?.holding && withinCircle(replayFrame.x, replayFrame.y, ...repeatPosition, Beatmap.ActualFollowpointRadius) && !exitedFollowRadius) {
+							scoringFrame.result = 30;
+							scoringFrame.combo++;
+							scoringFrame.largeTickHits++;
+                            scoringFrame.hpChange = HP_INCREASE['largeTickHit'];
+
+							if(scoringFrame.combo > scoringFrame.maxCombo)
+								scoringFrame.maxCombo = scoringFrame.combo;
+
+							ScoringFrames.push(scoringFrame);
+						} else {
+							// missed a slider repeat
+							if (sliderHeadAccuracy) {
+								scoringFrame.result = 'sliderbreak';
+							} else {
+								scoringFrame.result = 'large_tick_miss';
+								scoringFrame.largeTickMisses++;
+							}
+                            scoringFrame.hpChange = HP_INCREASE['largeTickMiss'];
+							scoringFrame.combo = 0;
+							hitObject.MissedSliderTick = true;
+
+							ScoringFrames.push(scoringFrame);
+						}
+					}
+
 					if (i + 1 == hitObject.repeatCount) {
-						const replayFrame = cursor.at(hitObject.actualEndTime);
+                        while (replayFrame.offset < hitObject.actualEndTime) {
+                            replayFrame = cursor.next();
+                            let currentProgress = (replayFrame.offset - repeatOffset) / repeatDuration;
+                            if (i % 2 == 1) currentProgress = 1 - currentProgress;
+                            currentProgress = clamp(currentProgress, 0, 1);
+                            const dot = hitObject.SliderDots[Math.floor(currentProgress * (hitObject.SliderDots.length - 1))];
+                            if (!dot) continue;
+
+                            if (exitedFollowRadius) {
+                                const withinSliderball = replayFrame.holding && withinCircle(replayFrame.x, replayFrame.y, ...dot, Beatmap.Radius);
+                                exitedFollowRadius = !withinSliderball;
+                            } else {
+                                const withinFollowRadius = replayFrame.holding && withinCircle(replayFrame.x, replayFrame.y, ...dot, Beatmap.ActualFollowpointRadius);
+                                exitedFollowRadius = !withinFollowRadius;
+                            }
+                        }
 
 						const endPosition = i % 2 == 1 ? hitObject.position : hitObject.actualEndPosition;
 
@@ -677,7 +727,7 @@ class ReplayProcessor {
 						&& hitObject.hitOffset <= Beatmap.HitWindow50 
 						&& hitObject.hitOffset > (hitObject.actualEndTime - hitObject.startTime);
 
-						if (isLateStart || replayFrame?.holding && withinCircle(replayFrame.x, replayFrame.y, ...endPosition, Beatmap.ActualFollowpointRadius)) {
+						if (isLateStart || replayFrame?.holding && withinCircle(replayFrame.x, replayFrame.y, ...endPosition, Beatmap.ActualFollowpointRadius) && !exitedFollowRadius) {
 							const scoringFrame = newScoringFrame(ScoringFrames);
 							scoringFrame.offset = hitObject.endTime;
 							scoringFrame.position = endPosition;
