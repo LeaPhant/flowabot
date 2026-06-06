@@ -201,6 +201,15 @@ class Cursor {
     }
 }
 
+const getSliderPosition = (slider, offset) => {
+    const relOffset = offset - slider.startTime;
+    let turnProgress = relOffset % slider.repeatDuration / slider.repeatDuration;
+    const turn = Math.floor(relOffset / slider.repeatDuration) % 2;
+    if (turn) turnProgress = 1 - turnProgress;
+
+    return slider.SliderDots[Math.floor(turnProgress * (slider.SliderDots.length - 1))];
+}
+
 class SliderTracker {
     cursor;
     frame;
@@ -219,15 +228,11 @@ class SliderTracker {
             || !this.frame.holding
     }
 
-    until (from, time, repeat) {
+    until (time) {
         while (this.frame.offset < time) {
             this.frame = this.cursor.next();
-            
-            let currentProgress = (this.frame.offset - from) / (this.slider.duration / this.slider.repeatCount);
-            if (repeat) currentProgress = 1 - currentProgress;
-            currentProgress = clamp(currentProgress, 0, 1);
 
-            const dot = this.slider.SliderDots[Math.floor(currentProgress * (this.slider.SliderDots.length - 1))];
+            const dot = getSliderPosition(this.slider, this.frame.offset);
             if (!dot) continue;
 
             if (this.exitedFollowRadius) {
@@ -638,51 +643,10 @@ class ReplayProcessor {
 					if (i % 2 == 1)
 						sliderTicks.reverse();
 
-                    for (const tick of sliderTicks) {
-						const scoringFrame = newScoringFrame(ScoringFrames);
-						const tickOffset = i % 2 == 1 ? tick.reverseOffset : tick.offset;
-
-						const offset = repeatOffset + tickOffset;
-
-						scoringFrame.offset = offset;
-						scoringFrame.position = tick.position;
-
-                        tracker.until(repeatOffset, offset, i % 2);
-
-						const isLateStart = sliderHeadAccuracy && hitObject.hitOffset <= Beatmap.HitWindow50 && hitObject.hitOffset > repeatOffset;
-
-						if (isLateStart || tracker.frame.holding && withinCircle(tracker.frame.x, tracker.frame.y, ...tick.position, Beatmap.ActualFollowpointRadius) && !tracker.exitedFollowRadius) {
-							scoringFrame.result = 10;
-							scoringFrame.combo++;
-							scoringFrame.largeTickHits++;
-                            scoringFrame.hpChange = HP_INCREASE['largeTickHit'];
-
-							if(scoringFrame.combo > scoringFrame.maxCombo)
-								scoringFrame.maxCombo = scoringFrame.combo;
-
-							ScoringFrames.push(scoringFrame);
-
-							continue;
-						}
-
-						// missed a slider tick
-						hitObject.MissedSliderTick = 1;
-						if (sliderHeadAccuracy) {
-							scoringFrame.result = 'sliderbreak';
-						} else {
-							scoringFrame.result = 'large_tick_miss';
-							scoringFrame.largeTickMisses++;
-						}
-                        scoringFrame.hpChange = HP_INCREASE['largeTickMiss'];
-						scoringFrame.combo = 0;
-
-						ScoringFrames.push(scoringFrame);
-					}
-
 					if (i > 0) {
 						const scoringFrame = newScoringFrame(ScoringFrames);
 
-                        tracker.until(repeatOffset - repeatDuration, repeatOffset, i % 2);
+                        tracker.until(repeatOffset);
 
 						scoringFrame.offset = repeatOffset;
 
@@ -718,8 +682,49 @@ class ReplayProcessor {
 						}
 					}
 
+                    for (const tick of sliderTicks) {
+						const scoringFrame = newScoringFrame(ScoringFrames);
+						const tickOffset = i % 2 == 1 ? tick.reverseOffset : tick.offset;
+
+						const offset = repeatOffset + tickOffset;
+
+						scoringFrame.offset = offset;
+						scoringFrame.position = tick.position;
+
+                        tracker.until(offset);
+
+						const isLateStart = sliderHeadAccuracy && hitObject.hitOffset <= Beatmap.HitWindow50 && hitObject.hitOffset > repeatOffset;
+
+						if (isLateStart || tracker.frame.holding && withinCircle(tracker.frame.x, tracker.frame.y, ...tick.position, Beatmap.ActualFollowpointRadius) && !tracker.exitedFollowRadius) {
+							scoringFrame.result = 10;
+							scoringFrame.combo++;
+							scoringFrame.largeTickHits++;
+                            scoringFrame.hpChange = HP_INCREASE['largeTickHit'];
+
+							if(scoringFrame.combo > scoringFrame.maxCombo)
+								scoringFrame.maxCombo = scoringFrame.combo;
+
+							ScoringFrames.push(scoringFrame);
+
+							continue;
+						}
+
+						// missed a slider tick
+						hitObject.MissedSliderTick = 1;
+						if (sliderHeadAccuracy) {
+							scoringFrame.result = 'sliderbreak';
+						} else {
+							scoringFrame.result = 'large_tick_miss';
+							scoringFrame.largeTickMisses++;
+						}
+                        scoringFrame.hpChange = HP_INCREASE['largeTickMiss'];
+						scoringFrame.combo = 0;
+
+						ScoringFrames.push(scoringFrame);
+					}
+
 					if (i + 1 == hitObject.repeatCount) {
-                        tracker.until(repeatOffset, hitObject.actualEndTime, i % 2);
+                        tracker.until(hitObject.actualEndTime);
 
 						const endPosition = i % 2 == 1 ? hitObject.position : hitObject.actualEndPosition;
 

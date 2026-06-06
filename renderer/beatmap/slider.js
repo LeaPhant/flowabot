@@ -290,13 +290,11 @@ class SliderProcessor {
 		const { Slider } = this;
 		const { SliderDots } = Slider;
 
-		const turnDuration = Slider.duration / Slider.repeatCount;
-
 		const finalSpanIndex = Slider.repeatCount - 1;
-        const finalSpanStartTime = Slider.startTime + finalSpanIndex * turnDuration;
+        const finalSpanStartTime = Slider.startTime + finalSpanIndex * Slider.repeatDuration;
 
-		const legacyLastTickTime = Math.max(Slider.startTime + Slider.duration / 2, (finalSpanStartTime + turnDuration) + TAIL_LENIENCY);
-        let legacyLastTickProgress = (legacyLastTickTime - finalSpanStartTime) / turnDuration;
+		const legacyLastTickTime = Math.max(Slider.startTime + Slider.duration / 2, (finalSpanStartTime + Slider.repeatDuration) + TAIL_LENIENCY);
+        let legacyLastTickProgress = (legacyLastTickTime - finalSpanStartTime) / Slider.repeatDuration;
 
         if (Slider.repeatCount % 2 == 0)
 			legacyLastTickProgress = 1 - legacyLastTickProgress;
@@ -341,15 +339,13 @@ class SliderProcessor {
 			if(!Array.isArray(position) || position.length != 2)
 				continue;
 
-			let turnDuration = Slider.duration / Slider.repeatCount;
-
-			let offset = (x / Slider.pixelLength) * turnDuration;
+			let offset = (x / Slider.pixelLength) * Slider.repeatDuration;
 
 			// Don't render slider tick on slider end
 			if (Math.round(x) != Slider.pixelLength) {
 				SliderTicks.push({
 					offset: offset,
-					reverseOffset: turnDuration - offset,
+					reverseOffset: Slider.repeatDuration - offset,
 					position
 				});
 			}
@@ -361,6 +357,7 @@ class SliderProcessor {
 	process (Slider) {
 		this.Slider = Slider;
 
+        Slider.repeatDuration = Slider.duration / Slider.repeatCount;
 		Slider.SliderDots = [];
 
 		if (Slider.curveType == 'pass-through' && Slider.points.length == 3) {
