@@ -4,7 +4,7 @@ const weather = require('openweather-apis');
 
 weather.setLang('en');
 weather.setUnits('metric');
-weather.setAPPID(config.credentials.open_weather_map_api);
+weather.setAPPID(process.env.OPENWEATHERMAP_KEY ?? config.credentials.open_weather_map_api);
 
 module.exports = {
     command: 'weather',
@@ -16,6 +16,7 @@ module.exports = {
         result: "Returns the current weather in London."
     },
     configRequired: ['credentials.open_weather_map_api'],
+    envRequired: ['OPENWEATHERMAP_KEY'],
     call: obj => {
         return new Promise((resolve, reject) => {
             let { argv, msg } = obj;

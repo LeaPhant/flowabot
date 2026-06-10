@@ -356,7 +356,7 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 }
 
 async function downloadMedia(options, beatmap, beatmap_path, size, download_path){
-	if(options.type != 'mp4' || options.custom_url || !options.audio || !config.credentials.osu_api_key)
+	if(options.type != 'mp4' || options.custom_url || !options.audio || !(process.env.OSU_API_KEY ?? config.credentials.osu_api_key))
 		throw 'No mapset available';
 
 	let output = {};
@@ -368,7 +368,7 @@ async function downloadMedia(options, beatmap, beatmap_path, size, download_path
 		const hash = crypto.createHash('md5').update(content).digest("hex");
 
 		const { data } = await axios.get('https://osu.ppy.sh/api/get_beatmaps', { params: {
-			k: config.credentials.osu_api_key,
+			k: process.env.OSU_API_KEY ?? config.credentials.osu_api_key,
 			h: hash
 		}});
 
@@ -867,11 +867,11 @@ module.exports = {
 							attachment: `${file_path}/video.${options.type}`,
 							name: `video.${options.type}`
 						}]}).then(() => {
-							fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
+							//fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
 						})
 						.catch(console.error)
 						.finally(() => {
-							fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
+							//fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
 						});
 					}else{
 						if (!config.upload_command) {

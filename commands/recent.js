@@ -21,6 +21,7 @@ module.exports = {
         }
     ],
     configRequired: ["credentials.client_id", "credentials.client_secret"],
+    envRequired: ['OSU_CLIENT_ID', 'OSU_CLIENT_SECRET'],
     call: obj => {
         return new Promise((resolve, reject) => {
             let { argv, msg, user_ign, last_beatmap } = obj;

@@ -192,7 +192,7 @@ module.exports = {
     },
 
     downloadBeatmapByMd5: async function(beatmap_md5) {
-        const beatmap = await axios.get('https://osu.ppy.sh/api/get_beatmaps', { params: { k: config.credentials?.osu_api_key, h: beatmap_md5 }});
+        const beatmap = await axios.get('https://osu.ppy.sh/api/get_beatmaps', { params: { k: process.env.OSU_API_KEY ?? config.credentials?.osu_api_key, h: beatmap_md5 }});
 
         if (!beatmap.data || beatmap.data.length < 1) return;
 

@@ -49,8 +49,9 @@ if(helper.getItem('last_message')){
 	helper.setItem('last_message', JSON.stringify(last_message));
 }
 
-if(config.credentials.client_id && config.credentials.client_secret)
-    osu.init(client, config.credentials.client_id, config.credentials.client_secret, last_beatmap);
+if((process.env.OSU_CLIENT_ID ?? config.credentials.client_id)
+    && (process.env.OSU_CLIENT_SECRET ?? config.credentials.client_secret))
+    osu.init(client, process.env.OSU_CLIENT_ID ?? config.credentials.client_id, process.env.OSU_CLIENT_SECRET ?? config.credentials.client_secret, last_beatmap);
 
 function checkCommand(msg, command){
     if(!msg.content.startsWith(config.prefix))
@@ -137,7 +138,16 @@ fs.readdir(commands_path).then(items => {
                 if(!Array.isArray(command.configRequired))
                     configRequired = [configRequired];
 
-                configRequired.forEach(config_path => {
+                let { envRequired } = command;
+
+                if (!Array.isArray(command.envRequired))
+                    envRequired = [envRequired];
+
+                configRequired.forEach((config_path, index) => {
+                    if (process.env[envRequired[index]] != null 
+                        && process.env[envRequired[index]].length > 0)
+                        return;
+
                     if(!objectPath.has(config, config_path)){
                         available = false;
                         unavailability_reason.push(`required config option ${config_path} not set`);
@@ -322,13 +332,13 @@ client.on('messageCreate', onMessage);
 
 client.on('ready', () => {
 	helper.log('flowabot is ready');
-	if(config.credentials.discord_client_id)
+	if(process.env.DISCORD_CLIENT_ID ?? config.credentials.discord_client_id)
 		helper.log(
 			`Invite bot to server: ${chalk.blueBright('https://discord.com/api/oauth2/authorize?client_id='
-			+ config.credentials.discord_client_id + '&permissions=8&scope=bot')}`);
+			+ (process.env.DISCORD_CLIENT_ID ?? config.credentials.discord_client_id) + '&permissions=8&scope=bot')}`);
 });
 
-client.login(config.credentials.bot_token).catch(err => {
+client.login(process.env.DISCORD_BOT_TOKEN ?? config.credentials.bot_token).catch(err => {
 	console.error('');
 	console.error(chalk.redBright("Couldn't log into Discord. Wrong bot token?"));
 	console.error('');

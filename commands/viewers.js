@@ -5,8 +5,8 @@ const { AppTokenAuthProvider } = require('@twurple/auth');
 const { ApiClient } = require('@twurple/api');
 
 const authProvider = new AppTokenAuthProvider(
-	config.credentials.twitch_client_id, 
-	config.credentials.twitch_client_secret
+	process.env.TWITCH_CLIENT_ID ?? config.credentials.twitch_client_id, 
+	process.env.TWITCH_CLIENT_SECRET ?? config.credentials.twitch_client_secret
 );
 
 const apiClient = new ApiClient({ authProvider });
@@ -21,6 +21,7 @@ module.exports = {
         result: "Returns how many viewers distortion2 currently has (if they're live)."
     },
     configRequired: ['credentials.twitch_client_id', 'credentials.twitch_client_secret'],
+    envRequired: ['TWITCH_CLIENT_ID', 'TWITCH_CLIENT_SECRET'],
     call: async obj => {
 		let { argv } = obj;
 

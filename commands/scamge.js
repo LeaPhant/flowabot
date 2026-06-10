@@ -8,6 +8,7 @@ module.exports = {
     description: "See how much pp somebody or yourself is scammed out of.",
     usage: '[username]',
     configRequired: ['credentials.client_id', 'credentials.client_secret'],
+    envRequired: ['OSU_CLIENT_ID', 'OSU_CLIENT_SECRET'],
     call: obj => {
         return new Promise((resolve, reject) => {
             const { argv, msg, user_ign } = obj;

@@ -1096,8 +1096,8 @@ async function getAccessToken(){
     };
 
     let body = {
-        "client_id": config.credentials.client_id,
-        "client_secret": config.credentials.client_secret,
+        "client_id": process.env.OSU_CLIENT_ID ?? config.credentials.client_id,
+        "client_secret": process.env.OSU_CLIENT_SECRET ?? config.credentials.client_secret,
         "grant_type": "client_credentials",
         "scope": "public"  
     }
