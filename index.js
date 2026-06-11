@@ -216,9 +216,9 @@ function onMessage(msg){
 
     let argv = msg.content.split(' ');
 
-    argv[0] = argv[0].substr(config.prefix.length);
+    argv[0] = argv[0].substr(helper.prefix.length);
 
-    if(config.debug)
+    if(helper.debug)
         helper.log(msg.author.username, ':', msg.content);
 
     commands.forEach(command => {

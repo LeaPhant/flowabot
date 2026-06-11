@@ -162,7 +162,7 @@ module.exports = {
 
                 resolve({embeds: [embed]});
             }).catch(err => {
-               if(config.debug)
+               if(helper.debug)
                    helper.error(err);
 
                reject('User not found');

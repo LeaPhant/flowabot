@@ -1331,7 +1331,7 @@ module.exports = {
 
                 cb(output_message);
 
-                if(config.debug){
+                if(helper.debug){
                     helper.log("Current pp: " + pp_full);
                     helper.log("Added pp: " + adding_pp + " -> " + (pp_no_bonus - pp_full).toFixed(1));
                     helper.log("Result: " + pp_no_bonus.toFixed(1));

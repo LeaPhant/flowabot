@@ -196,7 +196,7 @@ module.exports = {
                     beatmap_id = await osu.parse_beatmap_url(beatmap_url);
                     if(!beatmap_id) custom_url = true;
                 } catch(e) {
-                    if(config.debug)
+                    if(helper.debug)
                         helper.error(e);
 
                     reject(e);
@@ -221,13 +221,13 @@ module.exports = {
 
             let download_path = path.resolve(config.osu_cache_path, `${beatmap_id}.osu`);
 
-            if(config.debug)
+            if(helper.debug)
                 helper.log('render length', length);
 
             if(length >= 10)
                 video_type = 'mp4';
 
-            if(config.debug)
+            if(helper.debug)
                 helper.log('specified ar', ar);
 
             if(custom_url){
@@ -243,7 +243,7 @@ module.exports = {
             let previewTime;
 
             if (type == 'strains' || type == 'aim' || type == 'speed' ){
-                if(config.debug)
+                if(helper.debug)
                     helper.log('getting strains for mods', mods);
 
                 time = Math.max(0, (await osu.get_strains(download_path, mods.join(''), type)).max_strain_time_real - 2000 - (length * 1000 / 2));

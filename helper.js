@@ -1,6 +1,4 @@
 const LocalStorage = require('node-localstorage').LocalStorage;
-localStorage = new LocalStorage('./scratch');
-
 const { DateTime } = require('luxon');
 const fs = require('fs');
 const path = require('path');
@@ -11,6 +9,9 @@ const fileExists = async path => !!(await fs.promises.stat(path).catch(e => fals
 
 const config = require('./config.json');
 const PREFIX = process.env.BOT_PREFIX ?? config.prefix;
+const DEBUG = process.env.DEBUG ?? config.debug;
+
+localStorage = new LocalStorage(config.storage_path ?? './scratch');
 
 const sep = '  ✦  ';
 const cmd_escape = "```";
@@ -19,6 +20,7 @@ let commands;
 
 module.exports = {
     prefix: PREFIX,
+    debug: DEBUG,
     fileExists,
 
     init: _commands => {
@@ -290,7 +292,7 @@ module.exports = {
                 return_username = user_ign[message.author.id];
         }
 
-        if(config.debug)
+        if(DEBUG)
             module.exports.log('returning data for username', return_username);
 
         return return_username;

@@ -758,11 +758,11 @@ module.exports = {
 
 		let done = 0;
 
-		if(config.debug)
+		if(helper.debug)
 			console.time('render beatmap');
 
 		if(options.type == 'gif'){
-			if(config.debug)
+			if(helper.debug)
 				console.time('encode video');
 
 			ffmpeg_args.push(`${file_path}/video.gif`);
@@ -781,7 +781,7 @@ module.exports = {
 					return false;
 				}
 
-				if(config.debug)
+				if(helper.debug)
 					console.timeEnd('encode video');
 
 				renderStatus[3] = `✓ encoding video (${((Date.now() - encodingProcessStart) / 1000).toFixed(3)}s)`;
@@ -826,7 +826,7 @@ module.exports = {
 				ffmpeg_args.unshift('-f', 'lavfi', '-r', fps, '-i', `color=c=black:s=${size.join("x")}`);
 				helper.log("rendering without audio");
 			}).finally(() => {
-				if(config.debug)
+				if(helper.debug)
 					console.time('encode video');
 
 				ffmpeg_args.push(
@@ -852,7 +852,7 @@ module.exports = {
 						return false;
 					}
 
-					if(config.debug)
+					if(helper.debug)
 						console.timeEnd('encode video');
 
 					renderStatus[3] = `✓ encoding video (${((Date.now() - encodingProcessStart) / 1000).toFixed(3)}s)`;
@@ -891,7 +891,7 @@ module.exports = {
                             } else {
                                 const upload_command = config.upload_command.replace('{path}', `${file_path}/video.${options.type}`);
 
-                                if (config.debug)
+                                if (helper.debug)
                                     console.log('running upload command: ', config.upload_command);
 
                                 response = await execPromise(upload_command);
@@ -965,7 +965,7 @@ module.exports = {
 				if(done == threads){
 					renderStatus[2] = `✓ rendering frames (${((Date.now() - framesProcessStart) / 1000).toFixed(3)}s)`;
 
-					if(config.debug)
+					if(helper.debug)
 						console.timeEnd('render beatmap');
 				}
 			});
