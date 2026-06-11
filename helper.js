@@ -9,7 +9,7 @@ const fileExists = async path => !!(await fs.promises.stat(path).catch(e => fals
 
 const config = require('./config.json');
 const PREFIX = process.env.BOT_PREFIX ?? config.prefix;
-const DEBUG = process.env.DEBUG ?? config.debug;
+const DEBUG = process.env.DEBUG ? ['1', 'true'].includes(process.env.DEBUG) : config.debug;
 
 localStorage = new LocalStorage(config.storage_path ?? './scratch');
 
