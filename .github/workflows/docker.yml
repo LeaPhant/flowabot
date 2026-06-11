@@ -32,6 +32,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Get commit sha
+        id: sha
+        run: |
+          echo "short_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
       # Install the cosign tool except on PR
       # https://github.com/sigstore/cosign-installer
       - name: Install cosign
@@ -71,8 +76,11 @@ jobs:
         uses: docker/build-push-action@0565240e2d4ab88bba5387d719585280857ece09 # v5.0.0
         with:
           context: .
+          platforms: linux/${{ matrix.arch }}
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: |
+            ghcr.io/leaphant/flowabot:main-${{ matrix.arch }}
+            ghcr.io/leaphant/flowabot:main-${{ steps.meta.sha.outputs.short_sha }}-${{ matrix.arch }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
