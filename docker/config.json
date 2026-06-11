@@ -1,0 +1,15 @@
+{
+    "prefix": "!",
+    "debug": true,
+    "process_beatmap_sync": true,
+    "osu_cache_path": "/maps",
+    "replay_path": "/replays",
+    "maps_path": "/mapsets",
+    "storage_path": "/store",
+    "upload_script": "/upload.sh",
+    "pp_path": "",
+    "beatmap_api": "https://osu.respektive.pw",
+    "ffmpeg_path": "/usr/bin/ffmpeg",
+    "credentials": {}
+  }
+  
