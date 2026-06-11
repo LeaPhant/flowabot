@@ -867,14 +867,14 @@ module.exports = {
 							attachment: `${file_path}/video.${options.type}`,
 							name: `video.${options.type}`
 						}]}).then(() => {
-							//fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
+							fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
 						})
 						.catch(console.error)
 						.finally(() => {
-							//fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
+							fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
 						});
 					}else{
-						if (!config.upload_command) {
+						if (!config.upload_command && !config.upload_script) {
 							resolveRender("File too large and no upload command specified.").finally(() => {
 								fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
 							});
@@ -882,17 +882,26 @@ module.exports = {
 						}
 
 						try{
-							const upload_command = config.upload_command.replace('{path}', `${file_path}/video.${options.type}`);
+                            const upload_script = await helper.fileExists(config.upload_script) ? config.upload_script : undefined;
+                            let response;
 
-							if (config.debug)
-								console.log('running upload command: ', config.upload_command);
+                            if (upload_script) {
+                                response = await execFilePromise(upload_script, [`${file_path}/video.${options.type}`]);
+                                const url = new URL(response.stdout);
+                            } else {
+                                const upload_command = config.upload_command.replace('{path}', `${file_path}/video.${options.type}`);
 
-							const response = await execPromise(upload_command);
-							const url = new URL(response.stdout);
+                                if (config.debug)
+                                    console.log('running upload command: ', config.upload_command);
 
-							await resolveRender(url.href);
+                                response = await execPromise(upload_command);
+                            }
+                            
+                            const url = new URL(response.stdout);
+                            
+                            await resolveRender(url.href);
 						}catch(err){
-							await resolveRender("File too large and failed to upload to specified upload command.")
+							await resolveRender("File too large and failed to upload to specified upload command/script.")
 							console.error(err);
 						}finally{
 							fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
