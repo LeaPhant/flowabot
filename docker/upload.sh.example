@@ -2,7 +2,7 @@
 
 # example upload script for a zipline v4 server
 
-ZIPLINE_HOST="https://boob.li"
-TOKEN="MTc4MTE3OTI5Mjg4Nw==.NWVhYmI0NjE0NmQ1MzM3NTE2MDY1Nzg1LjhhYTEwNDZlZjBiNTUwYWI1Y2I2NzcwYWU4N2I0YjA3NGY3NGYyNTVhY2UyOTVkYmQ2ZmZjMWIxZTBlOWYyZGNiOWYzOTAxNTkyNTBhOGFjYzg0ODBmNjBjYWE2YjYyZDdhMjY0ZDc3ODliMjMzMGU5NDVmZDUxYTRkZWE5NjZiYTYuMzI1YTc2NGI2OTAwODBlMTE1MThmMDc4ZGQ2MTgwYWQ="
+ZIPLINE_HOST=""
+TOKEN=""
 
-curl -s -X POST "$ZIPLINE_HOST/api/upload" -H "authorization: $TOKEN" -H 'Content-type: multipart/form-data' -H 'No-JSON: true' -H 'Override-Domain: boob.li' -F "file=@$1;type=video/mp4" | jq -r .files[0].url
+curl -s -X POST "$ZIPLINE_HOST/api/upload" -H "authorization: $TOKEN" -H 'Content-type: multipart/form-data' -F "file=@$1;type=video/mp4" | jq -r .files[0].url
