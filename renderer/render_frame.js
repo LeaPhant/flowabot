@@ -34,9 +34,9 @@ let enabled_mods = [""];
 
 const resources = path.resolve(__dirname, "res");
 
-const BEATMAP_MIRRORS = config.beatmap_mirrors ?? [
+const BEATMAP_MIRRORS = process.env.BEATMAP_MIRRORS ? process.env.BEATMAP_MIRRORS.split(',') : (config.beatmap_mirrors ?? [
     "https://mirror.nekoha.moe/api4/download/$SETID"
-];
+]);
 
 async function copyDir(src,dest) {
     const entries = await fs.promises.readdir(src, {withFileTypes: true});
