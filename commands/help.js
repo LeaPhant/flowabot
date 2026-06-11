@@ -13,7 +13,7 @@ module.exports = {
     example: [
         {
             run: "help pp",
-            result: `Returns help on how to use the \`${config.prefix}pp\` command.`
+            result: `Returns help on how to use the \`${helper.prefix}pp\` command.`
         }
     ],
     call: obj => {

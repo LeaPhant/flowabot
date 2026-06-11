@@ -10,6 +10,7 @@ const axios = require('axios');
 const fileExists = async path => !!(await fs.promises.stat(path).catch(e => false));
 
 const config = require('./config.json');
+const PREFIX = process.env.BOT_PREFIX ?? config.prefix;
 
 const sep = '  ✦  ';
 const cmd_escape = "```";
@@ -17,6 +18,7 @@ const cmd_escape = "```";
 let commands;
 
 module.exports = {
+    prefix: PREFIX,
     fileExists,
 
     init: _commands => {
@@ -68,7 +70,7 @@ module.exports = {
                     if(index > 0)
                         commands_value += ", ";
 
-                    commands_value += `\`${config.prefix}${_command}\``;
+                    commands_value += `\`${PREFIX}${_command}\``;
                 });
 
                 embed.fields.push({
@@ -89,7 +91,7 @@ module.exports = {
                 if(command.usage){
                     embed.fields.push({
                         name: "Usage",
-                        value: `${cmd_escape}${config.prefix}${command.command[0]} ${command.usage}${cmd_escape}\n`
+                        value: `${cmd_escape}${PREFIX}${command.command[0]} ${command.usage}${cmd_escape}\n`
                     });
                 }
 
@@ -109,10 +111,10 @@ module.exports = {
                             examples_value += "\n\n";
 
                         if(typeof example === 'object'){
-                            examples_value += `${cmd_escape}${config.prefix}${example.run}${cmd_escape}`;
+                            examples_value += `${cmd_escape}${PREFIX}${example.run}${cmd_escape}`;
                             examples_value += example.result;
                         }else{
-                            examples_value += `${cmd_escape}${config.prefix}${example}${cmd_escape}`;
+                            examples_value += `${cmd_escape}${PREFIX}${example}${cmd_escape}`;
                         }
                     });
 
