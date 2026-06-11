@@ -13,7 +13,7 @@ services:
 #
 #   volumes:
 #     - ./data/maps:/maps
-#     - ./data/mapsets:/maps
+#     - ./data/mapsets:/mapsets
 #     - ./data/replays:/replays
 #     - ./data/store:/store
 #     - ./upload.sh:/upload.sh
