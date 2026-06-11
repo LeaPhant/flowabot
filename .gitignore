@@ -70,7 +70,7 @@ scratch
 .DS_Store
 
 # config and credentials
-config.json
+/config.json
 
 build
 osumaps

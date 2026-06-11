@@ -1,0 +1,21 @@
+services:
+  flowabot:
+    image: ghcr.io/leaphant/flowabot:main
+    container_name: flowabot
+    restart: unless-stopped
+
+#   Specify custom locations to cache (optional)
+#     - maps (.osu files)
+#     - mapsets (extracted .osz)
+#     - replays (.osr)
+#     - localstorage store (previously ./scratch)
+#     - upload script (video path passed as argument, don't forget to chmod +x it)
+#
+#   volumes:
+#     - ./data/maps:/maps
+#     - ./data/mapsets:/maps
+#     - ./data/replays:/replays
+#     - ./data/store:/store
+#     - ./upload.sh:/upload.sh
+
+    env_file: .env # see .env.example
