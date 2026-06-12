@@ -35,7 +35,7 @@ let enabled_mods = [""];
 const resources = path.resolve(__dirname, "res");
 
 const BEATMAP_MIRRORS = process.env.BEATMAP_MIRRORS ? process.env.BEATMAP_MIRRORS.split(',') : (config.beatmap_mirrors ?? [
-    "https://mirror.nekoha.moe/api4/download/$SETID"
+    "https://mirror.nekoha.moe/api4/download/{SETID}"
 ]);
 
 async function copyDir(src,dest) {
@@ -396,18 +396,24 @@ async function downloadMedia(options, beatmap, beatmap_path, size, download_path
 
 	let mapOsz;
 
-    for (const mirror of BEATMAP_MIRRORS) {
-        try {
-            const oszResponse = await axios.get(
-                mirror.replaceAll('$SETID', beatmapset_id), 
-                { timeout: 10000, responseType: 'arraybuffer' }
-            );
-            mapOsz = oszResponse.data;
-            break;
-        } catch(e) {
-            continue;
-        }
-    }
+	for (const mirror of BEATMAP_MIRRORS) {
+		const mirrorUrl = mirror.replace(/\$SETID|\{SETID\}/g, beatmapset_id);
+		try {
+			const oszResponse = await axios.get(mirrorUrl, {
+				timeout: 10000,
+				responseType: "arraybuffer",
+				headers: {
+					"User-Agent": "flowabot (https://github.com/LeaPhant/flowabot)",
+				},
+			});
+			mapOsz = oszResponse.data;
+			break;
+		} catch (e) {
+			let errorString = Buffer.from(e.response.data).toString("utf-8");
+			console.error(mirrorUrl, e.response.status, errorString);
+			continue;
+		}
+	}
 
 	const extraction_path = path.resolve(download_path, 'map');
 
