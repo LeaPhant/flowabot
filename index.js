@@ -17,10 +17,8 @@ const helper = require('./helper.js');
 const intents = process.env.DISCORD_INTENTS 
     ? process.env.DISCORD_INTENTS.split(',').map(i => GatewayIntentBits[i]) 
     : Object.values(GatewayIntentBits);
-const client = new Client({ intents, partials: Object.values(Partials) });
 
-const flags = new IntentsBitField(client.options.intents).toArray();
-console.log('flags:', flags);
+const client = new Client({ intents, partials: Object.values(Partials) });
 
 client.on('error', helper.error);
 
