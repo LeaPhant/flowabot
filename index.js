@@ -5,7 +5,7 @@ process.on('uncaughtException', function(err){
     console.error(err.stack);
 });
 
-const { Client, GatewayIntentBits, Partials } = require('discord.js');
+const { Client, GatewayIntentBits, IntentsBitField, Partials } = require('discord.js');
 const fs = require('fs').promises;
 const path = require('path');
 const objectPath = require("object-path");
@@ -14,7 +14,13 @@ const chalk = require('chalk');
 const osu = require('./osu.js');
 const helper = require('./helper.js');
 
-const client = new Client({ intents: Object.values(GatewayIntentBits), partials: Object.values(Partials) });
+const intents = process.env.DISCORD_INTENTS 
+    ? process.env.DISCORD_INTENTS.split(',').map(i => GatewayIntentBits[i]) 
+    : Object.values(GatewayIntentBits);
+const client = new Client({ intents, partials: Object.values(Partials) });
+
+const flags = new IntentsBitField(client.options.intents).toArray();
+console.log('flags:', flags);
 
 client.on('error', helper.error);
 
@@ -171,6 +177,22 @@ fs.readdir(commands_path).then(items => {
                         unavailability_reason.push(`required emote ${emote_name} is missing`);
                     }
                 });
+            }
+
+            if (command.intentRequired) {
+                let { intentRequired } = command;
+
+                if(!Array.isArray(command.intentRequired))
+                    intentRequired = [intentRequired];
+
+                const intents = new IntentsBitField(client.options.intents).toArray();
+
+                for (const intent of intentRequired) {
+                    if (intents.includes(intent)) continue;
+
+                    available = false;
+                    unavailability_reason.push(`required intent ${intent} not given`);
+                }
             }
 
             if(available){
