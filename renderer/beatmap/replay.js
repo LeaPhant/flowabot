@@ -223,14 +223,19 @@ class SliderTracker {
         this.beatmap = beatmap;
 
         this.frame = this.cursor.at(this.slider.startTime);
+        if (this.frame == undefined) return;
+
         this.exitedFollowradius = 
             !withinCircle(this.frame.x, this.frame.y, this.slider.position, this.beatmap.ActualFollowpointRadius) 
             || !this.frame.holding
     }
 
     until (time) {
-        while (this.frame.offset < time) {
-            this.frame = this.cursor.next();
+        while (this.frame?.offset < time) {
+            const nextFrame = this.cursor.next();
+            if (nextFrame == undefined) break;
+
+            this.frame = nextFrame;
 
             const dot = getSliderPosition(this.slider, this.frame.offset);
             if (!dot) continue;
@@ -656,7 +661,7 @@ class ReplayProcessor {
 
 						const isLateStart = sliderHeadAccuracy && hitObject.hitOffset <= Beatmap.HitWindow50 && hitObject.hitOffset > repeatOffset;
 
-						if (isLateStart || tracker.frame.holding && withinCircle(tracker.frame.x, tracker.frame.y, ...repeatPosition, Beatmap.ActualFollowpointRadius) && !tracker.exitedFollowRadius) {
+						if (isLateStart || tracker.frame?.holding && withinCircle(tracker.frame.x, tracker.frame.y, ...repeatPosition, Beatmap.ActualFollowpointRadius) && !tracker.exitedFollowRadius) {
 							scoringFrame.result = 30;
 							scoringFrame.combo++;
 							scoringFrame.largeTickHits++;
@@ -695,7 +700,7 @@ class ReplayProcessor {
 
 						const isLateStart = sliderHeadAccuracy && hitObject.hitOffset <= Beatmap.HitWindow50 && hitObject.hitOffset > repeatOffset;
 
-						if (isLateStart || tracker.frame.holding && withinCircle(tracker.frame.x, tracker.frame.y, ...tick.position, Beatmap.ActualFollowpointRadius) && !tracker.exitedFollowRadius) {
+						if (isLateStart || tracker.frame?.holding && withinCircle(tracker.frame.x, tracker.frame.y, ...tick.position, Beatmap.ActualFollowpointRadius) && !tracker.exitedFollowRadius) {
 							scoringFrame.result = 10;
 							scoringFrame.combo++;
 							scoringFrame.largeTickHits++;
@@ -732,7 +737,7 @@ class ReplayProcessor {
 						&& hitObject.hitOffset <= Beatmap.HitWindow50 
 						&& hitObject.hitOffset > (hitObject.actualEndTime - hitObject.startTime);
 
-						if (isLateStart || tracker.frame.holding && withinCircle(tracker.frame.x, tracker.frame.y, ...endPosition, Beatmap.ActualFollowpointRadius) && !tracker.exitedFollowRadius) {
+						if (isLateStart || tracker.frame?.holding && withinCircle(tracker.frame.x, tracker.frame.y, ...endPosition, Beatmap.ActualFollowpointRadius) && !tracker.exitedFollowRadius) {
 							const scoringFrame = newScoringFrame(ScoringFrames);
 							scoringFrame.offset = hitObject.endTime;
 							scoringFrame.position = endPosition;
