@@ -532,6 +532,10 @@ function convertStandardisedToClassic(score, object_count) {
     return Math.round((Math.pow(object_count, 2) * 32.57 + 100000) * score / 1000000);
 }
 
+function convertStandardisedToWither(score, object_count) {
+    return Math.round((Math.pow(object_count, 2) * 32.57) * Math.pow(score / 1000000, 1.62) + score * 0.1);
+}
+
 function getModSettingsString(mods) {
 	const appraochDifferentStyles = ["Linear", "Gravity", "InOut1", "InOut2", "Accelerate1", "Accelerate2", "Accelerate3", "Decelerate1", "Decelerate2", "Decelerate3"];
 	let string = "";
@@ -1461,7 +1465,7 @@ module.exports = {
             lines[0] += `${score_string}${helper.sep}`;
         } else {
             let object_count = recent.count300 + recent.count100 + recent.count50 + recent.countmiss;
-            let score_string = `${convertStandardisedToClassic(recent.score, object_count).toLocaleString()} (${recent.score.toLocaleString()})`;
+            let score_string = `${convertStandardisedToClassic(recent.score, object_count).toLocaleString()} (${recent.score.toLocaleString()}) [${convertStandardisedToWither(recent.score, object_count).toLocaleString()}]`;
             lines[0] += `${score_string}${helper.sep}`;
         }
 
