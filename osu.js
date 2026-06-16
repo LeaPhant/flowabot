@@ -534,6 +534,10 @@ function convertStandardisedToClassic(score, object_count) {
     return Math.round((Math.pow(object_count, 2) * 32.57 + 100000) * score / 1000000);
 }
 
+function convertStandardisedToWither(score, object_count) {
+    return Math.round((Math.pow(object_count, 2) * 32.57) * Math.min(Math.pow(score / 1000000, 1.62), score / 1000000) + score * 0.1);
+}
+
 function getModSettingsString(mods) {
 	const appraochDifferentStyles = ["Linear", "Gravity", "InOut1", "InOut2", "Accelerate1", "Accelerate2", "Accelerate3", "Decelerate1", "Decelerate2", "Decelerate3"];
 	let string = "";
@@ -1456,13 +1460,14 @@ module.exports = {
         if(recent.lb > 0)
             lines[0] += `#${recent.lb}${helper.sep}`;
 
+        let object_count = recent.count300 + recent.count100 + recent.count50 + recent.countmiss;
+
         if(recent.legacy_score > 0) {
-            let score_string =`${recent.legacy_score.toLocaleString()} (${recent.score.toLocaleString()})`
-            lines[0] += `${score_string}`;
+            let score_string = recent.legacy_score.toLocaleString();
+            lines[0] += `${score_string}${helper.sep}Stable`;
         } else {
-            let object_count = recent.count300 + recent.count100 + recent.count50 + recent.countmiss;
-            let score_string = `${convertStandardisedToClassic(recent.score, object_count).toLocaleString()} (${recent.score.toLocaleString()})`;
-            lines[0] += `${score_string}`;
+            let score_string = recent.score.toLocaleString();
+            lines[0] += `${score_string}${helper.sep}Lazer`;
         }
 
         if(recent.pp_fc.toFixed(2) != recent.pp.toFixed(2))
@@ -1563,6 +1568,16 @@ module.exports = {
             {
                 name: lines[2],
                 value: lines[3]
+            },
+            {
+                name: "Classic Score",
+                value: convertStandardisedToClassic(recent.score, object_count).toLocaleString(),
+                inline: true
+            },
+            {
+                name: "WitherScore",
+                value: convertStandardisedToWither(recent.score, object_count).toLocaleString(),
+                inline: true
             }
         );
 
