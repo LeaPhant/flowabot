@@ -535,7 +535,7 @@ function convertStandardisedToClassic(score, object_count) {
 }
 
 function convertStandardisedToWither(score, object_count) {
-    return Math.round((Math.pow(object_count, 2) * 32.57) * Math.pow(score / 1000000, 1.62) + score * 0.1);
+    return Math.round((Math.pow(object_count, 2) * 32.57) * Math.min(Math.pow(score / 1000000, 1.62), score / 1000000) + score * 0.1);
 }
 
 function getModSettingsString(mods) {
