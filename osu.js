@@ -1460,13 +1460,14 @@ module.exports = {
         if(recent.lb > 0)
             lines[0] += `#${recent.lb}${helper.sep}`;
 
+        let object_count = recent.count300 + recent.count100 + recent.count50 + recent.countmiss;
+
         if(recent.legacy_score > 0) {
-            let score_string =`${recent.legacy_score.toLocaleString()} (${recent.score.toLocaleString()})`
-            lines[0] += `${score_string}`;
+            let score_string = recent.legacy_score.toLocaleString();
+            lines[0] += `${score_string}${helper.sep}Stable`;
         } else {
-            let object_count = recent.count300 + recent.count100 + recent.count50 + recent.countmiss;
-            let score_string = `${convertStandardisedToClassic(recent.score, object_count).toLocaleString()} (${recent.score.toLocaleString()})`;
-            lines[0] += `${score_string}`;
+            let score_string = recent.score.toLocaleString();
+            lines[0] += `${score_string}${helper.sep}Lazer`;
         }
 
         if(recent.pp_fc.toFixed(2) != recent.pp.toFixed(2))
@@ -1569,8 +1570,14 @@ module.exports = {
                 value: lines[3]
             },
             {
-                name: "-# Experimental",
-                value: `-# WitherScore: ${convertStandardisedToWither(recent.score, object_count).toLocaleString()}`
+                name: "Classic Score",
+                value: convertStandardisedToClassic(recent.score, object_count).toLocaleString(),
+                inline: true
+            },
+            {
+                name: "WitherScore",
+                value: convertStandardisedToWither(recent.score, object_count).toLocaleString(),
+                inline: true
             }
         );
 
