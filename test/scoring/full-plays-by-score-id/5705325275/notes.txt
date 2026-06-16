@@ -1,0 +1,1 @@
+- has a sliderhead miss due to early tap within 400ms miss hit window followed by a correct tap

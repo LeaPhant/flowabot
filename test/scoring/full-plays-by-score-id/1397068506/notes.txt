@@ -1,0 +1,2 @@
+- has stable doubletap (is fc)
+- has mods: HDHR

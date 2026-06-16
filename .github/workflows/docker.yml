@@ -1,0 +1,78 @@
+name: 'Push Docker Images'
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  push:
+    strategy:
+      matrix:
+        arch: [amd64, arm64]
+
+    name: push
+    runs-on: ubuntu-24.04${{ matrix.arch == 'arm64' && '-arm' || '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get commit sha
+        id: sha
+        run: |
+          echo "short_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          push: true
+          platforms: linux/${{ matrix.arch }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: false
+          build-args: |
+            FLOWABOT_GIT_SHA=${{ steps.sha.outputs.short_sha }}
+          tags: |
+            ghcr.io/leaphant/flowabot:main-${{ matrix.arch }}
+            ghcr.io/leaphant/flowabot:main-${{ steps.sha.outputs.short_sha }}-${{ matrix.arch }}
+
+  amend-builds:
+    runs-on: ubuntu-24.04
+    needs: push
+    steps:
+      - uses: actions/checkout@v4
+      - name: Get commit sha
+        id: sha
+        run: |
+          echo "short_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: pull images
+        run: |
+          docker pull --platform=linux/amd64 ghcr.io/leaphant/flowabot:main-${{ steps.sha.outputs.short_sha }}-amd64
+          docker pull --platform=linux/arm64 ghcr.io/leaphant/flowabot:main-${{ steps.sha.outputs.short_sha }}-arm64
+
+      - name: create manifests
+        run: |
+          docker manifest create ghcr.io/leaphant/flowabot:main-${{ steps.sha.outputs.short_sha }} \
+            --amend ghcr.io/leaphant/flowabot:main-${{ steps.sha.outputs.short_sha }}-amd64 \
+            --amend ghcr.io/leaphant/flowabot:main-${{ steps.sha.outputs.short_sha }}-arm64 && \
+          docker manifest create ghcr.io/leaphant/flowabot:main \
+            --amend ghcr.io/leaphant/flowabot:main-${{ steps.sha.outputs.short_sha }}-amd64 \
+            --amend ghcr.io/leaphant/flowabot:main-${{ steps.sha.outputs.short_sha }}-arm64
+
+      - name: push manifests
+        run: |
+          docker manifest push ghcr.io/leaphant/flowabot:main-${{ steps.sha.outputs.short_sha }}
+          docker manifest push ghcr.io/leaphant/flowabot:main

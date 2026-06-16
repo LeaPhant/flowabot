@@ -1,9 +1,14 @@
-const RandomMod = require('./random');
-const ReflectionMod = require('./reflection');
+const ApplicableMods = {
+	RandomMod: require('./random'),
+	ReflectionMod: require('./reflection')
+};
 
-const applyMods = Beatmap => {
-	new ReflectionMod(Beatmap).apply();
-	new RandomMod(Beatmap).apply();
+const DefaultMods = Object.values(ApplicableMods);
+
+const applyMods = (Beatmap, ...EnabledMods) => {
+	for (const Mod of EnabledMods ?? DefaultMods) {
+		new Mod(Beatmap).apply();
+	}
 }
 
-module.exports = applyMods;
+module.exports = { applyMods, ApplicableMods };

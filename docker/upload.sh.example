@@ -1,0 +1,8 @@
+#!/bin/sh
+
+# example upload script for a zipline v4 server
+
+ZIPLINE_HOST=""
+TOKEN=""
+
+curl -s -X POST "$ZIPLINE_HOST/api/upload" -H "authorization: $TOKEN" -H 'Content-type: multipart/form-data' -F "file=@$1;type=video/mp4" | jq -r .files[0].url

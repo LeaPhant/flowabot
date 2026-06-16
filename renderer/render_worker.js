@@ -1,4 +1,4 @@
-const { createCanvas, Image } = require('canvas');
+const { createCanvas, Image, GlobalFonts } = require('@napi-rs/canvas');
 const path = require('path');
 const fs = require('fs').promises;
 const helper = require('../helper.js');
@@ -15,8 +15,12 @@ const FL_SIZES = [0.75, 0.6, 0.45]; // flashlight size relative to playfield hei
 const resources = path.resolve(__dirname, "res");
 
 let images = {
-    "arrow": path.resolve(resources, "images", "arrow.svg")
+    "arrow": path.resolve(resources, "images", "arrow.svg"),
+    "star": path.resolve(resources, "images", "star.svg")
 };
+
+GlobalFonts.registerFromPath(path.resolve(resources, 'fonts', 'NotoSans', 'NotoSans-Regular.ttf'), 'Noto Sans');
+GlobalFonts.registerFromPath(path.resolve(resources, 'fonts', 'JetBrainsMono', 'JetBrainsMono-Regular.ttf'), 'JetBrainsMono');
 
 const easeOutQuad = x => 1 - (1 - x) * (1 - x);
 
@@ -247,8 +251,8 @@ process.on('message', async obj => {
         ctx.lineWidth = 4 * scale_multiplier;
         ctx.shadowColor = 'transparent';
 		ctx.fillStyle = 'white';
-        // Draw follow points
 
+        // Draw follow points
 		for (const fp of followpointsOnScreen) {
 			if (options.analyze) break;
 			
@@ -405,12 +409,13 @@ process.on('message', async obj => {
 					const snakingStart = hitObject.startTime - beatmap.TimePreempt;
                     const snakingFinish = snakingStart + beatmap.TimePreempt / 3;
 
-                    let snakingProgress = Math.max(0, Math.min(1, (time - snakingStart) / (snakingFinish - snakingStart)));
+					let snakingProgress = 1;
+					let render_dots = hitObject.SliderDots;
 
-                    let render_dots = [];
-
-                    for(let x = 0; x < Math.floor(hitObject.SliderDots.length * snakingProgress); x++)
-                        render_dots.push(hitObject.SliderDots[x]);
+					if (time < snakingFinish) {
+						snakingProgress = Math.max(0, Math.min(1, (time - snakingStart) / (snakingFinish - snakingStart)));
+						render_dots = render_dots.slice(0, Math.floor(render_dots.length * snakingProgress));
+					}
 
                     // Use stroke with rounded ends to "fake" a slider path
                     ctx.beginPath();
@@ -568,10 +573,11 @@ process.on('message', async obj => {
 
                         fontSize *= scale_multiplier * sizeFactor;
 
-                        // Draw combo number on circle
-                        ctx.font = `${fontSize}px sans-serif`;
+                        // Draw repeat arrowe
+                        ctx.font = `${fontSize}px Noto Sans`;
 
-                        ctx.fillText("➤", ...position);
+                        const arrowSize = sizeFactor * scale_multiplier * beatmap.Radius;
+                        ctx.drawImage(images['arrow'], position[0] - arrowSize / 2, position[1] - arrowSize / 2, arrowSize, arrowSize);
 
                         /* this doesn't render correctly for some reason???
                            using text for now I guess (TODO: FIX) */
@@ -633,7 +639,7 @@ process.on('message', async obj => {
                             fontSize *= scale_multiplier;
 
                             // Draw combo number on circle
-                            ctx.font = `${fontSize}px sans-serif`;
+                            ctx.font = `${fontSize}px Noto Sans`;
                             ctx.fillText(hitObject.ComboNumber, position[0], position[1]);
                         }
 
@@ -687,11 +693,12 @@ process.on('message', async obj => {
 
                         // Draw follow circle visible around the follow point
 
-                        ctx.fillStyle = "rgba(255,255,255,0.8)";
+						ctx.lineWidth = 3 * scale_multiplier;
+                        ctx.strokeStyle = "rgba(255,255,255,0.5)";
                         ctx.beginPath();
 
                         position = playfieldPosition(...pos_current);
-                        ctx.arc(...position, scale_multiplier * (beatmap.FollowpointRadius), 0, 2 * Math.PI, false);
+                        ctx.arc(...position, scale_multiplier * (beatmap.ActualFollowpointRadius), 0, 2 * Math.PI, false);
                         ctx.stroke();
                     }
 
@@ -721,6 +728,9 @@ process.on('message', async obj => {
                     }
                     */
 
+                    const spinnerProgress = clamp(1 - (time - hitObject.startTime) / (hitObject.endTime - hitObject.startTime), 0, 1);
+                    const spinnerSize = 210 * spinnerProgress + 30;
+
                     // Outer spinner circle
                     ctx.beginPath();
                     ctx.arc(...position, scale_multiplier * 240, 0, 2 * Math.PI, false);
@@ -729,6 +739,13 @@ process.on('message', async obj => {
                     // Inner spinner circle
                     ctx.beginPath();
                     ctx.arc(...position, scale_multiplier * 30, 0, 2 * Math.PI, false);
+                    ctx.stroke();
+
+                    ctx.lineWidth = 5 * scale_multiplier;
+
+                    // Draw shrinking circle
+                    ctx.beginPath();
+                    ctx.arc(...position, scale_multiplier * spinnerSize, 0, 2 * Math.PI, false);
                     ctx.stroke();
                 }
             }
@@ -781,7 +798,7 @@ process.on('message', async obj => {
 
                     fontSize *= scale_multiplier * sizeFactor;
 
-                    ctx.font = `${fontSize}px sans-serif`;
+                    ctx.font = `${fontSize}px Noto Sans`;
                     ctx.fillText(hitObject.ComboNumber, ...position);
                 }
             }
@@ -826,6 +843,22 @@ process.on('message', async obj => {
 
             if(currentFrame == null)
                 currentFrame = beatmap.ScoringFrames[beatmap.ScoringFrames.length - 1];
+
+            const currentSpinner = beatmap.hitObjects.find(a => time >= a.startTime && time < a.endTime && a.objectName == 'spinner');
+
+            if (currentSpinner) {
+                const rpmPosition = playfieldPosition(PLAYFIELD_WIDTH / 2, PLAYFIELD_HEIGHT - 30);
+
+                let fontSize = 22;
+                ctx.globalAlpha = 1;
+                ctx.fillStyle = "white";
+                ctx.textBaseline = "middle";
+                ctx.textAlign = "center";
+                ctx.font = `${fontSize}px JetBrainsMono`;
+                const rpm = currentFrame.rpm ? Math.round(currentFrame.rpm) : 0;
+                const pad = " ".repeat(4 - rpm.toString().length);
+                ctx.fillText(`RPM${pad}${rpm}`, ...rpmPosition);
+            }
 
             const scoringFrames = [];
 
@@ -883,14 +916,38 @@ process.on('message', async obj => {
             const UR_BAR_300 = beatmap.HitWindow300 / beatmap.HitWindow50 * UR_BAR_WIDTH;
 
             if(currentFrame != null){
+                const hpPosition = [15, 20];
                 const comboPosition = [15, canvas.height - 35];
                 const accuracyPosition = [canvas.width - 15, 40];
 
-                ctx.fillStyle = "white";
+                const color = [255,255,255];
+
+                let currentHp = currentFrame.hp ?? 1;
+                const nextFrame = beatmap.ScoringFrames.length > currentFrameIndex ? beatmap.ScoringFrames[currentFrameIndex + 1] : null;
+
+                if (nextFrame) {
+                    const progress = clamp((time - currentFrame.offset) / (nextFrame.offset - currentFrame.offset), 0, 1);
+                    const diff = (nextFrame.hp ?? 1) - currentHp;
+                    currentHp += progress * diff;
+                }
+
+                if (currentHp < 0.6) {
+                    const newColor = clamp(Math.floor(color[1] * (currentHp / 0.6 - 0.2)), 0, 255);
+                    color[1] = newColor;
+                    color[2] = newColor;
+                }
+
+                if (!isNaN(currentHp)) {
+                    ctx.fillStyle = `rgb(${color.join(',')})`;
+                    ctx.globalAlpha = clamp((0.7 - currentHp) * 5, 0, 1);
+                    ctx.fillRect(...hpPosition, 200 * (currentFrame.hp ?? 1), 10);
+                }
+
                 ctx.globalAlpha = 1;
+                ctx.fillStyle = "white";
                 ctx.textAlign = "left";
                 ctx.textBaseline = "bottom";
-                ctx.font = `${32 * scale_multiplier}px monospace`;
+                ctx.font = `${32 * scale_multiplier}px JetBrainsMono`;
                 ctx.fillText(`${currentFrame.combo}x`, ...comboPosition);
 
                 let { pp, stars } = currentFrame;
@@ -914,20 +971,47 @@ process.on('message', async obj => {
                 }
 
                 ctx.textBaseline = "top";
-                ctx.font = `${26 * scale_multiplier}px monospace`;
+                ctx.font = `${26 * scale_multiplier}px JetBrainsMono`;
                 ctx.fillText(`${parseFloat(pp).toFixed(2)}pp`, 15, 45);
 
-                ctx.font = `${21 * scale_multiplier}px monospace`;
-                ctx.fillText(`★${parseFloat(stars).toFixed(2)}`, 15, 47 + 26 * scale_multiplier);
+                ctx.font = `${21 * scale_multiplier}px JetBrainsMono`;
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = "high";
+                ctx.fillText(`  ${parseFloat(stars).toFixed(2)}`, 15, 47 + 26 * scale_multiplier);
+                ctx.drawImage(images['star'], 15, 47 + 26 * scale_multiplier, 21 * scale_multiplier, 21 * scale_multiplier);
 
                 ctx.textAlign = "right";
                 ctx.textBaseline = "top";
-                ctx.font = `${26 * scale_multiplier}px monospace`;
-                ctx.fillText(`${currentFrame.accuracy.toFixed(2)}%`, ...accuracyPosition);
+                ctx.font = `${26 * scale_multiplier}px JetBrainsMono`;
+
+                const accText = `${currentFrame.accuracy.toFixed(2)}%`;
+                ctx.fillText(accText, ...accuracyPosition);
+
+                const accTextSize = ctx.measureText(accText);
+                const pieRadius = 12 * scale_multiplier;
+                const piePosition = [
+                    accuracyPosition[0] - accTextSize.width - pieRadius - 5,
+                    accuracyPosition[1] + (accTextSize.actualBoundingBoxDescent - accTextSize.actualBoundingBoxAscent) / 2
+                ];
+
+                ctx.strokeStyle = "white";
+                ctx.lineWidth = 2 * scale_multiplier;
+                
+                ctx.beginPath();
+                ctx.arc(...piePosition, pieRadius, 0, Math.PI * 2);
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(...piePosition);
+
+                const completion = time / (beatmap.totalTime * 1000) * 2 * Math.PI - Math.PI / 2;
+
+                ctx.arc(...piePosition, pieRadius, -Math.PI/2, completion);
+                ctx.fill();
 
                 const hitCountPosition = [canvas.width - 15, 45 + 26 * scale_multiplier];
 
-                ctx.font = `${21 * scale_multiplier}px monospace`;
+                ctx.font = `${21 * scale_multiplier}px JetBrainsMono`;
                 ctx.fillText(`${currentFrame.count100}x100 ${currentFrame.count50}x50`, ...hitCountPosition);
 
                 hitCountPosition[1] += 2 + 21 * scale_multiplier;
@@ -936,19 +1020,14 @@ process.on('message', async obj => {
                 const urPosition = [canvas.width - 15, canvas.height - 35];
 
                 ctx.textBaseline = "bottom";
-                ctx.font = `${26 * scale_multiplier}px monospace`;
+                ctx.font = `${26 * scale_multiplier}px JetBrainsMono`;
 
                 let urText = 'UR';
-                let { ur } = currentFrame;
+                let { ur, cvur } = currentFrame;
 
-                if(beatmap.Replay && (beatmap.Replay.Mods.includes('DT') || beatmap.Replay.Mods.includes('NC') || beatmap.Replay.Mods.includes("HT"))){
+                if(beatmap.SpeedMultiplier != 1){
                     urText = 'cvUR';
-
-                    if(beatmap.Replay.Mods.includes('DT') || beatmap.Replay.Mods.includes('NC'))
-                        ur /= 1.5;
-
-                    if(beatmap.Replay.Mods.includes('HT'))
-                        ur /= 0.75;
+                    ur = cvur;
                 }
 
                 ctx.fillText(`${ur.toFixed(2)} ${urText}`, ...urPosition);
@@ -973,11 +1052,13 @@ process.on('message', async obj => {
 
                 ctx.textAlign = "left";
                 ctx.textBaseline = "bottom";
-                ctx.font = `${16 * scale_multiplier}px sans-serif`;
+                ctx.font = `${16 * scale_multiplier}px Noto Sans`;
 
                 ctx.fillStyle = 'rgb(255,255,255,0.8)';
 
                 ctx.fillText('W.I.P. – scoring not accurate yet', 15, canvas.height - 10);
+
+                ctx.textAlign = "right";
             }
 
             for(const scoringFrame of scoringFrames){
@@ -1022,7 +1103,7 @@ process.on('message', async obj => {
                 ctx.globalAlpha = Math.min(1, 1.5 - (time - scoringFrame.offset) / 750);
                 ctx.textAlign = "center";
                 ctx.textBaseline = "middle";
-                ctx.font = `${30 * scale_multiplier}px sans-serif`;
+                ctx.font = `${30 * scale_multiplier}px Noto Sans`;
 
                 const position = scoringFrame.position.slice();
 
@@ -1287,7 +1368,7 @@ process.on('message', async obj => {
     }else{
         processFrame(time, options);
 
-        process.send(canvas.toBuffer().toString('base64'));
+        process.send(canvas.toBuffer('image/png').toString('base64'));
         process.exit(0);
     }
 });

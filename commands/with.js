@@ -20,6 +20,7 @@ module.exports = {
         }
     ],
     configRequired: ["credentials.client_id", "credentials.client_secret"],
+    envRequired: ['OSU_CLIENT_ID', 'OSU_CLIENT_SECRET'],
     call: obj => {
         return new Promise((resolve, reject) => {
             let { argv, msg, user_ign, last_beatmap } = obj;
@@ -76,7 +77,7 @@ module.exports = {
                     options.acc = options.custom_acc;
                     options.fail_percent = 1;
                     helper.updateLastBeatmap(options, msg.channel.id, last_beatmap);
-                    resolve({embed: embed});
+                    resolve({embeds: [embed]});
                 }
             });
         });

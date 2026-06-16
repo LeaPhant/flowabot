@@ -5,7 +5,7 @@ process.on('uncaughtException', function(err){
     console.error(err.stack);
 });
 
-const Discord = require('discord.js');
+const { Client, GatewayIntentBits, IntentsBitField, Partials } = require('discord.js');
 const fs = require('fs').promises;
 const path = require('path');
 const objectPath = require("object-path");
@@ -14,7 +14,11 @@ const chalk = require('chalk');
 const osu = require('./osu.js');
 const helper = require('./helper.js');
 
-const client = new Discord.Client({autoReconnect:true, disableMentions: "everyone"});
+const intents = process.env.DISCORD_INTENTS 
+    ? process.env.DISCORD_INTENTS.split(',').map(i => GatewayIntentBits[i]) 
+    : Object.values(GatewayIntentBits);
+
+const client = new Client({ intents, partials: Object.values(Partials) });
 
 client.on('error', helper.error);
 
@@ -49,21 +53,22 @@ if(helper.getItem('last_message')){
 	helper.setItem('last_message', JSON.stringify(last_message));
 }
 
-if(config.credentials.client_id && config.credentials.client_secret)
-    osu.init(client, config.credentials.client_id, config.credentials.client_secret, last_beatmap);
+if((process.env.OSU_CLIENT_ID ?? config.credentials.client_id)
+    && (process.env.OSU_CLIENT_SECRET ?? config.credentials.client_secret))
+    osu.init(client, process.env.OSU_CLIENT_ID ?? config.credentials.client_id, process.env.OSU_CLIENT_SECRET ?? config.credentials.client_secret, last_beatmap);
 
 function checkCommand(msg, command){
-    if(!msg.content.startsWith(config.prefix))
+    if(!msg.content.startsWith(helper.prefix))
         return false;
 
-	if(msg.author.bot && msg.webhookID == null)
+	if(msg.author.bot && msg.webhookId == null)
 		return false;
 
     let argv = msg.content.split(' ');
 
     let command_match = false;
 
-    let msg_check = msg.content.toLowerCase().substr(config.prefix.length).trim();
+    let msg_check = msg.content.toLowerCase().substr(helper.prefix.length).trim();
 
     let commands = command.command;
 
@@ -137,7 +142,16 @@ fs.readdir(commands_path).then(items => {
                 if(!Array.isArray(command.configRequired))
                     configRequired = [configRequired];
 
-                configRequired.forEach(config_path => {
+                let { envRequired } = command;
+
+                if (!Array.isArray(command.envRequired))
+                    envRequired = [envRequired];
+
+                configRequired.forEach((config_path, index) => {
+                    if (process.env[envRequired[index]] != null 
+                        && process.env[envRequired[index]].length > 0)
+                        return;
+
                     if(!objectPath.has(config, config_path)){
                         available = false;
                         unavailability_reason.push(`required config option ${config_path} not set`);
@@ -163,6 +177,22 @@ fs.readdir(commands_path).then(items => {
                 });
             }
 
+            if (command.intentRequired) {
+                let { intentRequired } = command;
+
+                if(!Array.isArray(command.intentRequired))
+                    intentRequired = [intentRequired];
+
+                const intents = new IntentsBitField(client.options.intents).toArray();
+
+                for (const intent of intentRequired) {
+                    if (intents.includes(intent)) continue;
+
+                    available = false;
+                    unavailability_reason.push(`required intent ${intent} not given`);
+                }
+            }
+
             if(available){
                 commands.push(command);
 			}else{
@@ -170,7 +200,7 @@ fs.readdir(commands_path).then(items => {
 					command.command = [command.command];
 
 				console.log('');
-				console.log(chalk.yellow(`${config.prefix}${command.command[0]} was not enabled:`));
+				console.log(chalk.yellow(`${helper.prefix}${command.command[0]} was not enabled:`));
 				unavailability_reason.forEach(reason => {
 					console.log(chalk.yellow(reason));
 				});
@@ -206,9 +236,9 @@ function onMessage(msg){
 
     let argv = msg.content.split(' ');
 
-    argv[0] = argv[0].substr(config.prefix.length);
+    argv[0] = argv[0].substr(helper.prefix.length);
 
-    if(config.debug)
+    if(helper.debug)
         helper.log(msg.author.username, ':', msg.content);
 
     commands.forEach(command => {
@@ -249,10 +279,10 @@ function onMessage(msg){
                             delete response.content;
 						}
 
-						if(content)
-	                        message_promise = msg.channel.send(content, response);
-						else
-							message_promise = msg.channel.send(response);
+                        if (content)
+                            response.content = content;
+
+						message_promise = msg.channel.send(response);
 
 						message_promise.catch(err => {
 							msg.channel.send(`Couldn't run command: **${err}**`);
@@ -318,17 +348,17 @@ function onMessage(msg){
     });
 }
 
-client.on('message', onMessage);
+client.on('messageCreate', onMessage);
 
 client.on('ready', () => {
 	helper.log('flowabot is ready');
-	if(config.credentials.discord_client_id)
+	if(process.env.DISCORD_CLIENT_ID ?? config.credentials.discord_client_id)
 		helper.log(
 			`Invite bot to server: ${chalk.blueBright('https://discord.com/api/oauth2/authorize?client_id='
-			+ config.credentials.discord_client_id + '&permissions=8&scope=bot')}`);
+			+ (process.env.DISCORD_CLIENT_ID ?? config.credentials.discord_client_id) + '&permissions=8&scope=bot')}`);
 });
 
-client.login(config.credentials.bot_token).catch(err => {
+client.login(process.env.DISCORD_BOT_TOKEN ?? config.credentials.bot_token).catch(err => {
 	console.error('');
 	console.error(chalk.redBright("Couldn't log into Discord. Wrong bot token?"));
 	console.error('');

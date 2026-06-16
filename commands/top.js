@@ -26,6 +26,7 @@ module.exports = {
         }
     ],
     configRequired: ["credentials.client_id", "credentials.client_secret"],
+    envRequired: ['OSU_CLIENT_ID', 'OSU_CLIENT_SECRET'],
     call: obj => {
         return new Promise((resolve, reject) => {
             let { argv, msg, user_ign, last_beatmap } = obj;
@@ -44,7 +45,7 @@ module.exports = {
             let match = argv[0].match(/\d+/);
             let _index = match > 0 ? match[0] : 1;
 
-            if(_index >= 1 && _index <= 100)
+            if(_index >= 1 && _index <= 200)
                 index = _index;
 
             if(!top_user){
@@ -67,17 +68,17 @@ module.exports = {
 
                         if(ur_promise){
                             resolve({
-                                embed: embed,
+                                embeds: [embed],
                                 files: [{attachment: strains_bar, name: 'strains_bar.png'}],
                                 edit_promise: new Promise((resolve, reject) => {
                                     ur_promise.then(recent => {
                                         embed = osu.format_embed(recent);
-                                        resolve({embed});
+                                        resolve({ embeds: [embed]});
                                     });
                                 })});
                         }else{
                             resolve({
-                                embed: embed,
+                                embeds: [embed],
                                 files: [{attachment: strains_bar, name: 'strains_bar.png'}]
                             });
                         }

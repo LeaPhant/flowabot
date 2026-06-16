@@ -10,15 +10,17 @@ const fs = require('fs').promises;
 
 const { DateTime, Duration } = require('luxon');
 
-const { createCanvas } = require('canvas');
+const { createCanvas, loadImage, GlobalFonts } = require('@napi-rs/canvas');
+
+GlobalFonts.registerFromPath(path.resolve(__dirname, 'renderer', 'res', 'fonts', 'BitstreamVeraSans', 'Vera.ttf'), 'Bitstream Vera Sans');
+GlobalFonts.registerFromPath(path.resolve(__dirname, 'renderer', 'res', 'fonts', 'BitstreamVeraSans', 'Vera-Bold.ttf'), 'Bitstream Vera Sans Bold');
 
 const ur_calc = require('./renderer/ur.js');
 const frame = require('./renderer/render_frame.js');
 const helper = require('./helper.js');
 
-const { ChartJSNodeCanvas } = require('chartjs-node-canvas');
-
-const graphCanvas = new ChartJSNodeCanvas({ width: 600, height: 400 });
+const { Chart } = require('chart.js/auto');
+const graphCanvas = createCanvas(600, 400);
 
 const Jimp = require('jimp');
 
@@ -57,7 +59,6 @@ const DIFF_MODS = ["HR","EZ","DT","HT","FL","HD","TD"];
 const TIME_MODS = ["DT", "HT"];
 
 const CHART_OPTIONS = {
-    fontColor: '#FFFFFFCC',
     legend: {
         display: false
     },
@@ -70,50 +71,51 @@ const CHART_OPTIONS = {
         }
     },
     elements: {
+        point: {
+            borderColor: 'rgba(255,255,255,0.1)',
+            backgroundColor: 'transparent',
+            radius: 2
+        },
         line: {
             borderColor: '#F06292',
             fill: false
         }
     },
-    title: {
-        display: true,
-        fontColor: '#ECEFF1DD',
-        fontSize: 14,
-        fontStyle: 'bold',
-        padding: 20
+    plugins: {
+        title: {
+            display: true,
+            color: '#ECEFF1DD',
+            font: { family: 'Bitstream Vera Sans', size: 14, weight: 'bold' },
+            padding: 20,
+            text: ""
+        },
+        legend: {
+            display: false
+        }
     },
     scales: {
-        yAxes: [{
-            gridLines: {
-                display: true,
-                color: '#607D8BAA',
-                drawBorder: false,
-                zeroLineColor: '#607D8BAA',
-                drawTicks: false
-            },
+        y: {
+            min: 0,
             ticks: {
-                fontColor: '#FFFFFFAA',
-                fontStyle: 'bold',
+                color: '#FFFFFFAA',
+                font: { family: 'Bitstream Vera Sans' },
                 padding: 10
-            }
-        }],
-        xAxes: [{
-            gridLines: {
-                display: false
             },
+        },
+        x: {
+            min: 0,
             ticks: {
-                fontColor: '#FFFFFFAA',
-                fontStyle: 'bold',
+                color: '#FFFFFFAA',
+                font: { family: 'Bitstream Vera Sans' },
                 maxTicksLimit: 12,
                 maxRotation: 0,
-                padding: 10
+                padding: 10,
+                callback: value => {
+                    return Duration.fromMillis(value).toFormat('m:ss')
+                }
             },
-            type: 'time',
-            time: { 
-                unit: 'second', 
-                displayFormats: { second: 'm:ss' } 
-            }
-        }]
+            type: 'linear',
+        }
     }
 };
 
@@ -555,6 +557,13 @@ function getModSettingsString(mods) {
                     string += `**${mod.acronym}** ~ Adjust pitch: \`${mod.settings.adjust_pitch}\`\n`;
                 break;
             case "SD":
+                if (!mod.settings)
+                    break;
+                if (mod.settings.hasOwnProperty("fail_on_slider_tail"))
+                    string += `**${mod.acronym}** ~ Fail when missing a slider tail: \`${mod.settings.fail_on_slider_tail}\`\n`;
+                if (mod.settings.hasOwnProperty("restart"))
+                    string += `**${mod.acronym}** ~ Restart on fail: \`${mod.settings.restart}\`\n`;
+                break;
             case "PF":
                 if (!mod.settings)
                     break;
@@ -753,6 +762,7 @@ async function getScore(recent_raw, cb){
 
     let requests = [
         api.get(`/users/${recent_raw.user_id}/scores/best`, { params: { limit: 100 } }),
+        api.get(`/users/${recent_raw.user_id}/scores/best`, { params: { limit: 100, offset: 100 } }),
         //api.get(`/beatmaps/${recent_raw.beatmap.id}/scores`, { params: { mode: 'osu' } }),
         //api.get(`/beatmaps/${recent_raw.beatmap.id}/scores/users/${recent_raw.user_id}`, { params: { mods: recent_raw.mods } }),
         api.get(`/users/${recent_raw.user_id}/osu`),
@@ -770,11 +780,11 @@ async function getScore(recent_raw, cb){
 
     Promise.all(requests).then(results => {
 
-        let user_best = results[0].data;
+        let user_best = results[0].data.concat(results[1].data);
         //let leaderboard = results[1].data;
         //let best_score = results[2].data;
-        let user = results[1].data;
-        let beatmapset = results[2].data
+        let user = results[2].data;
+        let beatmapset = results[3].data
 
         let pb = 0;
         let lb = 0;
@@ -829,8 +839,6 @@ async function getScore(recent_raw, cb){
             })
         }
 
-        let diff_settings = calculateCsArOdHp(beatmap.cs, beatmap.ar, beatmap.accuracy, beatmap.drain, recent.mods);
-
         let speed = 1;
 
         if (recent.mods.map(x => x.acronym).includes("DT") || recent.mods.map(x => x.acronym).includes("NC")) {
@@ -867,6 +875,10 @@ async function getScore(recent_raw, cb){
 			if (recent_raw.statistics.slider_tail_hit)
 				play_params.sliderEndHits = recent_raw.statistics.slider_tail_hit;
 
+            if (recent_raw.legacy_total_score) {
+                play_params.legacyTotalScore = recent_raw.legacy_total_score
+            }
+
             const fc_play_params = {
                 lazer: set_on_lazer,
                 mods: recent_raw.mods,
@@ -880,6 +892,11 @@ async function getScore(recent_raw, cb){
             const rosu_map = new rosu.Beatmap(beatmap_content)
 			const play = new rosu.Performance(play_params).calculate(rosu_map);
 			const fc_play = new rosu.Performance(fc_play_params).calculate(rosu_map);
+			const attributes = new rosu.BeatmapAttributesBuilder({
+				map: rosu_map,
+				mods: recent_raw.mods,
+				clockRate: speed,
+			}).build();
 
 			rosu_map.free();
 
@@ -896,10 +913,11 @@ async function getScore(recent_raw, cb){
                 creator: beatmapset.creator,
                 creator_id: beatmapset.user_id,
                 approved_date: beatmapset.ranked_date,
-                cs: diff_settings.cs,
-                ar: play.difficulty.ar,
-                od: play.difficulty.od,
-                hp: diff_settings.hp,
+                updated_date: beatmapset.last_updated,
+                cs: attributes.cs,
+                ar: attributes.ar,
+                od: attributes.od,
+                hp: attributes.hp,
                 duration: beatmap.total_length,
                 fail_percent: fail_percent
             }, recent);
@@ -915,55 +933,37 @@ async function getScore(recent_raw, cb){
                 }),
             }, recent);
 
-            if(recent.pp == null)
+            if(recent.pp == null || process.env.ALWAYS_CALCULATE == "1")
                 recent.pp = play.pp;
 
             let strains_bar;
 
             if(await helper.fileExists(beatmap_path)){
-                strains_bar = await module.exports.get_strains_bar(beatmap_path, recent.mods.map(mod => mod.acronym).join(''), recent.fail_percent, (recent.beatmapset_id == 481703 ? '#31858d' : undefined));
+                let frames;
+
+                if (recent.replay) {
+                    const ur_response = await ur_calc.get_ur(
+                        {
+                            access_token: access_token,
+                            player: recent_raw.user_id,
+                            beatmap_id: recent_raw.beatmap.id,
+                            mods_enabled: recent_raw.mods,
+                            score_id: recent.score_id,
+                            mods: recent.mods.map(x => x.acronym)
+                        });
+
+                    recent.ur = ur_response.ur;
+                    recent.cvur = ur_response.cvur;
+                    frames = ur_response.frames;
+                }
+
+                strains_bar = await module.exports.get_strains_bar(beatmap_path, recent.mods.map(mod => mod.acronym).join(''), recent.fail_percent, recent.beatmapset_id, frames);
 
                 if(strains_bar)
                     recent.strains_bar = true;
             }
 
-            if(recent.replay && await helper.fileExists(beatmap_path)){
-                let ur_promise = new Promise((resolve, reject) => {
-                    if(config.debug)
-                        helper.log('getting ur');
-
-                    ur_calc.get_ur(
-                        {
-                            access_token: access_token,
-                            player: recent_raw.user_id,
-                            beatmap_id: recent_raw.beatmap.id,
-                            mods_enabled: getModsEnum(recent_raw.mods.map(x => x.acronym)),
-                            score_id: recent.score_id,
-                            mods: recent.mods.map(x => x.acronym)
-                        }).then(response => {
-                            recent.ur = response.ur;
-
-                            if(recent.countmiss == (response.miss || 0) 
-                            && recent.count100 == (response['100'] || 0)
-                            && recent.count50 == (response['50'] || 0))
-                                recent.countsb = response.sliderbreak;
-
-                            if(recent.mods.map(x => x.acronym).includes("DT") || recent.mods.map(x => x.acronym).includes("NC"))
-                                recent.cvur = response.ur / 1.5;
-                            else if(recent.mods.map(x => x.acronym).includes("HT"))
-                                recent.cvur = response.ur * 1.5;
-
-                            resolve(recent);
-                        });
-                });
-
-                recent.ur = -1;
-                if(recent.mods.map(mod => mod.acronym).includes("DT") || recent.mods.map(mod => mod.acronym).includes("HT"))
-                    recent.cvur = -1;
-                cb(null, recent, strains_bar, ur_promise);
-            }else{
-                cb(null, recent, strains_bar);
-            }
+            cb(null, recent, strains_bar);
         }).catch(helper.error);
     }).catch(err => {
         cb("Couldn't reach osu!api. 💀");
@@ -1043,9 +1043,9 @@ async function updateTrackedUsers(){
                                     tracked_users[user].channels.forEach(channel_id => {
                                         let channel = discord_client.channels.cache.get(channel_id);
                                         if(channel)
-                                            channel.send(`${recent.username} got a new #${recent.pb} top play!`,
-												{
-													embed,
+                                            channel.send({
+                                                    content: `${recent.username} got a new #${recent.pb} top play!`,
+													embeds: [embed],
 													files: [{attachment: strains_bar, name: 'strains_bar.png'}]
 												}
 											).then(() => {
@@ -1058,9 +1058,9 @@ async function updateTrackedUsers(){
                                 tracked_users[user].channels.forEach(channel_id => {
                                     let channel = discord_client.channels.cache.get(channel_id);
                                     if(channel)
-                                        channel.send(`${recent.username} got a new #${recent.pb} top play!`,
-											{
-												embed,
+                                        channel.send({
+                                                content: `${recent.username} got a new #${recent.pb} top play!`,
+												embeds: [embed],
 												files: [{attachment: strains_bar, name: 'strains_bar.png'}]
 											})
 										.then(() => {
@@ -1100,8 +1100,8 @@ async function getAccessToken(){
     };
 
     let body = {
-        "client_id": config.credentials.client_id,
-        "client_secret": config.credentials.client_secret,
+        "client_id": process.env.OSU_CLIENT_ID ?? config.credentials.client_id,
+        "client_secret": process.env.OSU_CLIENT_SECRET ?? config.credentials.client_secret,
         "grant_type": "client_credentials",
         "scope": "public"  
     }
@@ -1335,7 +1335,7 @@ module.exports = {
 
                 cb(output_message);
 
-                if(config.debug){
+                if(helper.debug){
                     helper.log("Current pp: " + pp_full);
                     helper.log("Added pp: " + adding_pp + " -> " + (pp_no_bonus - pp_full).toFixed(1));
                     helper.log("Result: " + pp_no_bonus.toFixed(1));
@@ -1433,16 +1433,16 @@ module.exports = {
                 ranked_text = 'Loved';
                 break;
             default:
-                ranked_date = recent.approved_date;
+                ranked_date = recent.updated_date;
         }
 
         embed.footer = {
             icon_url: `https://a.ppy.sh/${recent.creator_id}?${+new Date()}`,
             text: `Mapped by ${recent.creator}${helper.sep}${ranked_text} on ${DateTime.fromISO(ranked_date).toFormat('dd MMMM yyyy')}`
         };
-        embed.thumbnail = {
+        /*embed.thumbnail = {
             url: recent.thumbnail_url
-        };
+        };*/
         let lines = ['', '', '', ''];
 
         lines[0] += `${getRankEmoji(recent.rank)}`;
@@ -1455,27 +1455,26 @@ module.exports = {
         if(recent.mods.length > 0)
             lines[0] += `+${sanitizeMods(recent.mods).map(m => m === "DA" ? "__DA__" : m).join(',')}${helper.sep}`;
 
+        lines[0] += `${+recent.acc.toFixed(2)}%${helper.sep}`;
+
         if(recent.lb > 0)
-            lines[0] += `#${recent.lb}`;
-        if(recent.mods.length > 0 || recent.lb > 0)
-            lines[0] += "\n"
+            lines[0] += `#${recent.lb}${helper.sep}`;
 
         if(recent.legacy_score > 0) {
             let score_string =`${recent.legacy_score.toLocaleString()} (${recent.score.toLocaleString()})`
-            lines[0] += `${score_string}${helper.sep}`;
+            lines[0] += `${score_string}`;
         } else {
             let object_count = recent.count300 + recent.count100 + recent.count50 + recent.countmiss;
             let score_string = `${convertStandardisedToClassic(recent.score, object_count).toLocaleString()} (${recent.score.toLocaleString()}) [${convertStandardisedToWither(recent.score, object_count).toLocaleString()}]`;
-            lines[0] += `${score_string}${helper.sep}`;
+            lines[0] += `${score_string}`;
         }
 
-        lines[0] += `${+recent.acc.toFixed(2)}%\n`;
-        lines[0] += `<t:${DateTime.fromISO(recent.date).toSeconds()}:R>`;
-
         if(recent.pp_fc.toFixed(2) != recent.pp.toFixed(2))
-            lines[1] += `**${recent.unsubmitted ? '*' : ''}${+recent.pp.toFixed(2)}pp**${recent.unsubmitted ? '*' : ''} ➔ ${+recent.pp_fc.toFixed(2)}pp for ${+recent.acc_fc.toFixed(2)}% FC\n`;
+            lines[1] += `**${recent.unsubmitted ? '*' : ''}${+recent.pp.toFixed(2)}pp**${recent.unsubmitted ? '*' : ''} ➔ ${+recent.pp_fc.toFixed(2)}pp for ${+recent.acc_fc.toFixed(2)}% FC`;
         else
-            lines[1] += `**${+recent.pp.toFixed(2)}pp**\n`
+            lines[1] += `**${+recent.pp.toFixed(2)}pp**`
+
+         lines[1] += `${helper.sep}<t:${DateTime.fromISO(recent.date).toSeconds()}:R>\n`;
 
         if(recent.legacy_perfect)
             lines[1] += `${recent.combo}x`;
@@ -1509,7 +1508,7 @@ module.exports = {
         if(recent.ur > 0){
             if(recent.count100 > 0 || recent.count50 > 0 || recent.countmiss > 0) lines[1] += helper.sep;
             lines[1] += `${+recent.ur.toFixed(2)} UR`;
-            if(recent.cvur)
+            if(recent.cvur != recent.ur)
                 lines[1] += ` (${+recent.cvur.toFixed(2)}cv)`;
         }else if(recent.ur < 0){
             if(recent.count100 > 0 || recent.count50 > 0 || recent.countmiss > 0) lines[1] += helper.sep;
@@ -1770,11 +1769,17 @@ module.exports = {
 	        api.get(`/users/${user_id}/scores/best`, { params: { limit: options.count, mode: "osu" } }),
 	        api.get(`/users/${user_id}/osu`)
         ];
+
+        if (options.count > 100)
+			requests.push(api.get(`/users/${user_id}/scores/best`, { params: { limit: 100, offset: 100, mode: "osu" } }));
         
         const results = await Promise.all(requests);
 
         let user_best = results[0].data;
         let user = results[1].data;
+
+        if(options.count > 100)
+			user_best = user_best.concat(results[2].data);
 
         if(user_best.length < 1){
             cb(`No top plays found for ${options.user}. 🤨`);
@@ -1946,10 +1951,16 @@ module.exports = {
 		let requests = [
 	        api.get(`/users/${user_id}/scores/best`, { params: { limit: 100, mode: "osu" } })
         ];
+
+		if (options.index > 100 || options.rb || options.ob)
+			requests.push(api.get(`/users/${user_id}/scores/best`, { params: { limit: 200, offset: 100, mode: "osu" } }));
         
         const results = await Promise.all(requests);
 
         let user_best = results[0].data;
+
+		if(options.index > 100 || options.rb || options.ob)
+			user_best = user_best.concat(results[1].data);
 
         if(user_best.length < 1){
             cb(`No top plays found for ${options.user}. 🤨`);
@@ -2008,9 +2019,7 @@ module.exports = {
 						beatmap.drain = mod.settings.drain_rate ?? beatmap.drain
 					}
 				})
-			}
-
-            let diff_settings = calculateCsArOdHp(beatmap.cs, beatmap.ar, beatmap.accuracy, beatmap.drain, options.mods);
+			};
 
             let speed = 1;
 
@@ -2037,6 +2046,11 @@ module.exports = {
 				mods: options.mods,
 				clockRate: speed,
 			}).calculate(rosu_map);
+			let attributes = new rosu.BeatmapAttributesBuilder({
+				map: rosu_map,
+				mods: options.mods,
+				clockRate: speed,
+			}).build();
 
             let accuracies = [90, 95, 97, 98, 99, 99.5, 100];
 
@@ -2100,7 +2114,7 @@ module.exports = {
                     lines[1] += '**';
             });
 
-            lines[3] = `CS**${+diff_settings.cs.toFixed(2)}** AR**${+diff.ar.toFixed(2)}** OD**${+diff.od.toFixed(2)}** HP**${+diff_settings.hp.toFixed(2)}** - `;
+            lines[3] = `CS**${+attributes.cs.toFixed(2)}** AR**${+attributes.ar.toFixed(2)}** OD**${+attributes.od.toFixed(2)}** HP**${+attributes.hp.toFixed(2)}** - `;
 
             lines[3] += `**${+bpm.toFixed(1)}** BPM ~ `;
             lines[3] += `**${+diff.stars.toFixed(2)}**★`;
@@ -2235,36 +2249,39 @@ module.exports = {
                 let bpm = +(MINUTE / timing_point.ms_per_beat * speed_multiplier).toFixed(2);
 
                 if(t == 0)
-                    bpms.push({ t: 0, y: bpm });
+                    bpms.push({ x: 0, y: bpm });
 
-                bpms.push({ t: timing_point.time, y: bpm });
+                bpms.push({ x: timing_point.time, y: bpm });
             }
 
             if(bpms.length == 0)
                 throw 'An error occured getting the Beatmap BPM values';
 
-            bpms.push({ t: map.objects[map.objects.length - 1].time, y: bpms[bpms.length - 1]['y'] });
+            bpms.push({ x: map.objects[map.objects.length - 1].time, y: bpms[bpms.length - 1]['y'] });
 
             const chartOptions = Object.assign({}, CHART_OPTIONS);
 
-            chartOptions.title.text = [`${map.artist} - ${map.title}`, `Version: ${map.version}, Mapped by ${map.creator}`];
-            chartOptions.scales.yAxes[0].ticks.precision = 0;
-
+            chartOptions.plugins.title.text = [`${map.artist} - ${map.title}`, `Version: ${map.version}, Mapped by ${map.creator}`];
+            chartOptions.scales.x.max = bpms[bpms.length - 1].x;
+            
             const configuration = {
                 type: 'line',
                 data: {
                     datasets: [{
                         label: 'BPM',
-                        steppedLine: true,
-                        lineTension: 0,
-                        borderJoinStyle: 'round',
-                        data: bpms
+                        stepped: true,
+                        borderCapStyle: 'square',
+                        borderJoinStyle: 'miter',
+                        data: bpms,
+                        fill: false,
                     }]
                 },
                 options: chartOptions
             };
 
-            const outputChart = await graphCanvas.renderToBuffer(configuration);
+            const chart = new Chart(graphCanvas, configuration);
+            const outputChart = await graphCanvas.toBuffer('image/png');
+            chart.destroy();
 
             const graphImage = new Jimp(600, 400, '#263238E6');
             const _graph = await Jimp.read(outputChart);
@@ -2437,18 +2454,76 @@ module.exports = {
 
     calculate_strains: calculateStrains,
 
-	get_strains_bar: async function(osu_file_path, mods_string, progress, color = '#F06292'){
+	get_strains_bar: async function(osu_file_path, mods_string, progress = 100, beatmapset_id, frames){
+        const BANNER_WIDTH = 900;
+        const BANNER_HEIGHT = 250;
+
+        const BAR_WIDTH = 399;
+        const BAR_HEIGHT = 80;
+
+        const BANNER_FACTOR = BAR_WIDTH / BANNER_WIDTH; 
+
+        const GRAPH_HEIGHT = 35;
+        const GRAPH_COLOR = beatmapset_id == 481703 ? '74,165,173' : '252,123,166';
+
 		let map_strains = await module.exports.get_strains(osu_file_path, mods_string);
 
 		if(!map_strains)
 			return false;
 
+        const spotResults = {};
+        const hitResults = [];
+
+        if (frames) {
+            const [lastFrame] = frames.slice(-1);
+
+            if (lastFrame.countMiss <= 12) {
+                hitResults.push(...frames.filter(x => x.result == 'miss'));
+                spotResults['miss'] = [];
+            }
+
+            if (lastFrame.count100 < 7) {
+                hitResults.push(...frames.filter(x => x.result == 100));
+                spotResults['100'] = [];
+
+                if (lastFrame.count50 < 7) {
+                    hitResults.push(...frames.filter(x => x.result == 50));
+                    spotResults['50'] = [];
+                }
+            }        
+
+            for (const frame of hitResults) {
+                const spot = frame.offset / lastFrame.offset;
+
+                spotResults[frame.result].push(spot);
+            }
+        }
+
 		let { strains, max_strain } = map_strains;
-		let bar = createCanvas(399, 40);
+		let bar = createCanvas(BAR_WIDTH, BAR_HEIGHT);
 		let ctx = bar.getContext('2d');
 
-		ctx.fillStyle = 'transparent';
-		ctx.fillRect(0, 0, 399, 40);
+        let banner;
+
+        try {
+            banner = await loadImage(`https://assets.ppy.sh/beatmaps/${beatmapset_id}/covers/cover.jpg`);
+
+            ctx.drawImage(banner, 0, 0, BANNER_WIDTH, BANNER_HEIGHT, 0, BAR_HEIGHT / 2 - BANNER_FACTOR * BANNER_HEIGHT / 2, BAR_WIDTH, BANNER_FACTOR * BANNER_HEIGHT);
+        } catch(e) {
+            console.warn(e);
+            // map probably has no background
+        }
+
+        const gradient = ctx.createLinearGradient(0, BAR_HEIGHT, 0, 0);
+
+        gradient.addColorStop(0, "rgba(0,0,0,0.7)");
+        gradient.addColorStop(0.45, "rgba(0,0,0,0.45)");
+        gradient.addColorStop(0.8, "rgba(0,0,0,0)");
+
+        ctx.fillStyle = gradient;
+        if (banner) {
+            ctx.fillRect(0, 0, BAR_WIDTH, BAR_HEIGHT);
+        }
 
 		let points = [];
 		let strain_chunks = [];
@@ -2463,48 +2538,124 @@ module.exports = {
 
 		strain_chunks.forEach((strain, index) => {
 			let _strain = strain / max_strain;
-			let x = (index + 1) / strain_chunks.length * 399;
-			let y = Math.min(30, 5 + 35 - _strain * 35);
+			let x = (index + 1) / strain_chunks.length * BAR_WIDTH;
+			let y = Math.min(BAR_HEIGHT - 5, GRAPH_HEIGHT - _strain * (GRAPH_HEIGHT - 5) + (BAR_HEIGHT - GRAPH_HEIGHT));
 			points.push({x, y});
 		});
 
-		ctx.fillStyle = color;
-		ctx.moveTo(0, 40);
-		ctx.lineTo(0, 30);
+        const graphGradient = ctx.createLinearGradient(0, BAR_HEIGHT, 0, BAR_HEIGHT - GRAPH_HEIGHT);
+
+        graphGradient.addColorStop(0, `rgba(${GRAPH_COLOR},0)`);
+        graphGradient.addColorStop(0.8, `rgba(${GRAPH_COLOR},0.7)`);
+
+
+        if (progress < 1) { 
+            ctx.globalAlpha = 0.7;
+        }
+
+		ctx.fillStyle = banner ? graphGradient : `rgba(${GRAPH_COLOR},0.7)`;
+        ctx.beginPath();
+		ctx.moveTo(0, BAR_HEIGHT + 10);
+		ctx.lineTo(0, points[0].y);
 
 		for(let i = 1; i < points.length - 2; i++){
-	        var xc = (points[i].x + points[i + 1].x) / 2;
-	        var yc = (points[i].y + points[i + 1].y) / 2;
+	        const xc = (points[i].x + points[i + 1].x) / 2;
+	        const yc = (points[i].y + points[i + 1].y) / 2;
 	        ctx.quadraticCurveTo(points[i].x, points[i].y, xc, yc);
 	    }
 
-		ctx.lineTo(399,30);
-		ctx.lineTo(399,40);
+		ctx.lineTo(BAR_WIDTH, points[points.length - 1].y);
+		ctx.lineTo(BAR_WIDTH, BAR_HEIGHT + 10);
 		ctx.closePath();
 		ctx.fill();
 
-		ctx.clearRect(progress * 399, 0, 399 - progress * 399, 40);
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = `rgb(${GRAPH_COLOR})`;
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
 
-		ctx.fillStyle = 'transparent';
-		ctx.fillRect(progress * 399, 0, 399 - progress * 399, 40);
+        ctx.beginPath();
+        ctx.moveTo(0, points[0].y)
 
-		ctx.fillStyle = color;
-		ctx.globalAlpha = 0.5;
-		ctx.moveTo(0, 40);
-		ctx.lineTo(0, 30);
+        for(let i = 1; i < Math.floor((points.length - 2) * progress); i++){
+            const xc = (points[i].x + points[i + 1].x) / 2;
+	        const yc = (points[i].y + points[i + 1].y) / 2;
+	        ctx.quadraticCurveTo(points[i].x, points[i].y, xc, yc);
+        }
+
+        if (progress == 1) 
+            ctx.lineTo(BAR_WIDTH, points[points.length - 1].y)
+        
+        ctx.stroke();
+
+        ctx.shadowColor = 'rgba(0,0,0,0.7)';
+        ctx.shadowOffsetX = 1;
+        ctx.shadowOffsetY = 1;
+        ctx.shadowBlur = 5;
+        ctx.lineWidth = 2;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        ctx.font = 'bold 18px sans-serif';
+
+        for (const resultType in spotResults) {
+            let color = 'white';
+            let text = '';
+
+            switch (resultType) {
+                case 'miss':
+                    color = '#ff3d3d';
+                    text = 'X';
+                    break;
+                case '100':
+                    color = '#46ff3d';
+                    text = '100';
+                    continue;
+                case '50':
+                    color = '#ffce3d';
+                    text = '50';
+                    continue;
+            }
+
+            ctx.fillStyle = color;
+            ctx.strokeStyle = color;
+
+            const spots = spotResults[resultType];
+
+            for (const spot of spots) {
+                const point = points[Math.floor(Math.min(0.98, spot) * points.length)];
+
+                ctx.beginPath();
+                ctx.moveTo(point.x, BAR_HEIGHT);
+                ctx.lineTo(point.x, point.y - 12);
+                ctx.stroke();
+
+                ctx.fillText(text, point.x, point.y - 9)
+            }
+        }
+
+        if (progress == 1)
+            return bar.toBuffer('image/png');
+
+        ctx.beginPath();
+		ctx.moveTo(0, BAR_HEIGHT + 10);
+		ctx.lineTo(0, BAR_HEIGHT - 10);
 
 		for(let i = 1; i < points.length - 2; i++){
-	        var xc = (points[i].x + points[i + 1].x) / 2;
-	        var yc = (points[i].y + points[i + 1].y) / 2;
+	        const xc = (points[i].x + points[i + 1].x) / 2;
+	        const yc = (points[i].y + points[i + 1].y) / 2;
+
+            if ((xc / BAR_WIDTH) >= progress)
+                break;
+
 	        ctx.quadraticCurveTo(points[i].x, points[i].y, xc, yc);
 	    }
 
-		ctx.lineTo(399,30);
-		ctx.lineTo(399,40);
+		ctx.lineTo(progress * 399, BAR_HEIGHT - 10);
+		ctx.lineTo(progress * 399, BAR_HEIGHT + 10);
 		ctx.closePath();
 		ctx.fill();
 
-		return bar.toBuffer();
+		return bar.toBuffer('image/png');
 	},
 
 	get_preview_point: function(osu_file_path){
@@ -2740,14 +2891,14 @@ module.exports = {
             for(let i = 0; i < chosen_strains.length; i += chunk_size){
                 let _strains = chosen_strains.slice(i, i + chunk_size);
 
-                stars.push({ t: i * STRAIN_STEP, y: Math.max(..._strains) });
+                stars.push({ x: i * STRAIN_STEP, y: Math.max(..._strains) });
             }
 
             const chartOptions = Object.assign({}, CHART_OPTIONS);
 
-            chartOptions.title.text = [`${map.artist} - ${map.title}`, `Version: ${map.version}, Mapped by ${map.creator}`];
-            chartOptions.scales.yAxes[0].ticks.suggestedMax = Math.ceil(Math.max(...stars.map(a => a['y'])));
-            chartOptions.scales.yAxes[0].ticks.beginAtZero = true;
+            chartOptions.plugins.title.text = [`${map.artist} - ${map.title}`, `Version: ${map.version}, Mapped by ${map.creator}`];
+            chartOptions.scales.y.suggestedMax = Math.ceil(Math.max(...stars.map(a => a['y'])));
+            chartOptions.scales.x.max = stars[stars.length - 1].x;
 
             const configuration = {
                 type: 'line',
@@ -2756,7 +2907,7 @@ module.exports = {
                         label: 'Stars',
                         data: stars
                     }, { // draws horizontal line for total star rating
-                        data: [{ t: 0, y: strains.total}, { t: stars[stars.length - 1]['t'], y: strains.total }],
+                        data: [{ x: 0, y: strains.total}, { x: stars[stars.length - 1]['x'], y: strains.total }],
                         fill: false,
                         radius: 0,
                         borderColor: 'rgba(255,255,255,0.4)'
@@ -2765,7 +2916,9 @@ module.exports = {
                 options: chartOptions
             };
 
-            const outputChart = await graphCanvas.renderToBuffer(configuration);
+            const chart = new Chart(graphCanvas, configuration);
+            const outputChart = await graphCanvas.toBuffer('image/png');
+            chart.destroy();
 
             const output_frame = await getFrame(osu_file_path, max_strain_time_real - map.objects[0].time % 400, mods_array, [427, 320], {ar: ar, cs: cs, noreplay: true})
             

@@ -21,6 +21,7 @@ module.exports = {
         }
     ],
     configRequired: ["credentials.client_id", "credentials.client_secret"],
+    envRequired: ['OSU_CLIENT_ID', 'OSU_CLIENT_SECRET'],
     call: obj => {
         return new Promise((resolve, reject) => {
             let { argv, msg, user_ign, last_beatmap } = obj;
@@ -57,17 +58,17 @@ module.exports = {
 
                         if(ur_promise){
                             resolve({
-                                embed: embed,
+                                embeds: [embed],
                                 files: [{attachment: strains_bar, name: 'strains_bar.png'}],
                                 edit_promise: new Promise((resolve, reject) => {
                                     ur_promise.then(recent => {
                                         embed = osu.format_embed(recent);
-                                        resolve({embed});
+                                        resolve({ embeds: [embed] });
                                     });
                                 })});
                         }else{
                             resolve({
-                                embed: embed,
+                                embeds: [embed],
                                 files: [{attachment: strains_bar, name: 'strains_bar.png'}]
                             });
                         }

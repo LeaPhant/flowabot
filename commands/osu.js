@@ -10,6 +10,7 @@ module.exports = {
         result: "Returns nathan on osu's osu! stats."
     },
     configRequired: ["credentials.client_id", "credentials.client_secret"],
+    envRequired: ['OSU_CLIENT_ID', 'OSU_CLIENT_SECRET'],
     call: obj => {
         return new Promise((resolve, reject) => {
             let { argv, msg, user_ign } = obj;
@@ -34,7 +35,7 @@ module.exports = {
                     return false;
                 }
 
-                resolve({embed: embed});
+                resolve({embeds: [embed]});
             });
         });
     }

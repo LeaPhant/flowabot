@@ -70,7 +70,7 @@ scratch
 .DS_Store
 
 # config and credentials
-config.json
+/config.json
 
 build
 osumaps
@@ -79,3 +79,5 @@ maps/
 renderer/webui/output
 replays
 .vscode
+
+vscode-profile*

@@ -8,13 +8,18 @@ const Jimp = require('jimp');
 const crypto = require('crypto');
 
 const unzip = require('unzipper');
-const disk = require('diskusage');
 
 const { exec, execFile, fork, spawn } = require('child_process');
 
+const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+
 const execPromise = util.promisify(exec);
 const execFilePromise = util.promisify(execFile);
-const diskCheck = util.promisify(disk.check);
+const diskCheck = util.promisify(fs.statfs);
+const freeSpace = async filePath => { 
+    const stat = await diskCheck(filePath);
+    return stat.bsize * stat.bfree 
+};
 
 const processBeatmap = require('./beatmap/process.js');
 
@@ -23,12 +28,15 @@ const helper = require('../helper.js');
 
 const ffmpeg = config.ffmpeg_path || require('ffmpeg-static');
 
-const MAX_SIZE = 25 * 1024 * 1024;
-const MAX_SIZE_DM = 8 * 1024 * 1024;
+const MAX_SIZE = 10 * 1024 * 1024;
 
 let enabled_mods = [""];
 
 const resources = path.resolve(__dirname, "res");
+
+const BEATMAP_MIRRORS = process.env.BEATMAP_MIRRORS ? process.env.BEATMAP_MIRRORS.split(',') : (config.beatmap_mirrors ?? [
+    "https://mirror.nekoha.moe/api4/download/{SETID}"
+]);
 
 async function copyDir(src,dest) {
     const entries = await fs.promises.readdir(src, {withFileTypes: true});
@@ -149,6 +157,20 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 
 	let hitSoundPaths = await processHitsounds(media.beatmap_path, argon);
 
+    const findHitsound = hitSound => {
+        if (hitSound in hitSoundPaths) {
+            return hitSoundPaths[hitSound];
+        }
+
+        const indexRemoved = hitSound.replace(/\d+$/, '');
+
+        if (indexRemoved in hitSoundPaths) {
+            return hitSoundPaths[indexRemoved];
+        }
+
+        return false;
+    }
+
 	let hitObjects = beatmap.hitObjects.filter(a => a.startTime >= start_time && a.startTime < start_time + actual_length);
 	let hitSounds = [];
 
@@ -185,12 +207,12 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 			offset /= time_scale;
 
 			for(const hitSound of hitObject.HitSounds){
-
-				if(hitSound in hitSoundPaths){
+                const hitSoundPath = findHitsound(hitSound);
+				if(hitSoundPath){
 					hitSounds.push({
 						offset,
 						sound: hitSound,
-						path: hitSoundPaths[hitSound],
+						path: hitSoundPath,
 						volume: timingPoint.sampleVolume / 100
 					});
 				}
@@ -214,11 +236,12 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 					offset -= start_time;
 					offset /= time_scale;
 
-					if(hitSound in hitSoundPaths){
+                    const hitSoundPath = findHitsound(hitSound);
+					if(hitSoundPath){
 						hitSounds.push({
 							offset,
 							sound: hitSound,
-							path: hitSoundPaths[hitSound],
+							path: hitSoundPath,
 							volume: edgeTimingPoint.sampleVolume / 100
 						});
 					}
@@ -235,12 +258,13 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 					offset /= time_scale;
 
 					tick.HitSounds[i].forEach(hitSound => {
-						if(hitSound in hitSoundPaths){
+                        const hitSoundPath = findHitsound(hitSound);
+						if(hitSoundPath){
 							hitSounds.push({
 								type: 'slidertick',
 								offset,
 								sound: hitSound,
-								path: hitSoundPaths[hitSound],
+								path: hitSoundPath,
 								volume: tickTimingPoint.sampleVolume / 100
 							});
 						}
@@ -261,7 +285,8 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 		}
 	});
 	// process in chunks
-	const chunkCount = require('os').cpus().length;
+	const chunkCount = Math.min(Math.floor(modded_length / 1000), require('os').cpus().length);
+    console.log(chunkCount);
 	const chunkLength = Math.floor(modded_length / chunkCount);
 
 	let hitSoundPromises = [];
@@ -306,7 +331,8 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 			return;
 		}
 
-		Promise.all(hitSoundPromises).then(async () => {
+		Promise.all(hitSoundPromises).then(async (stdout,stderr) => {
+            console.log(stderr);
 			mergeHitSoundArgs.push('-filter_complex', `amix=inputs=${chunksToMerge}:normalize=0`, path.resolve(file_path, `hitsounds.wav`));
 
 			await execFilePromise(ffmpeg, mergeHitSoundArgs, { shell: true });
@@ -330,19 +356,19 @@ async function renderHitsounds(mediaPromise, beatmap, start_time, actual_length,
 }
 
 async function downloadMedia(options, beatmap, beatmap_path, size, download_path){
-	if(options.type != 'mp4' || options.custom_url || !options.audio || !config.credentials.osu_api_key)
+	if(options.type != 'mp4' || options.custom_url || !options.audio || !(process.env.OSU_API_KEY ?? config.credentials.osu_api_key))
 		throw 'No mapset available';
 
 	let output = {};
 
 	let beatmapset_id = beatmap.BeatmapSetID;
 
-	if(beatmapset_id == null){
+	if(beatmapset_id == null || beatmapset_id < 0){
 		const content = await fs.promises.readFile(beatmap_path, 'utf8');
 		const hash = crypto.createHash('md5').update(content).digest("hex");
 
 		const { data } = await axios.get('https://osu.ppy.sh/api/get_beatmaps', { params: {
-			k: config.credentials.osu_api_key,
+			k: process.env.OSU_API_KEY ?? config.credentials.osu_api_key,
 			h: hash
 		}});
 
@@ -368,29 +394,36 @@ async function downloadMedia(options, beatmap, beatmap_path, size, download_path
         return output;
     }
 
-	let mapStream;
+	let mapOsz;
 
-	try{
+	for (const mirror of BEATMAP_MIRRORS) {
+		const mirrorUrl = mirror.replace(/\$SETID|\{SETID\}/g, beatmapset_id);
 		try {
-			const osuDirectMap = await axios.get(`https://catboy.best/d/${beatmapset_id}n`, { timeout: 10000, responseType: 'stream' });
-			mapStream = osuDirectMap.data;
+			const oszResponse = await axios.get(mirrorUrl, {
+				timeout: 10000,
+				responseType: "arraybuffer",
+				headers: {
+					"User-Agent": "flowabot (https://github.com/LeaPhant/flowabot)",
+				},
+			});
+			mapOsz = oszResponse.data;
+			break;
 		} catch (e) {
-			const nerinyanMap = await axios.get(`https://osu.direct/api/d/${beatmapset_id}`, { responseType: 'stream' });
-			mapStream = nerinyanMap.data;
+			let errorString = Buffer.from(e.response.data).toString("utf-8");
+			console.error(mirrorUrl, e.response.status, errorString);
+			continue;
 		}
-	}catch(e){
-		const beatconnectMap = await axios.get(`https://api.nerinyan.moe/d/${beatmapset_id}`, { responseType: 'stream' });
-		mapStream = beatconnectMap.data;
 	}
 
 	const extraction_path = path.resolve(download_path, 'map');
 
-	const extraction = mapStream.pipe(unzip.Extract({ path: extraction_path }));
-
-	await new Promise((resolve, reject) => {
-		extraction.on('close', resolve);
-		extraction.on('error', reject);
-	});
+    const unzipper = await unzip.Open.buffer(mapOsz);
+    try {
+        await unzipper.extract({ path: extraction_path });
+    } catch(e) {
+        console.error(e);
+        return false;
+    }
 
 	output.beatmap_path = extraction_path;
 
@@ -483,21 +516,71 @@ module.exports = {
 
 		options.msg = null;
 
-		const renderStatus = ['– processing beatmap', '– rendering frames', '– encoding video'];
+		const renderStatus = [`Replay: \`${(options.score_id || options.osr) ? 'Yes' : 'No'}\``, '– processing beatmap', '– rendering frames', '– encoding video'];
 
 		let renderMessage;
+        let ffmpegProcess;
 
-		msg.channel.send({embed: {description: renderStatus.join("\n")}}).then(msg => {
+        let rnd = Math.round(1e9 * Math.random());
+        let file_path = path.resolve(config.frame_path != null ? config.frame_path : os.tmpdir(), 'frames', `${rnd}`);;
+
+        const cancelButton = new ButtonBuilder()
+        .setCustomId('cancel-render')
+        .setLabel('Cancel').setStyle(ButtonStyle.Danger);
+
+        const row = new ActionRowBuilder().addComponents(cancelButton);
+
+        let collector;
+        let cancelled = false;
+
+		msg.channel.send({
+            embeds: [{
+                description: renderStatus.join("\n")
+            }],
+            components: [row]
+        }).then(msg => {
 			renderMessage = msg;
+
+            const filter = i => i.customId === 'cancel-render' && i.user.id === options.author_id;
+            collector = msg.createMessageComponentCollector({ filter });
+            collector.on('collect', i => {
+                cancelled = true;
+                if (ffmpegProcess) {
+                    try {
+                        ffmpegProcess.kill();
+                    } catch(e) {
+                        // failed to kill ffmpeg
+                    }
+                }
+                workers.forEach(worker => {
+                    try {
+                        worker.kill();
+                    } catch(e) {
+                         // failed to kill ffmpeg
+                    }
+                });
+                setTimeout(() => {
+                    fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
+                }, 10000);
+                i.update({
+                    embeds: [{
+                        description: 'Render was cancelled.'
+                    }],
+                    components: []
+                }).catch(helper.error);
+                clearInterval(updateInterval);
+                return;
+            });
 		}).catch(helper.error);
 
 		const updateRenderStatus = async () => {
 			if (!renderMessage) return;
-			await renderMessage.edit({
-				embed: {
+			renderMessage.edit({
+				embeds: [{
 					description: renderStatus.join("\n")
-				}
-			});
+				}],
+                components: [row]
+			}).catch(() => {});
 		};
 
 		const updateInterval = setInterval(() => { updateRenderStatus().catch(console.error) }, 3000);
@@ -508,8 +591,15 @@ module.exports = {
 			updateRenderStatus();
 			clearInterval(updateInterval);
 
-			await msg.channel.send(opts);
-			if (renderMessage) await renderMessage.delete();
+			msg.channel.send(opts).then(outputMessage => {
+                if (cancelled) {
+                    outputMessage.delete().catch(() => {});
+                }
+            });
+
+			if (renderMessage && !cancelled) {
+                renderMessage.delete().catch(() => {});
+            }
 		};
 
 		const beatmapProcessStart = Date.now();
@@ -537,7 +627,7 @@ module.exports = {
 					return false;
 				}
 
-				renderStatus[0] = `✓ processing beatmap (${((Date.now() - beatmapProcessStart) / 1000).toFixed(3)}s)`;
+				renderStatus[1] = `✓ processing beatmap (${((Date.now() - beatmapProcessStart) / 1000).toFixed(3)}s)`;
 			});
 
 			beatmap = await new Promise(resolve => {
@@ -548,15 +638,17 @@ module.exports = {
 		} else {
 			try {
 				beatmap = await processBeatmap(beatmap_path, options, mods_raw, time, length);
-				renderStatus[0] = `✓ processing beatmap (${((Date.now() - beatmapProcessStart) / 1000).toFixed(3)}s)`;
+				renderStatus[1] = `✓ processing beatmap (${((Date.now() - beatmapProcessStart) / 1000).toFixed(3)}s)`;
 			} catch(e) {
+				console.error(e);
 				resolveRender("Error processing beatmap or replay").catch(console.error);
 				return false;
 			}
-			
 		}
 
 		console.timeEnd('process beatmap');
+        
+        renderStatus[0] = `Map: \`${beatmap.Artist} - ${beatmap.Title} [${beatmap.Version}]\`\n` + renderStatus[0];
 
 		time = beatmap.renderTime;
 		length = beatmap.renderLength;
@@ -578,8 +670,6 @@ module.exports = {
 
 		let actual_length = time_max - time;
 
-		let rnd = Math.round(1e9 * Math.random());
-		let file_path;
 		let fps = options.fps || 60;
 
 		let i = 0;
@@ -599,7 +689,6 @@ module.exports = {
 
 		let bitrate = 1200;
 
-		file_path = path.resolve(config.frame_path != null ? config.frame_path : os.tmpdir(), 'frames', `${rnd}`);
 
 		await fs.promises.mkdir(file_path, { recursive: true });
 
@@ -647,9 +736,7 @@ module.exports = {
 			}
 		}
 
-		const info = await diskCheck(file_path);
-
-		if(info.available * 0.9 < frames_size){
+		if(await freeSpace(file_path) * 0.9 < frames_size){
 			resolveRender("Not enough disk space").catch(console.error);
 
 			return false;
@@ -677,18 +764,18 @@ module.exports = {
 
 		let done = 0;
 
-		if(config.debug)
+		if(helper.debug)
 			console.time('render beatmap');
 
 		if(options.type == 'gif'){
-			if(config.debug)
+			if(helper.debug)
 				console.time('encode video');
 
 			ffmpeg_args.push(`${file_path}/video.gif`);
 
 			const encodingProcessStart = Date.now();
 
-			let ffmpegProcess = spawn(ffmpeg, ffmpeg_args, { shell: true });
+			ffmpegProcess = spawn(ffmpeg, ffmpeg_args, { shell: true });
 
 			ffmpegProcess.on('close', async code => {
 				if(code > 0){
@@ -700,10 +787,10 @@ module.exports = {
 					return false;
 				}
 
-				if(config.debug)
+				if(helper.debug)
 					console.timeEnd('encode video');
 
-				renderStatus[1] = `✓ encoding video (${((Date.now() - encodingProcessStart) / 1000).toFixed(3)}s)`;
+				renderStatus[3] = `✓ encoding video (${((Date.now() - encodingProcessStart) / 1000).toFixed(3)}s)`;
 
 				resolveRender({files: [{
 					attachment: `${file_path}/video.${options.type}`,
@@ -745,7 +832,7 @@ module.exports = {
 				ffmpeg_args.unshift('-f', 'lavfi', '-r', fps, '-i', `color=c=black:s=${size.join("x")}`);
 				helper.log("rendering without audio");
 			}).finally(() => {
-				if(config.debug)
+				if(helper.debug)
 					console.time('encode video');
 
 				ffmpeg_args.push(
@@ -755,9 +842,11 @@ module.exports = {
 					'-movflags', 'faststart', '-g', fps, '-force_key_frames', '00:00:00.000', `${file_path}/video.mp4`
 				);
 
+                if (cancelled) return;
+
 				const encodingProcessStart = Date.now();
 
-				let ffmpegProcess = spawn(ffmpeg, ffmpeg_args, { shell: true });
+				ffmpegProcess = spawn(ffmpeg, ffmpeg_args, { shell: true });
 
 				ffmpegProcess.on('close', async code => {
 					if(code > 0){
@@ -769,28 +858,17 @@ module.exports = {
 						return false;
 					}
 
-					if(config.debug)
+					if(helper.debug)
 						console.timeEnd('encode video');
 
-					renderStatus[2] = `✓ encoding video (${((Date.now() - encodingProcessStart) / 1000).toFixed(3)}s)`;
+					renderStatus[3] = `✓ encoding video (${((Date.now() - encodingProcessStart) / 1000).toFixed(3)}s)`;
 
 						const stat = await fs.promises.stat(`${file_path}/video.${options.type}`);
 
 					console.log('size', stat.size / 1024, 'KiB');
 					console.log('max size', MAX_SIZE / 1024, 'KiB');
 
-					if(stat.size < MAX_SIZE && msg.channel.type == "text" || options.webui){
-						resolveRender({files: [{
-							attachment: `${file_path}/video.${options.type}`,
-							name: `video.${options.type}`
-						}]}).then(() => {
-							fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
-						})
-						.catch(console.error)
-						.finally(() => {
-							fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
-						});
-					}else if(stat.size < MAX_SIZE_DM){
+					if(stat.size < MAX_SIZE || options.webui){
 						resolveRender({files: [{
 							attachment: `${file_path}/video.${options.type}`,
 							name: `video.${options.type}`
@@ -802,7 +880,7 @@ module.exports = {
 							fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
 						});
 					}else{
-						if (!config.upload_command) {
+						if (!config.upload_command && !config.upload_script) {
 							resolveRender("File too large and no upload command specified.").finally(() => {
 								fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
 							});
@@ -810,17 +888,26 @@ module.exports = {
 						}
 
 						try{
-							const upload_command = config.upload_command.replace('{path}', `${file_path}/video.${options.type}`);
+                            const upload_script = await helper.fileExists(config.upload_script) ? config.upload_script : undefined;
+                            let response;
 
-							if (config.debug)
-								console.log('running upload command: ', config.upload_command);
+                            if (upload_script) {
+                                response = await execFilePromise(upload_script, [`${file_path}/video.${options.type}`]);
+                                const url = new URL(response.stdout);
+                            } else {
+                                const upload_command = config.upload_command.replace('{path}', `${file_path}/video.${options.type}`);
 
-							const response = await execPromise(upload_command);
-							const url = new URL(response.stdout);
+                                if (helper.debug)
+                                    console.log('running upload command: ', config.upload_command);
 
-							await resolveRender(url.href);
+                                response = await execPromise(upload_command);
+                            }
+                            
+                            const url = new URL(response.stdout);
+                            
+                            await resolveRender(url.href);
 						}catch(err){
-							await resolveRender("File too large and failed to upload to specified upload command.")
+							await resolveRender("File too large and failed to upload to specified upload command/script.")
 							console.error(err);
 						}finally{
 							fs.promises.rm(file_path, { recursive: true }).catch(helper.error);
@@ -836,7 +923,7 @@ module.exports = {
 
 					const frame = parseInt(line.substring(6).trim());
 
-					renderStatus[2] = `– encoding video (${Math.round(frame/amount_frames*100)}%)`;
+					renderStatus[3] = `– encoding video (${Math.round(frame/amount_frames*100)}%)`;
 				});
 
 				pipeFrameLoop(ffmpegProcess, err => {
@@ -870,7 +957,7 @@ module.exports = {
 			worker.on('message', frame => {
 				frames_rendered.push(frame);
 
-				renderStatus[1] = `– rendering frames (${Math.round(frames_rendered.length/amount_frames*100)}%)`;
+				renderStatus[2] = `– rendering frames (${Math.round(frames_rendered.length/amount_frames*100)}%)`;
 			});
 
 			worker.on('close', code => {
@@ -882,9 +969,9 @@ module.exports = {
 				done++;
 
 				if(done == threads){
-					renderStatus[1] = `✓ rendering frames (${((Date.now() - framesProcessStart) / 1000).toFixed(3)}s)`;
+					renderStatus[2] = `✓ rendering frames (${((Date.now() - framesProcessStart) / 1000).toFixed(3)}s)`;
 
-					if(config.debug)
+					if(helper.debug)
 						console.timeEnd('render beatmap');
 				}
 			});

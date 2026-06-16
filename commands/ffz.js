@@ -59,7 +59,7 @@ module.exports = {
                         let stream = response.data.pipe(fs.createWriteStream(file));
 
                         stream.on('finish', () => {
-                            resolve({embed: {
+                            resolve({embeds: [{
                                 title: emote.name,
                                 url: `https://www.frankerfacez.com/emoticon/${emote.id}`,
                                 image: {
@@ -68,7 +68,7 @@ module.exports = {
                                 footer: {
                                     text: `Submitted by ${emote.owner.display_name}`
                                 }
-                            }, files: [{ attachment: file, name: 'emote.png' }], remove_path: file});
+                            }], files: [{ attachment: file, name: 'emote.png' }], remove_path: file});
                         });
                     });
                 }else{

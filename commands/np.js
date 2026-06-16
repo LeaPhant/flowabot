@@ -16,6 +16,8 @@ module.exports = {
     description: "Shows what song you are currently listening to. If it can't be retrieved from Rich Presence it will ask for a Last.fm username.",
     usage: '[last.fm username]',
     configRequired: ['credentials.last_fm_key'],
+    envRequired: ['LAST_FM_KEY'],
+    intentRequired: ['GuildPresences'],
     call: obj => {
         return new Promise((resolve, reject) => {
             let { argv, msg } = obj;
@@ -92,7 +94,7 @@ module.exports = {
             }
 
             if(embed){
-                resolve({embed: embed});
+                resolve({embeds: [embed]});
                 return true;
             }
 
@@ -101,7 +103,7 @@ module.exports = {
                 return false;
             }
 
-            lastFm.defaults.params.api_key = config.credentials.last_fm_key;
+            lastFm.defaults.params.api_key = process.env.LAST_FM_KEY ?? config.credentials.last_fm_key;
 
             let requests = [
                 lastFm.get('', { params: { method: 'user.getinfo', user: argv[1] }}),
@@ -144,10 +146,10 @@ module.exports = {
                     if(track.album["#text"].length > 0)
                         embed.description = `⠀\nAlbum: **${track.album["#text"]}**`
 
-                    resolve({ embed: embed });
+                    resolve({ embeds: [embed] });
                 }
             }).catch(err => {
-                if(config.debug)
+                if(helper.debug)
                     helper.error(err);
 
                 reject('User not found');

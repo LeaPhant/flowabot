@@ -1,0 +1,45 @@
+﻿osu file format v128
+
+[General]
+AudioFilename: audio.wav
+AudioLeadIn: 0
+PreviewTime: -1
+Countdown: 0
+SampleSet: Normal
+StackLeniency: 0.7
+Mode: 0
+LetterboxInBreaks: 0
+WidescreenStoryboard: 1
+
+[Editor]
+DistanceSpacing: 1
+BeatDivisor: 4
+GridSize: 4
+TimelineZoom: 1
+
+[Metadata]
+Title: beep
+TitleUnicode: beep
+Artist: lea
+ArtistUnicode: lea
+Creator: LeaPhant
+Version: New Difficulty
+Source: beep
+Tags: beep
+
+[Difficulty]
+HPDrainRate: 5
+CircleSize: 5
+OverallDifficulty: 5
+ApproachRate: 5
+SliderMultiplier: 1.9999999552965158
+SliderTickRate: 1
+
+[Events]
+
+[TimingPoints]
+1000,500,4,1,0,100,1,0
+
+
+[HitObjects]
+152.00002,192.00003,1000,6,0,L|L|351.6156:193.06323,1,200,0|0,1:0|1:0,1:0:0:0:

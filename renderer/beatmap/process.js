@@ -3,16 +3,18 @@ const path = require('path');
 
 const osuBeatmapParser = require('osu-parser');
 const axios = require('axios');
+const booba = require('booba');
 
+const helper = require('../../helper');
 const config = require('../../config.json');
 
-const { difficultyRange, float } = require('./util');
+const { difficultyRange, float, int } = require('./util');
 const { parseReplay, applyReplay } = require('./replay');
 
 const applySliders = require('./slider');
 const applyHitsounds = require('./hitsounds');
 const applyStacking = require('./stacking');
-const applyMods = require('./mods/mods');
+const { applyMods, ApplicableMods } = require('./mods/mods');
 const applyCounter = require('./pp');
 const applyFollowpoints = require('./followpoints');
 
@@ -39,20 +41,9 @@ class BeatmapProcessor {
 	}
 
 	async parseBeatmap () {
-		this.osuContents = await fs.readFile(this.beatmap_path, 'utf8');
+        let Replay;
 
-		const Beatmap = osuBeatmapParser.parseContent(this.osuContents);
-
-		Beatmap.CircleSize = Number(Beatmap.CircleSize ?? 5);
-		Beatmap.OverallDifficulty =  Number(Beatmap.OverallDifficulty ?? 5);
-		// Very old maps use the OD as the AR 
-		Beatmap.ApproachRate = Number(Beatmap.ApproachRate ?? Beatmap.OverallDifficulty ?? 5);
-
-		console.time("download/parse replay");
-
-		let Replay;
-
-		if (this.options.score_id) {
+        if (this.options.score_id) {
 			const replay_path = path.resolve(config.replay_path, `${this.options.score_id}.osr`);
 
 			if (await exists(replay_path)) {
@@ -66,16 +57,45 @@ class BeatmapProcessor {
 				const response = await axios.get(this.options.osr, { timeout: 5000, responseType: 'arraybuffer' });
 
 				Replay = await parseReplay(response.data);
-				
-				if (Replay.score_info) {
-					this.mods_raw = Replay.score_info.mods;
-				}
+
+                if (Replay?.mods != null) {
+                    const mods = new booba.Mods(Replay.mods).toString(false).split(",").map(x => { return { acronym: x }});
+                    this.mods_raw = mods;
+                }
+
+                if (Replay?.score_info) {
+                    this.mods_raw = Replay.score_info.mods;
+                }
 			} catch(e) {
 				console.error(e);
 
 				throw "Couldn't download replay";
 			}
 		}
+
+        if (Replay?.beatmapMD5 && 
+            (!this.beatmap_path || await helper.fileMd5(this.beatmap_path) != Replay.beatmapMD5)) {
+            
+            try {
+                const newBeatmapPath = await helper.downloadBeatmapByMd5(Replay.beatmapMD5);
+
+                if (newBeatmapPath)
+                    this.beatmap_path = newBeatmapPath;
+            } catch(e) {
+                //
+            }
+        }
+
+		this.osuContents = await fs.readFile(this.beatmap_path, 'utf8');
+
+		const Beatmap = osuBeatmapParser.parseContent(this.osuContents);
+
+		Beatmap.CircleSize = Number(Beatmap.CircleSize ?? 5);
+		Beatmap.OverallDifficulty =  Number(Beatmap.OverallDifficulty ?? 5);
+		// Very old maps use the OD as the AR 
+		Beatmap.ApproachRate = Number(Beatmap.ApproachRate ?? Beatmap.OverallDifficulty ?? 5);
+
+		console.time("download/parse replay");
 
 		Beatmap.Replay = Replay;
 
@@ -88,12 +108,16 @@ class BeatmapProcessor {
 			Mods.set(mod.acronym, mod.settings ?? {});
 		}
 
+        console.log("MODS", this.mods_raw);
+
 		return Beatmap;
 	}
 
 	async applySettings () {
 		const { Beatmap, options } = this;
-		const { Mods } = Beatmap;		
+		const { Mods } = Beatmap;
+
+        Beatmap.options = options;
 
 		if (Mods.has('HR')) {
 			Beatmap.CircleSize = Math.min(10, Beatmap.CircleSize * 1.3);
@@ -145,22 +169,22 @@ class BeatmapProcessor {
 		if (!isNaN(options.od))
 			Beatmap.OverallDifficulty = options.od;
 	
-		Beatmap.TimePreempt = difficultyRange(Beatmap.ApproachRate, 1800, 1200, 450);
-		Beatmap.TimeFadein = difficultyRange(Beatmap.ApproachRate, 1200, 800, 300);
+		Beatmap.TimePreempt = int(difficultyRange(Beatmap.ApproachRate, 1800, 1200, 450));
+		Beatmap.TimeFadein = int(difficultyRange(Beatmap.ApproachRate, 1200, 800, 300));
 	
 		if (Mods.has('HD') && options.hidden)
 			Beatmap.TimeFadein = Beatmap.TimePreempt * 0.4;
 	
 		const hitWindows = {
-			300: difficultyRange(Beatmap.OverallDifficulty, 80, 50, 20),
-			100: difficultyRange(Beatmap.OverallDifficulty, 140, 100, 60),
-			50: difficultyRange(Beatmap.OverallDifficulty, 200, 150, 100)
+			300: float(difficultyRange(Beatmap.OverallDifficulty, 80, 50, 20)),
+			100: float(difficultyRange(Beatmap.OverallDifficulty, 140, 100, 60)),
+			50: float(difficultyRange(Beatmap.OverallDifficulty, 200, 150, 100))
 		};
 	
 		for (const key in hitWindows) {
 			let judgement = hitWindows[key];
 	
-			if (Mods.has('CL'))
+			//if (Mods.has('CL'))
 				judgement -= 0.5;
 	
 			//if (!options.od)
@@ -178,16 +202,23 @@ class BeatmapProcessor {
 		Beatmap.HitWindowMiss = 400;
 	
 		// CS
-		Beatmap.Scale = float(float(1 - float(0.7) * difficultyRange(Beatmap.CircleSize)) / 2 * ROUNDING_ALLOWANCE);
+		Beatmap.Scale = float(float(1 - float(0.7) * float(difficultyRange(Beatmap.CircleSize))) / 2 * ROUNDING_ALLOWANCE);
 		Beatmap.Radius = OBJECT_RADIUS * Beatmap.Scale;
 		Beatmap.FollowpointRadius = Beatmap.Radius * 2;
 		Beatmap.ActualFollowpointRadius = Beatmap.Radius * 2.4;
-	
-		Beatmap.StackLeniency = parseFloat(Beatmap.StackLeniency) || 0.7;
+
+        const stackLeniency = parseFloat(Beatmap.StackLeniency);
+		Beatmap.StackLeniency = isNaN(stackLeniency) ? 0.7 : stackLeniency;
 
 		for (const hitObject of Beatmap.hitObjects) {
 			hitObject.latestHit = hitObject.startTime + Beatmap.HitWindow50;
 			hitObject.StackHeight = 0;
+
+            if (hitObject.objectName == 'slider') {
+                hitObject.SliderDots = [];
+                hitObject.SliderTicks = [];
+                hitObject.actualEndPosition = hitObject.endPosition;
+            }
 
 			if (hitObject.objectName != 'circle')
 				continue;
@@ -197,8 +228,8 @@ class BeatmapProcessor {
 		}
 	}
 
-	async applyMods () {
-		applyMods(this.Beatmap);
+	async applyMods (EnabledMods) {
+		applyMods(this.Beatmap, EnabledMods);
 	}
 
 	async applyComboColors () {
@@ -294,7 +325,7 @@ class BeatmapProcessor {
 			let firstNonSpinner = Beatmap.hitObjects.filter(x => x.objectName != 'spinner');
 	
 			if (firstNonSpinner.length == 0)
-				firstNonSpinner = Beatmap.hitObjects[0];
+				firstNonSpinner = [Beatmap.hitObjects[0]]
 	
 			time = Math.max(time, Math.max(0, firstNonSpinner[0].startTime - 1000));
 		}
@@ -357,7 +388,7 @@ class BeatmapProcessor {
 
 		// trim beatmap
 		Beatmap.hitObjects[Beatmap.hitObjects.length - 1].lastObject = true;
-    	Beatmap.hitObjects = Beatmap.hitObjects.slice(firstHitobjectIndex, lastHitobjectIndex + 1);
+    	//Beatmap.hitObjects = Beatmap.hitObjects.slice(firstHitobjectIndex, lastHitobjectIndex + 1);
 	}
 
 	async applyCounter() {
@@ -376,8 +407,9 @@ class BeatmapProcessor {
 
 		await this.applySettings();
 		await this.applyComboColors();
+		await this.applyMods(ApplicableMods.ReflectionMod);
 		await this.applySliders();
-		await this.applyMods();
+		await this.applyMods(ApplicableMods.RandomMod);
 		await this.applyStacking();
 		await this.applyHitsounds();
 		await this.applyReplay();
@@ -387,9 +419,30 @@ class BeatmapProcessor {
 
 		return this.Beatmap;
 	}
+
+    async calculateUR () {
+        this.Beatmap = await this.parseBeatmap();
+
+        await this.applySettings();
+        await this.applyMods(ApplicableMods.ReflectionMod);
+        await this.applySliders();
+        await this.applyMods(ApplicableMods.RandomMod);
+		await this.applyStacking();
+        await this.applyReplay();
+
+        const frames = this.Beatmap.ScoringFrames;
+        const [lastFrame] = frames.slice(-1);
+
+        return { frames, ur: lastFrame?.ur, cvur: lastFrame?.cvur };
+    }
 }
-const processBeatmap = async (beatmap_path, options, mods_raw, time, length) => {
-	return await new BeatmapProcessor(beatmap_path, options, mods_raw, time, length).process();
+const processBeatmap = async (beatmap_path, options, mods_raw, time, length, ur_only = false) => {
+	const beatmapProcessor = new BeatmapProcessor(beatmap_path, options, mods_raw, time, length);
+
+    if (ur_only)
+        return await beatmapProcessor.calculateUR();
+
+    return await beatmapProcessor.process();
 };
 
 module.exports = processBeatmap;

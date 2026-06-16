@@ -70,7 +70,7 @@ module.exports = {
                             let error = stderr.split("\n")[1];
                             reject(error);
 
-                            if(config.debug)
+                            if(helper.debug)
                                 helper.error(stderr);
 
                             return false;

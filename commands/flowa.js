@@ -16,6 +16,7 @@ module.exports = {
         result: "Returns a random picture of a sakura tree."
     },
     configRequired: ['credentials.pexels_key'],
+    envRequired: ['PEXELS_KEY'],
     call: obj => {
         return new Promise((resolve, reject) => {
             let { argv } = obj;
@@ -36,7 +37,7 @@ module.exports = {
                         page: helper.getRandomInt(1, max)
                     },
                     headers: {
-                        'Authorization': config.credentials.pexels_key
+                        'Authorization': process.env.PEXELS_KEY ?? config.credentials.pexels_key
                     }
                 }
             ).then(response => {
