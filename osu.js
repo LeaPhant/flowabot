@@ -1465,7 +1465,7 @@ module.exports = {
             lines[0] += `${score_string}`;
         } else {
             let object_count = recent.count300 + recent.count100 + recent.count50 + recent.countmiss;
-            let score_string = `${convertStandardisedToClassic(recent.score, object_count).toLocaleString()} (${recent.score.toLocaleString()}) [${convertStandardisedToWither(recent.score, object_count).toLocaleString()}]`;
+            let score_string = `${convertStandardisedToClassic(recent.score, object_count).toLocaleString()} (${recent.score.toLocaleString()})`;
             lines[0] += `${score_string}`;
         }
 
@@ -1567,6 +1567,10 @@ module.exports = {
             {
                 name: lines[2],
                 value: lines[3]
+            },
+            {
+                name: "-# Experimental",
+                value: `-# WitherScore: ${convertStandardisedToWither(recent.score, object_count).toLocaleString()}`
             }
         );
 
