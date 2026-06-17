@@ -28,6 +28,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - uses: docker/build-push-action@v6
         with:
           push: true
@@ -40,6 +45,8 @@ jobs:
           tags: |
             ghcr.io/leaphant/flowabot:main-${{ matrix.arch }}
             ghcr.io/leaphant/flowabot:main-${{ steps.sha.outputs.short_sha }}-${{ matrix.arch }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/flowabot:main-${{ matrix.arch }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/flowabot:main-${{ steps.sha.outputs.short_sha }}-${{ matrix.arch }}
 
   amend-builds:
     runs-on: ubuntu-24.04
@@ -62,6 +69,8 @@ jobs:
         run: |
           docker pull --platform=linux/amd64 ghcr.io/leaphant/flowabot:main-${{ steps.sha.outputs.short_sha }}-amd64
           docker pull --platform=linux/arm64 ghcr.io/leaphant/flowabot:main-${{ steps.sha.outputs.short_sha }}-arm64
+          docker pull --platform=linux/amd64 ${{ secrets.DOCKERHUB_USERNAME }}/flowabot:main-${{ steps.sha.outputs.short_sha }}-amd64
+          docker pull --platform=linux/arm64 ${{ secrets.DOCKERHUB_USERNAME }}/flowabot:main-${{ steps.sha.outputs.short_sha }}-arm64
 
       - name: create manifests
         run: |
@@ -71,8 +80,16 @@ jobs:
           docker manifest create ghcr.io/leaphant/flowabot:main \
             --amend ghcr.io/leaphant/flowabot:main-${{ steps.sha.outputs.short_sha }}-amd64 \
             --amend ghcr.io/leaphant/flowabot:main-${{ steps.sha.outputs.short_sha }}-arm64
+          docker manifest create ${{ secrets.DOCKERHUB_USERNAME }}/flowabot:main \
+            --amend ${{ secrets.DOCKERHUB_USERNAME }}/flowabot:main-${{ steps.sha.outputs.short_sha }}-amd64 \
+            --amend ${{ secrets.DOCKERHUB_USERNAME }}/flowabot:main-${{ steps.sha.outputs.short_sha }}-arm64
+          docker manifest create ${{ secrets.DOCKERHUB_USERNAME }}/flowabot:main-${{ steps.sha.outputs.short_sha }} \
+            --amend ${{ secrets.DOCKERHUB_USERNAME }}/flowabot:main-${{ steps.sha.outputs.short_sha }}-amd64 \
+            --amend ${{ secrets.DOCKERHUB_USERNAME }}/flowabot:main-${{ steps.sha.outputs.short_sha }}-arm64
 
       - name: push manifests
         run: |
           docker manifest push ghcr.io/leaphant/flowabot:main-${{ steps.sha.outputs.short_sha }}
           docker manifest push ghcr.io/leaphant/flowabot:main
+          docker manifest push ${{ secrets.DOCKERHUB_USERNAME }}/flowabot:main
+          docker manifest push ${{ secrets.DOCKERHUB_USERNAME }}/flowabot:main-${{ steps.sha.outputs.short_sha }}
