@@ -65,6 +65,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - name: pull images
         run: |
           docker pull --platform=linux/amd64 ghcr.io/leaphant/flowabot:main-${{ steps.sha.outputs.short_sha }}-amd64
