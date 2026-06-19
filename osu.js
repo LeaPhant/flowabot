@@ -33,7 +33,6 @@ const STAR_SCALING_FACTOR = 0.0675;
 const EXTREME_SCALING_FACTOR = 0.5;
 
 const config = require('./config.json');
-const { mod } = require('mathjs');
 
 let tracked_users = {};
 let retries = 0;
@@ -1518,6 +1517,12 @@ module.exports = {
                 lines[1] += ` (xx.xxcv)`;
         }
 
+        const shortFormat = ['en-US', { maximumFractionDigits: 1, notation: 'compact', compactDisplay: 'short' }];
+
+        lines[1] += '\n';
+        lines[1] += `**${convertStandardisedToClassic(recent.score, object_count).toLocaleString()}** Classic Score`;
+        lines[1] += ` / ${convertStandardisedToWither(recent.score, object_count).toLocaleString()} WitherScore`;
+
         lines[2] = 'Beatmap Information';
 
         let b_info = {
@@ -1560,26 +1565,10 @@ module.exports = {
 
 		let mod_settings_value = getModSettingsString(recent.mods);
 
-        embed.fields.push(
-            {
-                name: lines[0],
-                value: lines[1]
-            },
-            {
-                name: lines[2],
-                value: lines[3]
-            },
-            {
-                name: "Classic Score",
-                value: convertStandardisedToClassic(recent.score, object_count).toLocaleString(),
-                inline: true
-            },
-            {
-                name: "WitherScore",
-                value: convertStandardisedToWither(recent.score, object_count).toLocaleString(),
-                inline: true
-            }
-        );
+        embed.fields.push({
+            name: lines[0],
+            value: lines[1]
+        });
 
 		if (mod_settings_value.length > 0) {
 			embed.fields.push({
@@ -1587,6 +1576,11 @@ module.exports = {
 				value: mod_settings_value
 			});
 		}
+
+        embed.fields.push({
+            name: lines[2],
+            value: lines[3]
+        });
 
         return embed;
 
