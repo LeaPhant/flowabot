@@ -4,7 +4,7 @@ const os = require('os');
 const util = require('util');
 
 const axios = require('axios');
-const Jimp = require('jimp');
+const { Jimp } = require('jimp');
 const crypto = require('crypto');
 
 const unzip = require('unzipper');
@@ -441,11 +441,11 @@ async function downloadMedia(options, beatmap, beatmap_path, size, download_path
 			const img = await Jimp.read(output.background_path);
 
 			await img
-			.cover(...size)
+            .cover({ w: size[0], h: size[1] })
 			.color([
 				{ apply: 'shade', params: [80] }
 			])
-			.writeAsync(path.resolve(extraction_path, 'bg.png'));
+			.write(path.resolve(extraction_path, 'bg.png'));
 	
 			output.background_path = path.resolve(extraction_path, 'bg.png');
 		}catch(e){

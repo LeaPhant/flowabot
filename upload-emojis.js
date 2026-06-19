@@ -18,7 +18,7 @@ const config = require('./config.json');
 
 let guilds = [];
 
-client.on('ready', () => {
+client.on('clientReady', () => {
     [...client.guilds.cache].forEach(guild => {
         if(guild.me.hasPermission('MANAGE_EMOJIS'))
             guilds.push(guild);

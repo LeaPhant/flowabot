@@ -350,7 +350,7 @@ function onMessage(msg){
 
 client.on('messageCreate', onMessage);
 
-client.on('ready', () => {
+client.on('clientReady', () => {
 	helper.log('flowabot is ready');
 	if(process.env.DISCORD_CLIENT_ID ?? config.credentials.discord_client_id)
 		helper.log(

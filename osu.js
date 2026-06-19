@@ -22,7 +22,7 @@ const helper = require('./helper.js');
 const { Chart } = require('chart.js/auto');
 const graphCanvas = createCanvas(600, 400);
 
-const Jimp = require('jimp');
+const { Jimp } = require('jimp');
 
 const getFrame = util.promisify(frame.get_frame);
 
@@ -2294,11 +2294,11 @@ module.exports = {
             const outputChart = await graphCanvas.toBuffer('image/png');
             chart.destroy();
 
-            const graphImage = new Jimp(600, 400, '#263238E6');
+            const graphImage = new Jimp({ width: 600, height: 400, color: '#263238E6'});
             const _graph = await Jimp.read(outputChart);
             graphImage.composite(_graph, 0, 0);
 
-            const buffer = await graphImage.getBufferAsync('image/png');
+            const buffer = await graphImage.getBuffer('image/png');
 
             return buffer;
         }catch(e){
@@ -2933,7 +2933,7 @@ module.exports = {
 
             const output_frame = await getFrame(osu_file_path, max_strain_time_real - map.objects[0].time % 400, mods_array, [427, 320], {ar: ar, cs: cs, noreplay: true})
             
-            const graphImage = new Jimp(600, 400, '#263238E6');
+            const graphImage = new Jimp({ width: 600, height: 400, color: '#263238E6'});
             
             const _graph = await Jimp.read(outputChart);
             const _frame = await Jimp.read(output_frame);
@@ -2941,7 +2941,7 @@ module.exports = {
 
             graphImage.composite(_graph, 0, 0);
 
-            const buffer = await graphImage.getBufferAsync('image/png');
+            const buffer = await graphImage.getBuffer('image/png');
 
             return buffer;
         }catch(e){
