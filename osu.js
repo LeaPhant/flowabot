@@ -1504,8 +1504,7 @@ module.exports = {
         }
 
         if(recent.countsb > 0){
-            if(recent.countmiss == 0) lines[1] += helper.sep;
-            else lines[1] += " ";
+            if(recent.count100 > 0 || recent.count50 > 0) lines[1] += helper.sep;
             lines[1] += `${recent.countsb}xSB`;
         }
 
