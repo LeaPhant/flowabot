@@ -674,10 +674,10 @@ class ReplayProcessor {
 						} else {
 							// missed a slider repeat
 							if (sliderHeadAccuracy) {
-								scoringFrame.result = 'sliderbreak';
-							} else {
-								scoringFrame.result = 'large_tick_miss';
+                                scoringFrame.result = 'large_tick_miss';
 								scoringFrame.largeTickMisses++;
+							} else {
+								scoringFrame.result = 'sliderbreak';
 							}
                             scoringFrame.hpChange = HP_INCREASE['largeTickMiss'];
 							scoringFrame.combo = 0;
@@ -717,10 +717,10 @@ class ReplayProcessor {
 						// missed a slider tick
 						hitObject.MissedSliderTick = 1;
 						if (sliderHeadAccuracy) {
-							scoringFrame.result = 'sliderbreak';
-						} else {
-							scoringFrame.result = 'large_tick_miss';
+                            scoringFrame.result = 'large_tick_miss';
 							scoringFrame.largeTickMisses++;
+						} else {
+							scoringFrame.result = 'sliderbreak';
 						}
                         scoringFrame.hpChange = HP_INCREASE['largeTickMiss'];
 						scoringFrame.combo = 0;
