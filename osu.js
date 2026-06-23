@@ -868,8 +868,10 @@ async function getScore(recent_raw, cb){
                 clockRate: speed,
             }
 
-			if (recent_raw.statistics.large_tick_hit)
+			if (recent_raw.statistics.large_tick_hit) {
 				play_params.largeTickHits = recent_raw.statistics.large_tick_hit;
+                recent.countsb = recent_raw.maximum_statistics.large_tick_hit - recent_raw.statistics.large_tick_hit;
+            }
 
 			if (recent_raw.statistics.slider_tail_hit)
 				play_params.sliderEndHits = recent_raw.statistics.slider_tail_hit;
@@ -954,6 +956,7 @@ async function getScore(recent_raw, cb){
                     recent.ur = ur_response.ur;
                     recent.cvur = ur_response.cvur;
                     frames = ur_response.frames;
+                    if (!recent.countsb) recent.countsb = frames?.filter(x => x.result == 'sliderbreak').length;
                 }
 
                 strains_bar = await module.exports.get_strains_bar(beatmap_path, recent.mods.map(mod => mod.acronym).join(''), recent.fail_percent, recent.beatmapset_id, frames);
@@ -1501,7 +1504,8 @@ module.exports = {
         }
 
         if(recent.countsb > 0){
-            if(recent.count100 > 0 || recent.count50 > 0 || recent.countmiss > 0) lines[1] += helper.sep;
+            if(recent.countmiss == 0) lines[1] += helper.sep;
+            else lines[1] += " ";
             lines[1] += `${recent.countsb}xSB`;
         }
 
