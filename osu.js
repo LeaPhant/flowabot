@@ -1494,17 +1494,17 @@ module.exports = {
             lines[1] += `${recent.count100}x100`;
 
         if(recent.count50 > 0){
-            if(recent.count100 > 0) lines[1] += helper.sep;
+            if(recent.count100 > 0) lines[1] += ' • ';
             lines[1] += `${recent.count50}x50`;
         }
 
         if(recent.countmiss > 0){
-            if(recent.count100 > 0 || recent.count50 > 0) lines[1] += helper.sep;
+            if(recent.count100 > 0 || recent.count50 > 0) lines[1] += ' • ';
             lines[1] += `${recent.countmiss}xMiss`;
         }
 
         if(recent.countsb > 0){
-            if(recent.count100 > 0 || recent.count50 > 0) lines[1] += helper.sep;
+            if(recent.count100 > 0 || recent.count50 > 0) lines[1] += ' • ';
             lines[1] += `${recent.countsb}xSB`;
         }
 
