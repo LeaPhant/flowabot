@@ -22,12 +22,13 @@ module.exports = {
             if(emoteName.startsWith("<:") && emoteName.split(":").length > 1)
                 emoteName = emoteName.split(":")[1];
 
-            if(emoji.has(emoteName))
-                emote = emoji.find(emoteName).emoji;
-            else if(msg.channel.type == 'text')
+            if(msg.channel.type == 'text')
                 emote = helper.emote(emoteName, msg.guild, client);
             else
                 emote = helper.emote(emoteName, null, client);
+
+            if(!emote && emoji.has(emoteName))
+                emote = emoji.find(emoteName).emoji;
 
             if(emote)
                 output += emote.toString();
