@@ -868,7 +868,7 @@ async function getScore(recent_raw, cb){
                 clockRate: speed,
             }
 
-			if (recent_raw.statistics.large_tick_hit) {
+			if (recent_raw.passed && recent_raw.statistics.large_tick_hit) {
 				play_params.largeTickHits = recent_raw.statistics.large_tick_hit;
                 recent.countsb = recent_raw.maximum_statistics.large_tick_hit - recent_raw.statistics.large_tick_hit;
             }
