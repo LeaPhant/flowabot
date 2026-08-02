@@ -2268,7 +2268,7 @@ module.exports = {
             }
 
             if(bpms.length == 0)
-                throw 'An error occured getting the Beatmap BPM values';
+                throw 'An error occurred getting the Beatmap BPM values';
 
             bpms.push({ x: map.objects[map.objects.length - 1].time, y: bpms[bpms.length - 1]['y'] });
 
@@ -2305,7 +2305,7 @@ module.exports = {
             return buffer;
         }catch(e){
             helper.error(e);
-            throw 'An error occured creating the graph';
+            throw 'An error occurred creating the graph';
         }
     },
 

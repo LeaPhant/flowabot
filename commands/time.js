@@ -49,7 +49,7 @@ module.exports = {
                     reject("Couldn't find this place");
                 }
             }).catch(err => {
-                reject("An error occured fetching the place");
+                reject("An error occurred fetching the place");
             });
         });
     }
