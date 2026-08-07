@@ -58,7 +58,7 @@ if((process.env.OSU_CLIENT_ID ?? config.credentials.client_id)
     osu.init(client, process.env.OSU_CLIENT_ID ?? config.credentials.client_id, process.env.OSU_CLIENT_SECRET ?? config.credentials.client_secret, last_beatmap);
 
 function checkCommand(msg, command){
-    if(!msg.content.startsWith(helper.prefix))
+    if(!helper.prefix.some(prefix => msg.content.startsWith(prefix)))
         return false;
 
 	if(msg.author.bot && msg.webhookId == null)
@@ -68,7 +68,7 @@ function checkCommand(msg, command){
 
     let command_match = false;
 
-    let msg_check = msg.content.toLowerCase().substr(helper.prefix.length).trim();
+    let msg_check = msg.content.toLowerCase().substr(helper.prefix[0].length).trim();
 
     let commands = command.command;
 
@@ -200,7 +200,7 @@ fs.readdir(commands_path).then(items => {
 					command.command = [command.command];
 
 				console.log('');
-				console.log(chalk.yellow(`${helper.prefix}${command.command[0]} was not enabled:`));
+				console.log(chalk.yellow(`${helper.prefix[0]}${command.command[0]} was not enabled:`));
 				unavailability_reason.forEach(reason => {
 					console.log(chalk.yellow(reason));
 				});
@@ -236,7 +236,7 @@ function onMessage(msg){
 
     let argv = msg.content.split(' ');
 
-    argv[0] = argv[0].substr(helper.prefix.length);
+    argv[0] = argv[0].substr(helper.prefix[0].length);
 
     if(helper.debug)
         helper.log(msg.author.username, ':', msg.content);
@@ -351,6 +351,7 @@ function onMessage(msg){
 client.on('messageCreate', onMessage);
 
 client.on('clientReady', () => {
+    client.application?.emojis.fetch().catch(helper.error);
 	helper.log('flowabot is ready');
 	if(process.env.DISCORD_CLIENT_ID ?? config.credentials.discord_client_id)
 		helper.log(

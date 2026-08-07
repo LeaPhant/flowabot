@@ -8,7 +8,7 @@ const axios = require('axios');
 const fileExists = async path => !!(await fs.promises.stat(path).catch(e => false));
 
 const config = require('./config.json');
-const PREFIX = process.env.BOT_PREFIX ?? config.prefix;
+const PREFIX = (process.env.BOT_PREFIX ?? config.prefix).split('|');
 const DEBUG = process.env.DEBUG ? ['1', 'true'].includes(process.env.DEBUG) : config.debug;
 
 localStorage = new LocalStorage(config.storage_path ?? './scratch');
@@ -207,6 +207,9 @@ module.exports = {
 
     emote: (emoteName, guild, client) => {
         let emote;
+
+        if(client.application.emojis)
+            emote = client.application.emojis.cache.find(emoji => emoji.name.toLowerCase() === emoteName.toLowerCase());
 
         if(guild)
             emote = guild.emojis.cache.find(emoji => emoji.name.toLowerCase() === emoteName.toLowerCase() && emoji.available);
