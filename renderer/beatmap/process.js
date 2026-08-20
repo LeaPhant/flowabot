@@ -424,6 +424,7 @@ class BeatmapProcessor {
         this.Beatmap = await this.parseBeatmap();
 
         await this.applySettings();
+        await this.applyComboColors();
         await this.applyMods(ApplicableMods.ReflectionMod);
         await this.applySliders();
         await this.applyMods(ApplicableMods.RandomMod);
