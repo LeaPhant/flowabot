@@ -592,7 +592,7 @@ process.on('message', async obj => {
                 let circleOpacity = opacity;
 
                 if(options.hidden && circleOpacity >= 1){
-                    let fadeOutStartTime = hitObject.startTime - beatmap.TimePreempt + beatmap.TimeFadein;
+                    const fadeOutStartTime = hitObject.startTime - beatmap.TimePreempt + beatmap.TimeFadein;
 
                     if(time >= fadeOutStartTime)
                         circleOpacity = 1 - (time - fadeOutStartTime) / (beatmap.TimePreempt * 0.3);
@@ -600,9 +600,6 @@ process.on('message', async obj => {
                     if(circleOpacity < 0)
                         circleOpacity = 0;
                 }
-
-                if (time > hitObject.startTime + hitObject.hitOffset || 0)
-                    circleOpacity = 0;
 
                 ctx.globalAlpha = circleOpacity;
 
@@ -753,7 +750,7 @@ process.on('message', async obj => {
                 }
             }
 
-            if(!options.hidden && (hitObject.hitResult != 0 || beatmap.Replay.auto) && time >= Math.min(hitObject.startTime, hitObject.startTime + hitObject.hitOffset || 0)){
+            if(!options.hidden && time >= hitObject.startTime && hitObject.startTime - time > -200){
                 // Draw fading out circles
                 if(hitObject.objectName != "spinner" && !options.traceable){
                     // Increase circle size the further it's faded out
@@ -818,10 +815,10 @@ process.on('message', async obj => {
                 || hitObject.MissedSliderStart < 1 && hitObject.objectName == 'slider')
                     continue;
 
-                if(time < hitObject.startTime + hitObject.hitOffset || 0)
+                if(time < hitObject.startTime)
                     continue;
 
-                if(time - (hitObject.startTime + hitObject.hitOffset || 0) > 750)
+                if(time - hitObject.startTime > 750)
                     continue;
 
                 const position = playfieldPosition(...hitObject.position);
