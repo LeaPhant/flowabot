@@ -263,7 +263,8 @@ class BeatmapProcessor {
 
 			currentComboNumber++;
 
-			hitObject.Color = "rgba(" + Beatmap["Combo" + currentCombo] + ",0.6)";
+            const colorRgb = Beatmap["Combo" + currentCombo].split(',').slice(0,3);
+			hitObject.Color = `rgba(${colorRgb.join(',')},0.6)`;
 			hitObject.ComboNumber = currentComboNumber;
 		}
 	}
