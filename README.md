@@ -46,7 +46,7 @@
 
 **Clone the repo and enter the bot directory**
 
-    git clone https://github.com/LeaPhant/flowabot.git
+    git clone https://codeberg.org/LeaPhant/flowabot.git
     cd flowabot
 
 ---

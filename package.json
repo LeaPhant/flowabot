@@ -14,7 +14,7 @@
     "author": "LeaPhant",
     "repository": {
         "type": "git",
-        "url": "https://github.com/LeaPhant/flowabot.git"
+        "url": "https://codeberg.org/LeaPhant/flowabot.git"
     },
     "license": "MIT",
     "dependencies": {
